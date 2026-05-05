@@ -1,0 +1,58 @@
+# Image for the functional_python scorer.
+#
+# Base: python:3.11-slim.
+# Adds pytest (+ pytest-timeout) and the union of third-party libraries
+# used by our HumanEval+ and BigCodeBench-Hard task samples so that the
+# sandboxed test harness can run with ``network=none`` — no pip install
+# at test time.
+#
+# Build:
+#   docker build -f scorers/Dockerfile.functional_python -t hybrid-eval-python:latest .
+#
+# Runtime invariants:
+#   * ``python -m pytest`` is on PATH.
+#   * ``unittest`` (stdlib) works too; some BigCodeBench-Hard tests are
+#     ``unittest.TestCase`` style.
+#   * The container is expected to run with ``network=none`` and a memory
+#     cap; nothing here depends on network access.
+#
+# Libs are the union across the pinned BigCodeBench-Hard sample
+# (benchmark/bigcodebench_hard/tasks.jsonl). HumanEval+ tasks are
+# pure-stdlib and need nothing extra.
+
+FROM python:3.11-slim
+
+# System packages: opencv-python-headless needs a couple of shared libs
+# at import time even in headless mode.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libglib2.0-0 \
+        libgl1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Matplotlib must use a non-GUI backend inside the sandbox (no X11).
+ENV MPLBACKEND=Agg \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Third-party libraries. Pinned loosely — the scorer only needs
+# "the API works", not deterministic versions.
+RUN pip install --no-cache-dir \
+        pytest==8.3.* \
+        pytest-timeout==2.3.* \
+        numpy \
+        pandas \
+        matplotlib \
+        seaborn \
+        opencv-python-headless \
+        flask \
+        flask-login \
+        flask-wtf \
+        wtforms \
+        werkzeug \
+        xlwt \
+        xlrd \
+        openpyxl
+
+WORKDIR /workspace
