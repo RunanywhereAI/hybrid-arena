@@ -11,3 +11,4 @@ tiktoken>=0.8,<1
 openai>=1.50,<2
 anthropic>=0.40,<1
 evalplus>=0.3,<1
+datasets>=2.19,<5    # BigCodeBench-Hard adapter (T1.3) — only required when refreshing the pinned tasks.jsonl
