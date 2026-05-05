@@ -1,0 +1,1148 @@
+{
+  "proxy": "http://127.0.0.1:8787",
+  "health": {
+    "ok": true,
+    "strategies": [
+      "always-local",
+      "always-cloud",
+      "rules",
+      "heuristic",
+      "llm-classifier",
+      "embedding-knn",
+      "cascade"
+    ],
+    "local": {
+      "base": "http://127.0.0.1:11434/v1",
+      "model": "qwen3-coder:30b",
+      "reachable": true
+    },
+    "cloud": {
+      "base": "https://api.openai.com/v1",
+      "model": "gpt-5.5",
+      "key_present": true,
+      "reachable": true,
+      "has_configured_model": true,
+      "has_fallback_model": true,
+      "sample_models": [
+        "gpt-4-0613",
+        "gpt-4",
+        "gpt-3.5-turbo",
+        "gpt-5.5-pro-2026-04-23",
+        "gpt-image-2-2026-04-21",
+        "gpt-5.5",
+        "gpt-5.5-2026-04-23",
+        "gpt-5.5-pro"
+      ]
+    },
+    "router_model": "qwen3:0.6b",
+    "log_file": "/Users/sanchitmonga/development/ODLM/MONOREPOOO/CODING/opencode/router/logs/decisions.jsonl",
+    "banner_enabled": true
+  },
+  "matrix": {
+    "trivial-rename": {
+      "always-local": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 666,
+        "banner": "[router] strategy=always-local → LOCAL (qwen3-coder:30b) | conf=1.00 | control: always-local",
+        "excerpt": "```js function price(items) { let subtotal = 0; for (const i of items) subtotal += i.price; return subtotal; } ```"
+      },
+      "always-cloud": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 2561,
+        "banner": "[router] strategy=always-cloud → CLOUD (gpt-5.5) | conf=1.00 | control: always-cloud",
+        "excerpt": "```js function price(items) { let subtotal = 0; for (const i of items) subtotal += i.price; return subtotal; } ```"
+      },
+      "rules": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 528,
+        "banner": "[router] strategy=rules → LOCAL (qwen3-coder:30b) | conf=0.85 | rules: kw[local]: rename",
+        "excerpt": "```js function price(items) { let subtotal = 0; for (const i of items) subtotal += i.price; return subtotal; } ```"
+      },
+      "heuristic": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 416,
+        "banner": "[router] strategy=heuristic → LOCAL (qwen3-coder:30b) | conf=1.00 | heuristic[score=-11.5 >=25? → local] uTok=43(+0.5) cb=1(+6) -local-kw=1(-18)",
+        "excerpt": "```js function price(items) { let subtotal = 0; for (const i of items) subtotal += i.price; return subtotal; } ```"
+      },
+      "llm-classifier": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 10699,
+        "banner": "[router] strategy=llm-classifier → LOCAL (qwen3-coder:30b) | conf=0.80 | llm-classifier(qwen3:0.6b): \"SIMPLE\" (10240ms)",
+        "excerpt": "```js function price(items) { let subtotal = 0; for (const i of items) subtotal += i.price; return subtotal; } ```"
+      },
+      "embedding-knn": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 1738,
+        "banner": "[router] strategy=embedding-knn → LOCAL (qwen3-coder:30b) | conf=1.00 | embedding-knn[k=5]: cloud=0/5 (w=0.00 vs 3.06) (1341ms) — top: \"Rename the variable foo to bar in src/utils.ts\"",
+        "excerpt": "```js function price(items) { let subtotal = 0; for (const i of items) subtotal += i.price; return subtotal; } ```"
+      },
+      "cascade": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 391,
+        "banner": "[router] strategy=cascade → LOCAL (qwen3-coder:30b) | conf=1.00 | cascade[trust-heuristic dist=36.5]: heuristic[score=-11.5 >=25? → local] uTok=43(+0.5) cb=1(+6) -local-kw=1(-18)",
+        "excerpt": "```js function price(items) { let subtotal = 0; for (const i of items) subtotal += i.price; return subtotal; } ```"
+      }
+    },
+    "trivial-typo": {
+      "always-local": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 215,
+        "banner": "[router] strategy=always-local → LOCAL (qwen3-coder:30b) | conf=1.00 | control: always-local",
+        "excerpt": "```c parseRequest ```"
+      },
+      "always-cloud": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 2156,
+        "banner": "[router] strategy=always-cloud → CLOUD (gpt-5.5) | conf=1.00 | control: always-cloud",
+        "excerpt": "function parseRequest()"
+      },
+      "rules": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 186,
+        "banner": "[router] strategy=rules → LOCAL (qwen3-coder:30b) | conf=0.85 | rules: kw[local]: rename,typo,fix the typo",
+        "excerpt": "```c parseRequest ```"
+      },
+      "heuristic": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 139,
+        "banner": "[router] strategy=heuristic → LOCAL (qwen3-coder:30b) | conf=1.00 | heuristic[score=-53.7 >=25? → local] uTok=23(+0.3) -local-kw=3(-54)",
+        "excerpt": "```c parseRequest ```"
+      },
+      "llm-classifier": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 213,
+        "banner": "[router] strategy=llm-classifier → LOCAL (qwen3-coder:30b) | conf=0.80 | llm-classifier(qwen3:0.6b): \"SIMPLE\" (87ms)",
+        "excerpt": "```c parseRequest ```"
+      },
+      "embedding-knn": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 175,
+        "banner": "[router] strategy=embedding-knn → LOCAL (qwen3-coder:30b) | conf=0.63 | embedding-knn[k=5]: cloud=2/5 (w=1.23 vs 2.10) (35ms) — top: \"Fix the typo in this function name: parseRequst → parseReque\"",
+        "excerpt": "```c parseRequest ```"
+      },
+      "cascade": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 127,
+        "banner": "[router] strategy=cascade → LOCAL (qwen3-coder:30b) | conf=1.00 | cascade[trust-heuristic dist=78.7]: heuristic[score=-53.7 >=25? → local] uTok=23(+0.3) -local-kw=3(-54)",
+        "excerpt": "```c parseRequest ```"
+      }
+    },
+    "trivial-fib": {
+      "always-local": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 514,
+        "banner": "[router] strategy=always-local → LOCAL (qwen3-coder:30b) | conf=1.00 | control: always-local",
+        "excerpt": "```javascript const fib = (n, a = 0, b = 1) => n === 0 ? a : fib(n - 1, b, a + b); ```"
+      },
+      "always-cloud": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 2191,
+        "banner": "[router] strategy=always-cloud → CLOUD (gpt-5.5) | conf=1.00 | control: always-cloud",
+        "excerpt": "```js const fib = n => n < 2 ? n : fib(n - 1) + fib(n - 2); ```"
+      },
+      "rules": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 520,
+        "banner": "[router] strategy=rules → LOCAL (qwen3-coder:30b) | conf=0.60 | rules: default-local (tokens=22, codeBlocks=0)",
+        "excerpt": "```javascript const fib = (n, a = 0, b = 1) => n === 0 ? a : fib(n - 1, b, a + b); ```"
+      },
+      "heuristic": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 445,
+        "banner": "[router] strategy=heuristic → LOCAL (qwen3-coder:30b) | conf=0.99 | heuristic[score=0.3 >=25? → local] uTok=22(+0.3)",
+        "excerpt": "```javascript const fib = (n, a = 0, b = 1) => n === 0 ? a : fib(n - 1, b, a + b); ```"
+      },
+      "llm-classifier": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 661,
+        "banner": "[router] strategy=llm-classifier → LOCAL (qwen3-coder:30b) | conf=0.80 | llm-classifier(qwen3:0.6b): \"SIMPLE\" (206ms)",
+        "excerpt": "```javascript const fib = (n, a = 0, b = 1) => n === 0 ? a : fib(n - 1, b, a + b); ```"
+      },
+      "embedding-knn": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 477,
+        "banner": "[router] strategy=embedding-knn → LOCAL (qwen3-coder:30b) | conf=1.00 | embedding-knn[k=5]: cloud=0/5 (w=0.00 vs 2.85) (18ms) — top: \"Write a one-line function that returns the Fibonacci sequenc\"",
+        "excerpt": "```javascript const fib = (n, a = 0, b = 1) => n === 0 ? a : fib(n - 1, b, a + b); ```"
+      },
+      "cascade": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 457,
+        "banner": "[router] strategy=cascade → LOCAL (qwen3-coder:30b) | conf=0.99 | cascade[trust-heuristic dist=24.7]: heuristic[score=0.3 >=25? → local] uTok=22(+0.3)",
+        "excerpt": "```javascript const fib = (n, a = 0, b = 1) => n === 0 ? a : fib(n - 1, b, a + b); ```"
+      }
+    },
+    "trivial-comment": {
+      "always-local": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 997,
+        "banner": "[router] strategy=always-local → LOCAL (qwen3-coder:30b) | conf=1.00 | control: always-local",
+        "excerpt": "```js /** * Formats a Date object into an ISO date string (YYYY-MM-DD format). * @param {Date} d - The Date object to format * @returns {string} The date in YYYY-MM-DD format (e.g., \"2023-12-25\") */ function formatDate(d) { return d.toISOSt"
+      },
+      "always-cloud": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 2141,
+        "banner": "[router] strategy=always-cloud → CLOUD (gpt-5.5) | conf=1.00 | control: always-cloud",
+        "excerpt": "```js /** * Formats a Date object as a YYYY-MM-DD string. * * @param {Date} d - The date to format. * @returns {string} The formatted date string. */ function formatDate(d) { return d.toISOString().slice(0, 10); } ```"
+      },
+      "rules": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 971,
+        "banner": "[router] strategy=rules → LOCAL (qwen3-coder:30b) | conf=0.85 | rules: kw[local]: format",
+        "excerpt": "```js /** * Formats a Date object into an ISO date string (YYYY-MM-DD format). * @param {Date} d - The Date object to format * @returns {string} The date in YYYY-MM-DD format (e.g., \"2023-12-25\") */ function formatDate(d) { return d.toISOSt"
+      },
+      "heuristic": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 892,
+        "banner": "[router] strategy=heuristic → LOCAL (qwen3-coder:30b) | conf=1.00 | heuristic[score=-11.7 >=25? → local] uTok=25(+0.3) cb=1(+6) -local-kw=1(-18)",
+        "excerpt": "```js /** * Formats a Date object into an ISO date string (YYYY-MM-DD format). * @param {Date} d - The Date object to format * @returns {string} The date in YYYY-MM-DD format (e.g., \"2023-12-25\") */ function formatDate(d) { return d.toISOSt"
+      },
+      "llm-classifier": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 987,
+        "banner": "[router] strategy=llm-classifier → LOCAL (qwen3-coder:30b) | conf=0.80 | llm-classifier(qwen3:0.6b): \"SIMPLE\" (110ms)",
+        "excerpt": "```js /** * Formats a Date object into an ISO date string (YYYY-MM-DD format). * @param {Date} d - The Date object to format * @returns {string} The date in YYYY-MM-DD format (e.g., \"2023-12-25\") */ function formatDate(d) { return d.toISOSt"
+      },
+      "embedding-knn": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 929,
+        "banner": "[router] strategy=embedding-knn → LOCAL (qwen3-coder:30b) | conf=1.00 | embedding-knn[k=5]: cloud=0/5 (w=0.00 vs 3.27) (39ms) — top: \"Add a JSDoc comment to the formatDate function\"",
+        "excerpt": "```js /** * Formats a Date object into an ISO date string (YYYY-MM-DD format). * @param {Date} d - The Date object to format * @returns {string} The date in YYYY-MM-DD format (e.g., \"2023-12-25\") */ function formatDate(d) { return d.toISOSt"
+      },
+      "cascade": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 886,
+        "banner": "[router] strategy=cascade → LOCAL (qwen3-coder:30b) | conf=1.00 | cascade[trust-heuristic dist=36.7]: heuristic[score=-11.7 >=25? → local] uTok=25(+0.3) cb=1(+6) -local-kw=1(-18)",
+        "excerpt": "```js /** * Formats a Date object into an ISO date string (YYYY-MM-DD format). * @param {Date} d - The Date object to format * @returns {string} The date in YYYY-MM-DD format (e.g., \"2023-12-25\") */ function formatDate(d) { return d.toISOSt"
+      }
+    },
+    "trivial-py-question": {
+      "always-local": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 493,
+        "banner": "[router] strategy=always-local → LOCAL (qwen3-coder:30b) | conf=1.00 | control: always-local",
+        "excerpt": "```python {name: len(name) for name in names} ``` Where `names` is your list of strings. This creates a dictionary mapping each string to its length."
+      },
+      "always-cloud": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 1791,
+        "banner": "[router] strategy=always-cloud → CLOUD (gpt-5.5) | conf=1.00 | control: always-cloud",
+        "excerpt": "```python {name: len(name) for name in names} ``` Example: ```python names = [\"Alice\", \"Bob\", \"Charlie\"] lengths = {name: len(name) for name in names} # {'Alice': 5, 'Bob': 3, 'Charlie': 7} ```"
+      },
+      "rules": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 496,
+        "banner": "[router] strategy=rules → LOCAL (qwen3-coder:30b) | conf=0.85 | rules: kw[local]: what is,quick",
+        "excerpt": "```python {name: len(name) for name in names} ``` Where `names` is your list of strings. This creates a dictionary mapping each string to its length."
+      },
+      "heuristic": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 427,
+        "banner": "[router] strategy=heuristic → LOCAL (qwen3-coder:30b) | conf=1.00 | heuristic[score=-35.7 >=25? → local] uTok=27(+0.3) -local-kw=2(-36)",
+        "excerpt": "```python {name: len(name) for name in names} ``` Where `names` is your list of strings. This creates a dictionary mapping each string to its length."
+      },
+      "llm-classifier": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 616,
+        "banner": "[router] strategy=llm-classifier → LOCAL (qwen3-coder:30b) | conf=0.80 | llm-classifier(qwen3:0.6b): \"SIMPLE\" (74ms)",
+        "excerpt": "```python {name: len(name) for name in names} ``` Where `names` is your list of strings. This creates a dictionary where each key is a string from the list and each value is the length of that string."
+      },
+      "embedding-knn": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 449,
+        "banner": "[router] strategy=embedding-knn → LOCAL (qwen3-coder:30b) | conf=1.00 | embedding-knn[k=5]: cloud=0/5 (w=0.00 vs 3.15) (25ms) — top: \"What is the syntax for a Python dict comprehension?\"",
+        "excerpt": "```python {name: len(name) for name in names} ``` Where `names` is your list of strings. This creates a dictionary mapping each string to its length."
+      },
+      "cascade": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 423,
+        "banner": "[router] strategy=cascade → LOCAL (qwen3-coder:30b) | conf=1.00 | cascade[trust-heuristic dist=60.7]: heuristic[score=-35.7 >=25? → local] uTok=27(+0.3) -local-kw=2(-36)",
+        "excerpt": "```python {name: len(name) for name in names} ``` Where `names` is your list of strings. This creates a dictionary mapping each string to its length."
+      }
+    },
+    "trivial-loop": {
+      "always-local": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 2024,
+        "banner": "[router] strategy=always-local → LOCAL (qwen3-coder:30b) | conf=1.00 | control: always-local",
+        "excerpt": "Here's how to convert that for loop to use `.map()`: ```javascript const result = arr.map(x => x * 2); ``` The `.map()` method creates a new array by applying a function to each element of the original array. In this case, it multiplies eac"
+      },
+      "always-cloud": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 2141,
+        "banner": "[router] strategy=always-cloud → CLOUD (gpt-5.5) | conf=1.00 | control: always-cloud",
+        "excerpt": "```js const result = arr.map(x => x * 2); ``` If `result` already exists and you want to append to it: ```js result.push(...arr.map(x => x * 2)); ```"
+      },
+      "rules": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 1795,
+        "banner": "[router] strategy=rules → LOCAL (qwen3-coder:30b) | conf=0.85 | rules: kw[local]: convert",
+        "excerpt": "Here's how to convert that for loop to use `.map()`: ```javascript const result = arr.map(x => x * 2); ``` The `.map()` method creates a new array by applying a function to each element of the original array. In this case, it multiplies eac"
+      },
+      "heuristic": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 1970,
+        "banner": "[router] strategy=heuristic → LOCAL (qwen3-coder:30b) | conf=1.00 | heuristic[score=-17.8 >=25? → local] uTok=19(+0.2) -local-kw=1(-18)",
+        "excerpt": "Here's how to convert that for loop to use `.map()`: ```javascript const result = arr.map(x => x * 2); ``` The `.map()` method creates a new array by applying a function to each element of the original array. In this case, it multiplies eac"
+      },
+      "llm-classifier": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 1874,
+        "banner": "[router] strategy=llm-classifier → LOCAL (qwen3-coder:30b) | conf=0.80 | llm-classifier(qwen3:0.6b): \"SIMPLE\" (92ms)",
+        "excerpt": "Here's how to convert that for loop to use `.map()`: ```javascript const result = arr.map(x => x * 2); ``` The `.map()` method creates a new array by applying a function to each element of the original array. In this case, it multiplies eac"
+      },
+      "embedding-knn": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 1833,
+        "banner": "[router] strategy=embedding-knn → LOCAL (qwen3-coder:30b) | conf=1.00 | embedding-knn[k=5]: cloud=0/5 (w=0.00 vs 3.12) (24ms) — top: \"Convert this for loop to a map: for (const x of arr) result.\"",
+        "excerpt": "Here's how to convert that for loop to use `.map()`: ```javascript const result = arr.map(x => x * 2); ``` The `.map()` method creates a new array by applying a function to each element of the original array. In this case, it multiplies eac"
+      },
+      "cascade": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 1931,
+        "banner": "[router] strategy=cascade → LOCAL (qwen3-coder:30b) | conf=1.00 | cascade[trust-heuristic dist=42.8]: heuristic[score=-17.8 >=25? → local] uTok=19(+0.2) -local-kw=1(-18)",
+        "excerpt": "Here's how to convert that for loop to use `.map()`: ```javascript const result = arr.map(x => x * 2); ``` The `.map()` method creates a new array by applying a function to each element of the original array. In this case, it multiplies eac"
+      }
+    },
+    "trivial-format": {
+      "always-local": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 241,
+        "banner": "[router] strategy=always-local → LOCAL (qwen3-coder:30b) | conf=1.00 | control: always-local",
+        "excerpt": "```javascript let x = 1; ```"
+      },
+      "always-cloud": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 1629,
+        "banner": "[router] strategy=always-cloud → CLOUD (gpt-5.5) | conf=1.00 | control: always-cloud",
+        "excerpt": "`let x = 1;`"
+      },
+      "rules": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 218,
+        "banner": "[router] strategy=rules → LOCAL (qwen3-coder:30b) | conf=0.60 | rules: default-local (tokens=13, codeBlocks=0)",
+        "excerpt": "```javascript let x = 1; ```"
+      },
+      "heuristic": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 186,
+        "banner": "[router] strategy=heuristic → LOCAL (qwen3-coder:30b) | conf=1.00 | heuristic[score=0.2 >=25? → local] uTok=13(+0.2)",
+        "excerpt": "```javascript let x = 1; ```"
+      },
+      "llm-classifier": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 234,
+        "banner": "[router] strategy=llm-classifier → LOCAL (qwen3-coder:30b) | conf=0.80 | llm-classifier(qwen3:0.6b): \"SIMPLE\" (73ms)",
+        "excerpt": "```javascript let x = 1; ```"
+      },
+      "embedding-knn": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 212,
+        "banner": "[router] strategy=embedding-knn → LOCAL (qwen3-coder:30b) | conf=1.00 | embedding-knn[k=5]: cloud=0/5 (w=0.00 vs 3.12) (52ms) — top: \"Add a missing semicolon\"",
+        "excerpt": "```javascript let x = 1; ```"
+      },
+      "cascade": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 161,
+        "banner": "[router] strategy=cascade → LOCAL (qwen3-coder:30b) | conf=1.00 | cascade[trust-heuristic dist=24.8]: heuristic[score=0.2 >=25? → local] uTok=13(+0.2)",
+        "excerpt": "```javascript let x = 1; ```"
+      }
+    },
+    "trivial-async": {
+      "always-local": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 2888,
+        "banner": "[router] strategy=always-local → LOCAL (qwen3-coder:30b) | conf=1.00 | control: always-local",
+        "excerpt": "Here are a few ways to make the function async and return a resolved Promise of 42: **Option 1: Using `async` keyword with `return`** ```js async function get42() { return 42; } ``` **Option 2: Using `async` keyword with `Promise.resolve()`"
+      },
+      "always-cloud": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 1284,
+        "banner": "[router] strategy=always-cloud → CLOUD (gpt-5.5) | conf=1.00 | control: always-cloud",
+        "excerpt": "```js async function get42() { return 42; } ``` Calling `get42()` now returns a Promise that resolves to `42`."
+      },
+      "rules": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 2588,
+        "banner": "[router] strategy=rules → LOCAL (qwen3-coder:30b) | conf=0.60 | rules: default-local (tokens=26, codeBlocks=1)",
+        "excerpt": "Here are a few ways to make the function async and return a resolved Promise of 42: **Option 1: Using `async` keyword with `return`** ```js async function get42() { return 42; } ``` **Option 2: Using `async` keyword with `Promise.resolve()`"
+      },
+      "heuristic": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 2414,
+        "banner": "[router] strategy=heuristic → LOCAL (qwen3-coder:30b) | conf=0.87 | heuristic[score=6.3 >=25? → local] uTok=26(+0.3) cb=1(+6)",
+        "excerpt": "Here are a few ways to make the function async and return a resolved Promise of 42: **Option 1: Using `async` keyword with `return`** ```js async function get42() { return 42; } ``` **Option 2: Using `async` keyword with `Promise.resolve()`"
+      },
+      "llm-classifier": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 2870,
+        "banner": "[router] strategy=llm-classifier → LOCAL (qwen3-coder:30b) | conf=0.80 | llm-classifier(qwen3:0.6b): \"SIMPLE\" (126ms)",
+        "excerpt": "Here are a few ways to make the function async and return a resolved Promise of 42: **Option 1: Using `async` keyword with `return`** ```js async function get42() { return 42; } ``` **Option 2: Using `async` keyword with `Promise.resolve()`"
+      },
+      "embedding-knn": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 1941,
+        "banner": "[router] strategy=embedding-knn → LOCAL (qwen3-coder:30b) | conf=0.62 | embedding-knn[k=5]: cloud=2/5 (w=1.18 vs 1.90) (35ms) — top: \"Make this function async\"",
+        "excerpt": "Here are a few ways to make the function async and return a resolved Promise of 42: **Option 1: Using `async` keyword with `return`** ```js async function get42() { return 42; } ``` **Option 2: Using `async` keyword with `Promise.resolve()`"
+      },
+      "cascade": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 2532,
+        "banner": "[router] strategy=cascade → LOCAL (qwen3-coder:30b) | conf=0.87 | cascade[trust-heuristic dist=18.7]: heuristic[score=6.3 >=25? → local] uTok=26(+0.3) cb=1(+6)",
+        "excerpt": "Here are a few ways to make the function async and return a resolved Promise of 42: **Option 1: Using `async` keyword with `return`** ```js async function get42() { return 42; } ``` **Option 2: Using `async` keyword with `Promise.resolve()`"
+      }
+    },
+    "moderate-test": {
+      "always-local": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 3804,
+        "banner": "[router] strategy=always-local → LOCAL (qwen3-coder:30b) | conf=1.00 | control: always-local",
+        "excerpt": "Here's a Jest unit test for the `uniq` function that covers the specified test cases: ```js import { uniq } from './your-module-file'; // Adjust the import path as needed describe('uniq function', () => { test('should handle empty input', ("
+      },
+      "always-cloud": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 2619,
+        "banner": "[router] strategy=always-cloud → CLOUD (gpt-5.5) | conf=1.00 | control: always-cloud",
+        "excerpt": "```js // uniq.test.js import { uniq } from './uniq'; describe('uniq', () => { test('returns an empty array for empty input', () => { expect(uniq([])).toEqual([]); }); test('returns the same array contents for one element', () => { expect(un"
+      },
+      "rules": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 3651,
+        "banner": "[router] strategy=rules → LOCAL (qwen3-coder:30b) | conf=0.60 | rules: default-local (tokens=42, codeBlocks=1)",
+        "excerpt": "Here's a Jest unit test for the `uniq` function that covers the specified test cases: ```js import { uniq } from './your-module-file'; // Adjust the import path as needed describe('uniq function', () => { test('should handle empty input', ("
+      },
+      "heuristic": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 3403,
+        "banner": "[router] strategy=heuristic → LOCAL (qwen3-coder:30b) | conf=0.87 | heuristic[score=6.5 >=25? → local] uTok=42(+0.5) cb=1(+6)",
+        "excerpt": "Here's a Jest unit test for the `uniq` function that covers all the specified cases: ```js import { uniq } from './your-module-file'; // Adjust the import path as needed describe('uniq function', () => { test('should handle empty input', ()"
+      },
+      "llm-classifier": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 3545,
+        "banner": "[router] strategy=llm-classifier → LOCAL (qwen3-coder:30b) | conf=0.80 | llm-classifier(qwen3:0.6b): \"SIMPLE\" (104ms)",
+        "excerpt": "Here's a Jest unit test for the `uniq` function that covers all the specified cases: ```js import { uniq } from './your-module-file'; // Adjust the import path as needed describe('uniq function', () => { test('should handle empty input', ()"
+      },
+      "embedding-knn": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 3709,
+        "banner": "[router] strategy=embedding-knn → LOCAL (qwen3-coder:30b) | conf=0.81 | embedding-knn[k=5]: cloud=1/5 (w=0.61 vs 2.58) (26ms) — top: \"Run the tests for this file\"",
+        "excerpt": "Here's a Jest unit test for the `uniq` function that covers the specified test cases: ```js import { uniq } from './your-module-file'; // Adjust the import path as needed describe('uniq function', () => { test('should handle empty input', ("
+      },
+      "cascade": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 3658,
+        "banner": "[router] strategy=cascade → LOCAL (qwen3-coder:30b) | conf=0.87 | cascade[trust-heuristic dist=18.5]: heuristic[score=6.5 >=25? → local] uTok=42(+0.5) cb=1(+6)",
+        "excerpt": "Here's a Jest unit test for the `uniq` function that covers the specified test cases: ```js import { uniq } from './your-module-file'; // Adjust the import path as needed describe('uniq function', () => { test('should handle empty input', ("
+      }
+    },
+    "moderate-bugfix": {
+      "always-local": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 4024,
+        "banner": "[router] strategy=always-local → LOCAL (qwen3-coder:30b) | conf=1.00 | control: always-local",
+        "excerpt": "Looking at this binary search implementation, I can identify the off-by-one bug in the update logic. The issue is in these lines: ```js if (arr[mid] < target) lo = mid; // BUG: should be lo = mid + 1 else hi = mid; // BUG: should be hi = mi"
+      },
+      "always-cloud": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 6072,
+        "banner": "[router] strategy=always-cloud → CLOUD (gpt-5.5) | conf=1.00 | control: always-cloud",
+        "excerpt": "The off-by-one bug is here: ```js if (arr[mid] < target) lo = mid; ``` Since `mid` has already been checked and is too small, the next search range should start after `mid`. Otherwise `lo` may not advance, causing an infinite loop. Fixed ve"
+      },
+      "rules": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 2955,
+        "banner": "[router] strategy=rules → LOCAL (qwen3-coder:30b) | conf=0.60 | rules: default-local (tokens=75, codeBlocks=1)",
+        "excerpt": "Looking at this binary search implementation, I can identify the off-by-one bug in the `lo = mid` line. The issue is that when `arr[mid] < target`, we set `lo = mid` instead of `lo = mid + 1`. This causes an infinite loop when `arr[mid]` is"
+      },
+      "heuristic": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 3866,
+        "banner": "[router] strategy=heuristic → LOCAL (qwen3-coder:30b) | conf=0.86 | heuristic[score=6.9 >=25? → local] uTok=75(+0.9) cb=1(+6)",
+        "excerpt": "Looking at this binary search implementation, I can identify the off-by-one bug in the update logic. The issue is in these lines: ```js if (arr[mid] < target) lo = mid; // BUG: should be lo = mid + 1 else hi = mid; // BUG: should be hi = mi"
+      },
+      "llm-classifier": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 3949,
+        "banner": "[router] strategy=llm-classifier → LOCAL (qwen3-coder:30b) | conf=0.80 | llm-classifier(qwen3:0.6b): \"SIMPLE\" (102ms)",
+        "excerpt": "Looking at this binary search implementation, I can identify the off-by-one bug in the update logic. The issue is in these lines: ```js if (arr[mid] < target) lo = mid; // BUG: should be lo = mid + 1 else hi = mid; // BUG: should be hi = mi"
+      },
+      "embedding-knn": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 4702,
+        "banner": "[router] strategy=embedding-knn → CLOUD (gpt-5.5) | conf=0.59 | embedding-knn[k=5]: cloud=3/5 (w=1.76 vs 1.24) (99ms) — top: \"Convert this for loop to a map: for (const x of arr) result.\"",
+        "excerpt": "The bug is here: ```js if (arr[mid] < target) lo = mid; ``` Since `mid` has already been checked and is too small, it must be excluded from the remaining search range. Otherwise, when `mid === lo`, the loop can get stuck forever. Fixed vers"
+      },
+      "cascade": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 3958,
+        "banner": "[router] strategy=cascade → LOCAL (qwen3-coder:30b) | conf=0.86 | cascade[trust-heuristic dist=18.1]: heuristic[score=6.9 >=25? → local] uTok=75(+0.9) cb=1(+6)",
+        "excerpt": "Looking at this binary search implementation, I can identify the off-by-one bug in the update logic. The issue is in these lines: ```js if (arr[mid] < target) lo = mid; // BUG: should be lo = mid + 1 else hi = mid; // BUG: should be hi = mi"
+      }
+    },
+    "complex-design": {
+      "always-local": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 7914,
+        "banner": "[router] strategy=always-local → LOCAL (qwen3-coder:30b) | conf=1.00 | control: always-local",
+        "excerpt": "# Multi-Tenant Authentication System with Row-Level Security in PostgreSQL ## 1. Schema Design ### Core Tables Structure ```sql -- Tenants table CREATE TABLE tenants ( id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name VARCHAR(255) NOT NUL"
+      },
+      "always-cloud": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 13585,
+        "banner": "[router] strategy=always-cloud → CLOUD (gpt-5.5) | conf=1.00 | control: always-cloud",
+        "excerpt": ""
+      },
+      "rules": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 16263,
+        "banner": "[router] strategy=rules → CLOUD (gpt-5.5) | conf=0.65 | rules: kw[cloud]: design,long,comprehensive",
+        "excerpt": ""
+      },
+      "heuristic": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 15027,
+        "banner": "[router] strategy=heuristic → CLOUD (gpt-5.5) | conf=1.00 | heuristic[score=56.8 >=25? → cloud] uTok=63(+0.8) kw=4(+56)",
+        "excerpt": ""
+      },
+      "llm-classifier": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 15445,
+        "banner": "[router] strategy=llm-classifier → CLOUD (gpt-5.5) | conf=0.80 | llm-classifier(qwen3:0.6b): \"COMPLEX\" (357ms)",
+        "excerpt": ""
+      },
+      "embedding-knn": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 15273,
+        "banner": "[router] strategy=embedding-knn → CLOUD (gpt-5.5) | conf=1.00 | embedding-knn[k=5]: cloud=5/5 (w=3.49 vs 0.00) (262ms) — top: \"Design a multi-tenant authentication system with row-level s\"",
+        "excerpt": ""
+      },
+      "cascade": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 16688,
+        "banner": "[router] strategy=cascade → CLOUD (gpt-5.5) | conf=1.00 | cascade[trust-heuristic dist=31.8]: heuristic[score=56.8 >=25? → cloud] uTok=63(+0.8) kw=4(+56)",
+        "excerpt": ""
+      }
+    },
+    "complex-refactor": {
+      "always-local": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 8591,
+        "banner": "[router] strategy=always-local → LOCAL (qwen3-coder:30b) | conf=1.00 | control: always-local",
+        "excerpt": "# Zero-Downtime Migration: MySQL to PostgreSQL ## 1. Dual-Write Strategy ### Setup Phase ```sql -- Create PostgreSQL table with identical schema CREATE TABLE users ( id BIGINT PRIMARY KEY, username VARCHAR(255) NOT NULL, email VARCHAR(255) "
+      },
+      "always-cloud": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 11135,
+        "banner": "[router] strategy=always-cloud → CLOUD (gpt-5.5) | conf=1.00 | control: always-cloud",
+        "excerpt": ""
+      },
+      "rules": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 12649,
+        "banner": "[router] strategy=rules → CLOUD (gpt-5.5) | conf=0.65 | rules: kw[cloud]: plan,strategy",
+        "excerpt": ""
+      },
+      "heuristic": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 10674,
+        "banner": "[router] strategy=heuristic → CLOUD (gpt-5.5) | conf=0.58 | heuristic[score=28.9 >=25? → cloud] uTok=69(+0.9) kw=2(+28)",
+        "excerpt": ""
+      },
+      "llm-classifier": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 10774,
+        "banner": "[router] strategy=llm-classifier → CLOUD (gpt-5.5) | conf=0.80 | llm-classifier(qwen3:0.6b): \"COMPLEX\" (493ms)",
+        "excerpt": ""
+      },
+      "embedding-knn": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 10858,
+        "banner": "[router] strategy=embedding-knn → CLOUD (gpt-5.5) | conf=1.00 | embedding-knn[k=5]: cloud=5/5 (w=3.43 vs 0.00) (90ms) — top: \"Plan a zero-downtime migration of our user table from MySQL \"",
+        "excerpt": ""
+      },
+      "cascade": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 12392,
+        "banner": "[router] strategy=cascade → CLOUD (gpt-5.5) | conf=0.84 | cascade[agree dist=3.9, llm=cloud]: heuristic[score=28.9 >=25? → cloud] uTok=69(+0.9) kw=2(+28) | llm-classifier(qwen3:0.6b): \"COMPLEX\" (119ms)",
+        "excerpt": ""
+      }
+    },
+    "complex-perf": {
+      "always-local": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 8151,
+        "banner": "[router] strategy=always-local → LOCAL (qwen3-coder:30b) | conf=1.00 | control: always-local",
+        "excerpt": "I'll walk you through a systematic approach to diagnose this 15x latency regression. Here's my step-by-step methodology: ## Phase 1: Immediate Data Collection & Verification **1. Confirm the Regression** - Verify the timing: When exactly di"
+      },
+      "always-cloud": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 12052,
+        "banner": "[router] strategy=always-cloud → CLOUD (gpt-5.5) | conf=1.00 | control: always-cloud",
+        "excerpt": ""
+      },
+      "rules": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 12146,
+        "banner": "[router] strategy=rules → CLOUD (gpt-5.5) | conf=0.65 | rules: kw[cloud]: step by step",
+        "excerpt": ""
+      },
+      "heuristic": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 8045,
+        "banner": "[router] strategy=heuristic → LOCAL (qwen3-coder:30b) | conf=0.70 | heuristic[score=14.9 >=25? → local] uTok=71(+0.9) kw=1(+14)",
+        "excerpt": "I'll walk you through a systematic approach to diagnose this 15x latency regression. Here's my step-by-step methodology: ## Phase 1: Initial Assessment & Data Collection **1. Confirm the Regression** - Verify the timing: when exactly did it"
+      },
+      "llm-classifier": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 8079,
+        "banner": "[router] strategy=llm-classifier → LOCAL (qwen3-coder:30b) | conf=0.80 | llm-classifier(qwen3:0.6b): \"SIMPLE\" (124ms)",
+        "excerpt": "I'll walk you through a systematic approach to diagnose this 15x latency regression. Here's my step-by-step methodology: ## Phase 1: Initial Assessment & Data Collection **1. Confirm the Regression** - Verify the timeline: When exactly did "
+      },
+      "embedding-knn": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 11604,
+        "banner": "[router] strategy=embedding-knn → CLOUD (gpt-5.5) | conf=1.00 | embedding-knn[k=5]: cloud=5/5 (w=3.24 vs 0.00) (41ms) — top: \"Diagnose this performance regression: p99 latency went from \"",
+        "excerpt": ""
+      },
+      "cascade": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 8165,
+        "banner": "[router] strategy=cascade → LOCAL (qwen3-coder:30b) | conf=0.88 | cascade[agree dist=10.1, llm=local]: heuristic[score=14.9 >=25? → local] uTok=71(+0.9) kw=1(+14) | llm-classifier(qwen3:0.6b): \"SIMPLE\" (158ms)",
+        "excerpt": "I'll walk you through a systematic approach to diagnose this 15x latency regression. Here's my step-by-step methodology: ## Phase 1: Initial Assessment & Data Collection **1. Confirm the Regression** - Verify the timeline: When exactly did "
+      }
+    },
+    "complex-architecture": {
+      "always-local": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 8149,
+        "banner": "[router] strategy=always-local → LOCAL (qwen3-coder:30b) | conf=1.00 | control: always-local",
+        "excerpt": "# Streaming Ingestion Pipeline Architecture: Kafka vs Pulsar Comparison ## Overview This document presents a comprehensive comparison of two streaming ingestion pipeline architectures designed to handle 100k events/sec with at-least-once se"
+      },
+      "always-cloud": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 17147,
+        "banner": "[router] strategy=always-cloud → CLOUD (gpt-5.5) | conf=1.00 | control: always-cloud",
+        "excerpt": ""
+      },
+      "rules": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 16342,
+        "banner": "[router] strategy=rules → CLOUD (gpt-5.5) | conf=0.65 | rules: kw[cloud]: architect,compare,comprehensive",
+        "excerpt": ""
+      },
+      "heuristic": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 11940,
+        "banner": "[router] strategy=heuristic → CLOUD (gpt-5.5) | conf=1.00 | heuristic[score=57.0 >=25? → cloud] uTok=78(+1.0) kw=4(+56)",
+        "excerpt": ""
+      },
+      "llm-classifier": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 8425,
+        "banner": "[router] strategy=llm-classifier → LOCAL (qwen3-coder:30b) | conf=0.80 | llm-classifier(qwen3:0.6b): \"SIMPLE\" (208ms)",
+        "excerpt": "# Streaming Ingestion Pipeline Architecture: Kafka vs Pulsar Comparison ## Overview This document presents a comprehensive comparison of two streaming ingestion pipeline architectures designed to handle 100k events/sec with at-least-once se"
+      },
+      "embedding-knn": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 14725,
+        "banner": "[router] strategy=embedding-knn → CLOUD (gpt-5.5) | conf=1.00 | embedding-knn[k=5]: cloud=5/5 (w=3.43 vs 0.00) (39ms) — top: \"Architect a streaming ingestion pipeline that handles 100k e\"",
+        "excerpt": ""
+      },
+      "cascade": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 12198,
+        "banner": "[router] strategy=cascade → CLOUD (gpt-5.5) | conf=1.00 | cascade[trust-heuristic dist=32.0]: heuristic[score=57.0 >=25? → cloud] uTok=78(+1.0) kw=4(+56)",
+        "excerpt": ""
+      }
+    },
+    "long-context": {
+      "always-local": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 8656,
+        "banner": "[router] strategy=always-local → LOCAL (qwen3-coder:30b) | conf=1.00 | control: always-local",
+        "excerpt": "I'll help you refactor a large TypeScript file into three modules with clear boundaries and provide a migration sequence that keeps tests passing. Since you mentioned it's 800 lines with deep import graphs, I'll create a comprehensive examp"
+      },
+      "always-cloud": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 8750,
+        "banner": "[router] strategy=always-cloud → CLOUD (gpt-5.5) | conf=1.00 | control: always-cloud",
+        "excerpt": ""
+      },
+      "rules": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 11007,
+        "banner": "[router] strategy=rules → CLOUD (gpt-5.5) | conf=0.65 | rules: kw[cloud]: long",
+        "excerpt": ""
+      },
+      "heuristic": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 7796,
+        "banner": "[router] strategy=heuristic → LOCAL (qwen3-coder:30b) | conf=0.59 | heuristic[score=20.4 >=25? → local] uTok=508(+6.3) kw=1(+14)",
+        "excerpt": "I'll help you refactor a large TypeScript file into three modules with clear boundaries and provide a migration sequence that keeps tests passing. Since you mentioned it's 800 lines with deep import graphs, I'll create a realistic example t"
+      },
+      "llm-classifier": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 7969,
+        "banner": "[router] strategy=llm-classifier → LOCAL (qwen3-coder:30b) | conf=0.80 | llm-classifier(qwen3:0.6b): \"SIMPLE\" (159ms)",
+        "excerpt": "I'll help you refactor a large TypeScript file into three modules with clear boundaries and provide a migration sequence that keeps tests passing. Since you mentioned it's 800 lines with deep import graphs, I'll create a comprehensive examp"
+      },
+      "embedding-knn": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 7869,
+        "banner": "[router] strategy=embedding-knn → LOCAL (qwen3-coder:30b) | conf=0.58 | embedding-knn[k=5]: cloud=2/5 (w=1.27 vs 1.73) (67ms) — top: \"Review this 800-line file and suggest a refactor plan with c\"",
+        "excerpt": "I'll help you refactor a large TypeScript file into three modules with clear boundaries and provide a migration sequence that keeps tests passing. Since you mentioned it's 800 lines with deep import graphs, I'll provide a comprehensive appr"
+      },
+      "cascade": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 7952,
+        "banner": "[router] strategy=cascade → LOCAL (qwen3-coder:30b) | conf=0.85 | cascade[agree dist=4.6, llm=local]: heuristic[score=20.4 >=25? → local] uTok=508(+6.3) kw=1(+14) | llm-classifier(qwen3:0.6b): \"SIMPLE\" (123ms)",
+        "excerpt": "I'll help you refactor a large TypeScript file into three modules with clear boundaries and provide a migration sequence that keeps tests passing. Since you mentioned it's 800 lines with deep import graphs, I'll create a comprehensive examp"
+      }
+    },
+    "ambiguous-short": {
+      "always-local": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 968,
+        "banner": "[router] strategy=always-local → LOCAL (qwen3-coder:30b) | conf=1.00 | control: always-local",
+        "excerpt": "I'd be happy to help you fix something, but I don't see any specific issue or code in your message. Could you please provide more details about what you'd like me to fix? For example: - Are you referring to code that needs debugging? - Is t"
+      },
+      "always-cloud": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 2548,
+        "banner": "[router] strategy=always-cloud → CLOUD (gpt-5.5) | conf=1.00 | control: always-cloud",
+        "excerpt": "Sure — please paste what you want fixed, along with any error message or what the expected behavior is."
+      },
+      "rules": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 1025,
+        "banner": "[router] strategy=rules → LOCAL (qwen3-coder:30b) | conf=0.60 | rules: default-local (tokens=2, codeBlocks=0)",
+        "excerpt": "I'd be happy to help you fix something, but I don't see any specific issue or code in your message. Could you please provide more details about what you'd like me to fix? For example: - Are you referring to code that needs debugging? - Is t"
+      },
+      "heuristic": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 926,
+        "banner": "[router] strategy=heuristic → LOCAL (qwen3-coder:30b) | conf=1.00 | heuristic[score=0.0 >=25? → local] uTok=2(+0.0)",
+        "excerpt": "I'd be happy to help you fix something, but I don't see any specific issue or code in your message. Could you please provide more details about what you'd like me to fix? For example: - Are you referring to code that needs debugging? - Is t"
+      },
+      "llm-classifier": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 1072,
+        "banner": "[router] strategy=llm-classifier → LOCAL (qwen3-coder:30b) | conf=0.80 | llm-classifier(qwen3:0.6b): \"SIMPLE\" (127ms)",
+        "excerpt": "I'd be happy to help you fix something, but I don't see any specific issue or code in your message. Could you please provide more details about what you'd like me to fix? For example: - Are you referring to code that needs debugging? - Is t"
+      },
+      "embedding-knn": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 2587,
+        "banner": "[router] strategy=embedding-knn → CLOUD (gpt-5.5) | conf=0.81 | embedding-knn[k=5]: cloud=4/5 (w=2.19 vs 0.52) (55ms) — top: \"Explain why this React component re-renders on every keystro\"",
+        "excerpt": "Sure — what would you like me to fix? Please send the text, code, error message, or file contents, and tell me what’s wrong or what you want changed."
+      },
+      "cascade": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 1086,
+        "banner": "[router] strategy=cascade → LOCAL (qwen3-coder:30b) | conf=1.00 | cascade[trust-heuristic dist=25.0]: heuristic[score=0.0 >=25? → local] uTok=2(+0.0)",
+        "excerpt": "I'd be happy to help you fix something, but I don't see any specific issue or code in your message. Could you please provide more details about what you'd like me to fix? For example: - Are you referring to a specific piece of code? - What "
+      }
+    },
+    "tools-heavy": {
+      "always-local": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 5994,
+        "banner": "[router] strategy=always-local → LOCAL (qwen3-coder:30b) | conf=1.00 | control: always-local",
+        "excerpt": "I'll help you find the 5 largest files in the src/ directory, count their imports, and provide a summary. Here's the solution: ```bash # Find the 5 largest files in src/ and count imports find src/ -type f -name \"*.js\" -o -name \"*.ts\" -o -n"
+      },
+      "always-cloud": {
+        "ok": true,
+        "status": 200,
+        "choice": "cloud",
+        "backend": "gpt-5.5",
+        "elapsed": 10551,
+        "banner": "[router] strategy=always-cloud → CLOUD (gpt-5.5) | conf=1.00 | control: always-cloud",
+        "excerpt": "I can’t access the filesystem or run shell commands in this API session because no shell/tool interface is exposed to me. If you run this from the repo root, it will list the 5 largest files under `src/`, count likely import statements in e"
+      },
+      "rules": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 7398,
+        "banner": "[router] strategy=rules → LOCAL (qwen3-coder:30b) | conf=0.60 | rules: default-local (tokens=29, codeBlocks=0)",
+        "excerpt": "I'll help you find the 5 largest files in the src/ directory, count their imports, and provide a summary. Here's the solution using shell tools: ```bash # Find the 5 largest files in src/ and count imports find src/ -type f -name \"*.js\" -o "
+      },
+      "heuristic": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 7852,
+        "banner": "[router] strategy=heuristic → LOCAL (qwen3-coder:30b) | conf=0.99 | heuristic[score=0.4 >=25? → local] uTok=29(+0.4)",
+        "excerpt": "I'll help you find the 5 largest files in the src/ directory, count their imports, and provide a summary. Here's the solution using shell tools: ```bash # Find the 5 largest files in src/ and count imports find src/ -type f -name \"*.js\" -o "
+      },
+      "llm-classifier": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 6400,
+        "banner": "[router] strategy=llm-classifier → LOCAL (qwen3-coder:30b) | conf=0.80 | llm-classifier(qwen3:0.6b): \"SIMPLE\" (390ms)",
+        "excerpt": "I'll help you find the 5 largest files in the src/ directory, count their imports, and provide a summary. Here's the solution using shell tools: ```bash # Find the 5 largest files in src/ and count imports find src/ -type f -name \"*.py\" -ex"
+      },
+      "embedding-knn": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 8003,
+        "banner": "[router] strategy=embedding-knn → LOCAL (qwen3-coder:30b) | conf=0.61 | embedding-knn[k=5]: cloud=2/5 (w=1.15 vs 1.80) (144ms) — top: \"Sort the imports alphabetically\"",
+        "excerpt": "I'll help you find the 5 largest files in the src/ directory, count their imports, and provide a summary. Here's the solution using shell tools: ```bash # Find the 5 largest files in src/ and count imports find src/ -type f -name \"*.js\" -o "
+      },
+      "cascade": {
+        "ok": true,
+        "status": 200,
+        "choice": "local",
+        "backend": "qwen3-coder:30b",
+        "elapsed": 7038,
+        "banner": "[router] strategy=cascade → LOCAL (qwen3-coder:30b) | conf=0.99 | cascade[trust-heuristic dist=24.6]: heuristic[score=0.4 >=25? → local] uTok=29(+0.4)",
+        "excerpt": "I'll help you find the 5 largest files in the src/ directory, count their imports, and provide a summary. Here's the solution using shell tools: ```bash # Find the 5 largest files in src/ and count imports find src/ -type f -name \"*.js\" -o "
+      }
+    }
+  }
+}

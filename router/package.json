@@ -1,0 +1,12 @@
+{
+  "name": "opencode-hybrid-router",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "OpenAI-compatible hybrid local/cloud router proxy for opencode. Multiple routing strategies, decision logging, zero deps.",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node test/run-tests.mjs"
+  }
+}
