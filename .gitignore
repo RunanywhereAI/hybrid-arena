@@ -11,3 +11,7 @@ results/latest
 _run.log
 _run.pid
 # keep research reports (they are the artefact)
+
+# External reference clones — treated as read-only vendored deps, not git-tracked
+EXTERNAL/minions/
+EXTERNAL/*/.git/
