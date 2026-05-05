@@ -1,0 +1,12 @@
+# Python dependencies for the eval harness.
+# T0.1 (pricing module + parity tests) only needs pytest; the rest are
+# listed so `pip install -r requirements.txt` gives a working environment
+# for the later tasks (runners, scorers, aggregation).
+
+pytest>=8.3,<9
+pandas>=2.2,<3
+httpx>=0.27,<1
+docker>=7.1,<8
+tiktoken>=0.8,<1
+openai>=1.50,<2
+anthropic>=0.40,<1
