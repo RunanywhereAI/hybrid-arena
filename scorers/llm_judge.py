@@ -307,13 +307,17 @@ def _call_anthropic(
     import anthropic  # local import so import-time has no hard dep
 
     client = anthropic.Anthropic(api_key=api_key)
-    resp = client.messages.create(
-        model=model,
-        max_tokens=max_tokens,
-        temperature=temperature,
-        system=system,
-        messages=[{"role": "user", "content": user}],
-    )
+    kwargs: dict[str, Any] = {
+        "model": model,
+        "max_tokens": max_tokens,
+        "system": system,
+        "messages": [{"role": "user", "content": user}],
+    }
+    # Claude 4 reasoning models (opus-4-*, sonnet-4-*) deprecated
+    # `temperature` in favor of default sampling. Pre-4 models accept it.
+    if not any(tag in model for tag in ("opus-4", "sonnet-4", "haiku-4")):
+        kwargs["temperature"] = temperature
+    resp = client.messages.create(**kwargs)
     chunks: list[str] = []
     for block in resp.content or []:
         # The SDK returns ``TextBlock`` instances; each has ``.text``.
