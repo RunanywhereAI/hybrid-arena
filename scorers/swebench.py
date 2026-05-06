@@ -202,7 +202,15 @@ def _find_report(run_id: str, cwd: Path) -> dict | None:
 
 
 def _resolved_from_report(report: dict | None, instance_id: str) -> bool | None:
-    """Return True/False/None from a harness report for ``instance_id``."""
+    """Return True/False/None from a harness report for ``instance_id``.
+
+    ``error_ids`` in v2 summaries covers both infra errors *and* things like
+    "patch failed to apply" or test-execution failures. For grading purposes
+    we treat error_ids as FAIL (matching the SWE-bench leaderboard
+    convention) once we know the harness itself ran successfully (i.e. a
+    summary was produced). True harness-failed-to-run cases surface as
+    returncode != 0 upstream and never reach this function's happy path.
+    """
     if not report:
         return None
     if instance_id in report.get("resolved_ids", []):
@@ -210,13 +218,14 @@ def _resolved_from_report(report: dict | None, instance_id: str) -> bool | None:
     if instance_id in report.get("unresolved_ids", []):
         return False
     if instance_id in report.get("error_ids", []):
-        # The harness errored on this instance — caller should treat as
-        # "unknown", not "failed".
-        return None
+        # Patch-apply failed or instance-level run error. This IS a model
+        # failure per leaderboard convention.
+        return False
+    if instance_id in report.get("empty_patch_ids", []):
+        return False
     # Per-instance report format.
     if "resolved" in report:
         return bool(report["resolved"])
-    # Some harness versions nest per-instance results by instance_id.
     inst = report.get(instance_id)
     if isinstance(inst, dict) and "resolved" in inst:
         return bool(inst["resolved"])

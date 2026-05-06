@@ -116,11 +116,14 @@ def _load_dotenv_once() -> None:
 def _resolve_api_key(explicit: str | None) -> str:
     if explicit:
         return explicit
-    if "ANTHROPIC_API_KEY" not in os.environ:
-        _load_dotenv_once()
-    key = os.environ.get("ANTHROPIC_API_KEY")
+    _load_dotenv_once()
+    # Prefer Anthropic if present; otherwise fall back to OpenAI (the judge
+    # routes through either provider depending on model id — see
+    # _call_judge). Tests and CI normally set ANTHROPIC_API_KEY; local runs
+    # may only have OPEN_AI_API_KEY.
+    key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("OPEN_AI_API_KEY")
     if not key:
-        raise RuntimeError("ANTHROPIC_API_KEY not set")
+        raise RuntimeError("neither ANTHROPIC_API_KEY nor OPEN_AI_API_KEY is set")
     return key
 
 
@@ -320,6 +323,72 @@ def _call_anthropic(
     return "\n".join(chunks).strip()
 
 
+def _call_openai(
+    *,
+    api_key: str,
+    model: str,
+    system: str,
+    user: str,
+    temperature: float,
+    max_tokens: int,
+) -> str:
+    import httpx
+
+    url = "https://api.openai.com/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    body: dict[str, Any] = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        "max_completion_tokens": max_tokens,
+    }
+    # gpt-5 / gpt-5.5 only support default temperature; older models accept
+    # explicit temperature.
+    if not model.startswith("gpt-5"):
+        body["temperature"] = temperature
+    resp = httpx.post(url, headers=headers, json=body, timeout=300)
+    resp.raise_for_status()
+    data = resp.json()
+    choice = (data.get("choices") or [{}])[0]
+    content = (choice.get("message") or {}).get("content") or ""
+    return content.strip()
+
+
+def _call_judge(
+    *,
+    api_key: str,
+    model: str,
+    system: str,
+    user: str,
+    temperature: float,
+    max_tokens: int,
+) -> str:
+    """Dispatch judge call by model id prefix."""
+    is_openai = model.startswith("gpt-") or model.startswith("o1") or model.startswith("o3")
+    if is_openai:
+        return _call_openai(
+            api_key=api_key,
+            model=model,
+            system=system,
+            user=user,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+    return _call_anthropic(
+        api_key=api_key,
+        model=model,
+        system=system,
+        user=user,
+        temperature=temperature,
+        max_tokens=max_tokens,
+    )
+
+
 # --------------------------------------------------------------------------- #
 # public API
 # --------------------------------------------------------------------------- #
@@ -357,7 +426,7 @@ def judge_pairwise(
     key = _resolve_api_key(api_key)
 
     # Ordering 1: A first, B second.
-    raw_ab = _call_anthropic(
+    raw_ab = _call_judge(
         api_key=key,
         model=judge_model,
         system=_SYSTEM_PROMPT,
@@ -369,7 +438,7 @@ def judge_pairwise(
 
     # Ordering 2: B first, A second. ``winner`` in this ordering's frame of
     # reference is inverted before averaging.
-    raw_ba = _call_anthropic(
+    raw_ba = _call_judge(
         api_key=key,
         model=judge_model,
         system=_SYSTEM_PROMPT,

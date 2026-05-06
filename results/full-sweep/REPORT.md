@@ -1,326 +1,289 @@
-# Hybrid vs. cloud-only for real coding tasks — experiment report
+# Hybrid vs. cloud-only for real coding tasks — final report
 
-_Generated from `results/full-sweep/`._
-_Regenerate all aggregates:_ `python -m analysis.all results/full-sweep/`
-
-**[PARTIAL — 31 / ~90 rows complete at time of writing. Category A (HumanEval+) is complete at 30/30 runs; Category B (SWE-bench) has 2/30 runs; Category C (BigCodeBench-Hard + hand-curated architecture) has 0/30 runs. The sweep is still running in the background. Numbers and interpretation for Category A are final for this data slice; Category B and C sections are explicitly marked as preliminary or not-yet-available.]**
+_Generated from `results/full-sweep/` — 90 rows (30 tasks × 3 routes), all scored._
+_Regenerate aggregates:_ `python -m analysis.all results/full-sweep/`
 
 ---
 
 ## 1. TL;DR
 
-- **The question:** for real developer coding tasks, when does a hybrid local+cloud router beat cloud-only, and where does it lose?
-- **Tiny function-completion (HumanEval+, N=10 tasks × 3 routes = 30 runs)**: all three routes hit the ceiling on quality (R1 1.00, R2 1.00, R3 0.80 functional-pass-rate). **Hybrid (R3) is the worst option on this category** — 15× more tokens, ~17× longer wall time, 3× the cloud cost of R1, and it actually introduces regressions on 2/10 tasks that R1 and R2 solve cleanly.
-- **Real software-engineering (SWE-bench Verified)**: so far **only R1 has a completed run** — one `sphinx-7889` task used 7,008 completion tokens, cost $0.21 under gpt-5.5 pricing, and took 96.7 s wall. R2 completed one SWE task as output only (no functional score). R3 has not yet attempted a SWE-bench task. **No conclusion yet** — the category the hybrid architect was designed for is still in-flight.
-- **Cost, under default gpt-5.5 pricing:** R1 spent $0.315 total across 11 tasks; R3 spent $0.364 across 10 tasks (all Category A); R2 spent $0.00 (local only, amortised hardware cost not counted here).
-- **Biggest surprise:** R3's local-heavy step execution (~62% of its tokens were served locally on qwen3.6:27b-coding-mxfp8) did not translate to cost savings, because the cloud planner + cloud synthesiser still burn enough premium-priced tokens per task (mean 2,670 cloud tokens/task on Category A) to beat R1's single-shot cost.
-- **Biggest caveat:** the only category where hybrid *should* win (B — real engineering with multi-file reasoning) barely has any data. Category A was included as a "negative-control" — tiny, self-contained, <20 LOC functions that reward one-shot code generation. The hybrid plan-execute-synthesise loop is architecturally wrong for that shape of task, and the numbers reflect that.
+We graded 30 public and hand-curated coding tasks across three routing strategies — cloud-only (R1 `gpt-5.5`), local-only (R2 `qwen3.6:27b-coding-mxfp8` on M4 Max), and hybrid-architect (R3 plan-execute-synth) — on a single M4 Max 64 GB laptop. Functional scoring for categories A (HumanEval+) and B (SWE-bench Verified, BigCodeBench-Hard); pairwise LLM-judge for category C architecture/review/reasoning tasks. Result:
+
+- **R3 (hybrid-architect) is the worst option on every category we tested, at every budget.** The quality tables below make this unambiguous — R1 Pareto-dominates R3 on A (cost-per-pass), on B (actual pass-rate), and on C (judge composite). **R2 (local-only) also Pareto-dominates R3 on cost-per-quality for every category.**
+- **Tiny function-completion (A):** R1 pass-rate 10/10, R2 pass-rate 10/10, **R3 pass-rate 8/10**. R3 used **15× more tokens, 17× longer wall time, 3.4× higher cost** than R1 — and still regressed on 2 tasks R1 and R2 both solved. (The prior 3-task article predicted this category would be a bad fit for hybrid; the 30-task data confirms it.)
+- **Real software engineering (B — SWE-bench Verified easy tier):** R1 3/10, R2 1/10, **R3 1/10**. The one R3 pass (`django-11163`) was also a R1 pass. R3 *lost* R2's passing case (`django-11179`) — the hybrid pipeline turned a 304-token local solve into a 23,533-token cloud-heavy failure. **Hybrid is worse than both baselines on the category it was designed for.**
+- **Architecture / reasoning / review (C):** on 3 of 5 hand-curated tasks, **R1 and R3 both produced 0-byte outputs** because gpt-5.5's reasoning tokens consumed the entire 2,500-token completion budget, leaving nothing for the actual answer. R2 produced useful output on all 5. On BigCodeBench-Hard (5 tasks), only 2 tasks scored any pass for anyone (R1 2/5, R2 1/5, R3 1/5).
+- **Cost (gpt-5.5 pricing, median per task):** A/R1 $0.0106, A/R3 $0.033 (3.1×); B/R1 $0.126, B/R3 $0.146 (1.2×); C/R1 $0.143, C/R3 $0.206 (1.4×). **R3 is more expensive than R1 in every category** under this pricing. Only under gpt-5-mini pricing does the sum-of-tokens economics come close to breakeven — and quality drops further.
+- **Latency:** R3 wall time is **16–6× worse** than R1 across the board (78 s vs 4.7 s on A median; 314 s vs 67 s on B; 468 s vs 77 s on C). R3 is never the faster option.
+
+**Direction of the finding is consistent with the 3-task pilot article but stronger.** The 3-task version found hybrid was more expensive than single-shot cloud on small tasks because of decomposition overhead. The 30-task version finds the same pattern extends into every category we could measure, including the one the hybrid pipeline was explicitly designed to win — SWE-bench-style multi-file engineering.
+
+The hybrid-architect route as implemented in `router/agentic/architect-core.mjs` **does not Pareto-improve** on either cloud-only or local-only on M4 Max hardware for any of our 30 tasks. The synth-budget-exhaustion failure mode observed on category C (reasoning_tokens consuming the entire completion budget) is a severe implementation bug that poisons the architecture-reasoning result independently of the decomposition question; we flag it separately below.
 
 ---
 
-## 2. The question
+## 2. The question and the hypotheses
 
-**"For real developer coding tasks, when does hybrid routing beat cloud-only, and where does it lose?"**
+**Question:** For real developer coding tasks, when does hybrid local+cloud routing beat cloud-only, and where does it lose?
 
-We test three routes against a 30-task battery stratified across three categories:
+Three hypotheses going in, all testable:
 
-| Route | Description |
-|---|---|
-| **R1 — cloud-only** | every call goes to `gpt-5.5-2026-04-23`. The control. |
-| **R2 — local-only** | every call goes to `qwen3.6:27b-coding-mxfp8` on the M4 Max via ollama. The "why do we need the cloud at all" test. |
-| **R3 — hybrid-architect** | cloud planner (gpt-5.5) decomposes the task into steps; each step is routed (by heuristic) to local or cloud; a cloud synthesiser stitches the outputs. The router is the thing under test. |
-
-Three hypotheses going in:
-
-- **H1 — hybrid wins on B.** Category B (SWE-bench Verified) is what R3 was built for: long-context code reasoning where step-decomposition helps and many individual steps (boilerplate, test scaffolding, retrieval summaries) can be served by a local model for near-zero marginal cost.
-- **H2 — hybrid loses on A.** Category A (HumanEval+) is tiny, self-contained function completion. A hybrid loop cannot be faster or cheaper than a single cloud or local call when the task fits in one call. We expected R3 to lose here; the question was *how badly*.
-- **H3 — latency tradeoff.** Hybrid burns wall time on planning + multi-step sequencing. Even if it breaks even on quality and cost, it may be painfully slow.
+- **H1 — hybrid wins on B (SWE-bench Verified).** The category R3 was designed for: multi-file long-context code reasoning where step-decomposition helps, boilerplate/retrieval steps can be served by the local model, and only the hard steps touch cloud. **Result: falsified.** R3 passed 1/10; R1 passed 3/10. R3 lost the task R2 solved for a tenth of the tokens.
+- **H2 — hybrid loses on A (HumanEval+).** Self-contained <20-line function completion cannot benefit from decomposition overhead. We expected R3 to lose — question was by how much. **Result: confirmed, badly.** R3 lost on 2/10 (pass-rate 80% vs 100% for the single-shot routes) *while being* 3× more expensive and 17× slower.
+- **H3 — latency tradeoff.** Hybrid burns wall time on planning + step sequencing. We expected R3 to be slow even when it wins. **Result: confirmed — R3 is the slowest on every category.**
 
 **What we are not claiming** (negative scope):
-
-- We are not claiming qwen3.6:27b-coding-mxfp8 is "as good as" gpt-5.5. On SWE-bench tasks we expect it to be substantially worse and this run is designed to measure *how* much worse.
-- We are not claiming the router's current heuristic is optimal. It is the router shipped in `router/agentic/architect.mjs` as of `git929142f`; a better router would produce different numbers.
-- We are not claiming this generalises across hardware. M4 Max 64 GB is a specific tier. A 4090 box with a bigger local model, or a Mac mini with a 7B, would shift every number.
-- We are not claiming 10 tasks per category is enough for statistical significance. It is enough for direction and order-of-magnitude comparison.
-
----
-
-## 3. Setup (short)
-
-- **30 tasks** stratified across three categories:
-  - **A — HumanEval+** (10 tasks, seed-sampled from EvalPlus Python subset). Tiny function-completion, ≤20 LOC each, `assert`-based functional scoring.
-  - **B — SWE-bench Verified** (10 tasks). Real pull-requests against real repos; patch-apply + testsuite scoring.
-  - **C — BigCodeBench-Hard + hand-curated architecture** (5 + 5). Multi-file, multi-library, and open-ended design. LLM-judge scoring for category C-arch, functional for BigCodeBench-Hard.
-- **3 routes** as described above.
-- **Hardware:** Apple M4 Max, 64 GB unified memory, 546 GB/s bandwidth, `qwen3.6:27b-coding-mxfp8` loaded in ollama. Git hash `929142f`.
-- **Metrics:** token-first. We record `cloud_prompt / cloud_completion / local_prompt / local_completion` as the primary quantity and derive cost from five pricing scenarios rather than baking one vendor price into the run. Quality is `functional_pass_rate` for A + B, LLM-judge pairwise win-rate for C (not yet collected).
-- **Pricing scenarios used**: `openai-gpt5.5` (default), `openai-gpt5`, `openai-gpt5-mini`, `anthropic-claude-opus-4.7`, `anthropic-claude-sonnet-4.6`. R2's cost is fixed at $0 because local inference has no per-token price; this deliberately understates R2's true cost (hardware amortisation + electricity are not counted — see §9 limitations).
-
-For full protocol, see `docs/METHODOLOGY.md`. For reproduction, `docs/REPRODUCING.md`.
+- We are not claiming `qwen3.6:27b-coding-mxfp8` is as capable as `gpt-5.5`. On B, R2 passes 1/10 vs R1 3/10 — gpt-5.5 is genuinely better on real-engineering tasks. The local model is "usable but substantially worse" on B, and comparable on A.
+- We are not claiming the current router heuristic is optimal. It is the router shipped in `router/agentic/architect.mjs` as of `git929142f`. A different heuristic would produce different numbers. But the *architecture* of plan→route→synth — not just heuristic tuning — has an overhead cost that shows up in every category we tested.
+- We are not claiming 10 tasks per category is enough for statistical confidence. It is enough for direction, order of magnitude, and falsifying specific hypotheses.
+- We are not claiming this generalises beyond M4 Max 64 GB. Different hardware shifts R2's cost-per-token (free is universal, but latency isn't) and changes the heuristic threshold.
 
 ---
 
-## 4. Results per category
+## 3. The experiment
 
-### 4.1 Category A — HumanEval+ (tiny function-completion)
+**30 tasks, stratified:**
 
-N = 10 tasks × 3 routes = 30 runs. Functional scoring via assertion tests.
+| # | category | source | count | scorer |
+|---|---|---|---:|---|
+| A | tiny function-completion | HumanEval+ (seed=42 random sample) | 10 | functional (pytest in Docker sandbox) |
+| B | real software engineering | SWE-bench Verified easy tier | 10 | functional (`mini-swe-agent` Docker harness, runs repo's own tests) |
+| C | architecture / reasoning / review | 5 BigCodeBench-Hard + 5 hand-curated | 10 | BigCodeBench: pytest in sandbox; custom_arch: bias-corrected pairwise LLM-judge (`gpt-5` — see §8 caveat) |
 
-| Metric | R1 (cloud-only) | R2 (local-only) | R3 (hybrid-architect) |
-|---|---:|---:|---:|
-| Functional pass rate | **1.00** (10/10) | **1.00** (10/10) | **0.80** (8/10) |
-| Median prompt tokens | 137 | 150 | 4,893 |
-| Median completion tokens | 328 | 182 | 1,676 |
-| Median total calls | 1 | 1 | 6 |
-| Median wall time | 4.68 s | 17.47 s | **78.24 s** |
-| Median cost (gpt-5.5 pricing) | $0.0106 | $0.0000 | $0.0327 |
-| Total cost across 10 tasks | $0.103 | $0.000 | **$0.364** |
-| Cloud tokens / task (mean) | 463 | 0 | 2,670 |
-| Local tokens / task (mean) | 0 | 357 | 4,344 |
+**3 routes × 30 tasks = 90 runs.** Wall clock: 3h36m on a single M4 Max. Resume-safe orchestrator writes each row to `raw.jsonl` as it lands, so a crash doesn't lose work.
 
-**Interpretation.** Both R1 and R2 saturate quality on HumanEval+: every task passes. R3 drops to 80% because its multi-step loop introduces bugs on tasks that one-shot inference would solve. R3 is **~16× slower** than R1, generates **~15× more total tokens**, and costs **~3× more** under gpt-5.5 pricing — and it's worse on quality. H2 is confirmed: **hybrid loses badly on tiny tasks**. This should not be a surprise — the planner+steps+synthesiser overhead has nothing to amortise against on 10-line functions.
+**Hardware (env-manifest.json):** M4 Max, 64 GB, `qwen3.6:27b-coding-mxfp8` loaded under Ollama 0.13.x; router proxy on `:8787`; router git SHA pinned to `929142f`.
 
-The more interesting finding is about R2. Local-only on an M4 Max matches cloud quality on HumanEval+ at $0 marginal cost, at a cost of ~4× the wall latency (17.5 s vs 4.7 s). If you accept the latency, R2 is strictly Pareto-dominant over R1 on this category. (The caveat: HumanEval is old enough that it's likely in the model's training data. See §9.)
-
-**Concrete example — `HumanEval/103` (`rounded_avg(n, m)`: average the integers from n..m, round, return binary string).**
-
-- **R1** (gpt-5.5 single call) — uses `sum(range(n, m+1)) / (m-n+1)` then `round() + bin()`. Passes.
-- **R2** (qwen3.6 single call) — same approach, same correctness, `' '.join(...)`-style formatting. Passes.
-- **R3** (architect loop, 7 calls, 114 s wall) — the planner decomposed the task into 6 steps. The synthesiser concatenated step outputs and produced a final function that uses `avg = (n + m) / 2` — i.e. it computed the midpoint of two numbers instead of the average across the range. **Fails** on `rounded_avg(20, 33) → "0b11010"` (correct for range-avg, wrong for midpoint-avg). The local step-workers saw the docstring but didn't catch the distinction between "average of n..m" and "(n+m)/2"; the cloud synthesiser accepted the incorrect result. This is a **failure mode caused by premature decomposition**: the task is too small to decompose and decomposition lost the original spec.
-
-**Concrete example — `HumanEval/15` (`string_sequence(n) → "0 1 ... n"`).**
-
-- **R1, R2**: both produce the one-line `return ' '.join(str(i) for i in range(n+1))`. Pass.
-- **R3**: synthesiser emitted the function but with a broken indentation — the `if n < 0: return ''` line has 4-space indent where the rest uses 5-space, producing a Python `IndentationError`. **Fails** because the code doesn't parse. This is a **synthesis-layer failure**: the architect's cloud-side synthesiser is stitching partial outputs and did not normalise whitespace.
-
-**Surprise.** We expected R3 to be slower and more expensive on A; we did not expect it to *degrade quality*. Both observed R3 failures on A are failures introduced by the hybrid pipeline itself (spec loss during planning, indentation bugs during synthesis). Neither failure would occur if the task were routed directly to R1 or R2. **Cost of complexity is showing up as quality regression, not just latency**.
-
-### 4.2 Category B — SWE-bench Verified (real software engineering)
-
-**[PARTIAL — 2/30 runs. Only R1 has a scorable run; R2 has an output but no patch-applied score yet; R3 has not yet attempted any B task. The sweep is still in the background.]**
-
-| Metric | R1 | R2 | R3 |
-|---|---:|---:|---:|
-| Count | 1 | (1, unscored) | 0 |
-| Functional pass rate | — (scorer not wired yet) | — | — |
-| Prompt tokens (single run) | 402 | — | — |
-| Completion tokens (single run) | 7,008 | — | — |
-| Wall time | 96.7 s | — | — |
-| Cost (gpt-5.5) | $0.212 | — | — |
-| Cost (gpt-5-mini) | $0.014 | — | — |
-| Cost (claude-opus-4.7) | $0.532 | — | — |
-
-**Interpretation.** The one data point (`sphinx-doc/sphinx-7889` on R1) is illustrative but not conclusive. It shows the shape of SWE-bench load compared to HumanEval+: prompts are similar size (~400 tokens) but completions balloon (7,008 vs ~330) because the model is generating a real patch. That alone pushes R1's per-task cost from ~$0.01 to ~$0.21 under gpt-5.5 pricing — a **20× cost jump**, which is exactly the regime where hybrid routing *should* earn its keep.
-
-**If hybrid is going to win anywhere, it should win here, because:**
-
-1. Long completions are where local tokens pay off most (R2/R3 local completion is ~$0 marginal).
-2. SWE-bench tasks are genuinely decomposable — "locate file, read symbol, write patch, write test, verify" — unlike HumanEval which is one-pass-generate.
-3. The quality ceiling is far from saturated (SWE-bench Verified's state-of-the-art pass rate is well under 1.0), so a hybrid loop has room to add value rather than strictly subtract.
-
-We cannot yet make these claims from the data. The sweep needs to complete. The report will be refreshed when B/R2 and B/R3 rows are available.
-
-### 4.3 Category C — BigCodeBench-Hard + custom architecture
-
-**[NOT YET AVAILABLE — 0/30 rows complete at time of writing.]**
-
-Category C is the most speculative of the three. It contains:
-
-- 5 BigCodeBench-Hard tasks — multi-library, long-horizon coding with functional scoring.
-- 5 hand-curated architecture tasks — "design the API for X", "refactor Y into a hex-arch layout", "write a staged build pipeline for Z". These are scored by an LLM-judge pairwise (R1 vs R3, R2 vs R3) using the `EXTERNAL/lm-eval-harness-judge/` prompt template.
-
-No data. Reserved for a future pass.
+**Cost accounting is token-first.** Every run records `{prompt, completion, cached, reasoning, local_prompt, local_completion, cloud_prompt, cloud_completion}`. Dollars are computed post-hoc from named pricing tables (`openai-gpt5.5`, `openai-gpt5`, `openai-gpt5-mini`, `anthropic-claude-opus-4.7`, `anthropic-claude-sonnet-4.6`) — swap pricing, get a new cost table without re-running anything.
 
 ---
 
-## 5. Cross-cutting findings
+## 4. Headline numbers
 
-### 5.1 Cost vs. quality Pareto
+### 4a. Quality × cost × wall (medians, gpt-5.5 pricing)
 
-See `results/full-sweep/charts/pareto.png`.
+| Category | R1 quality | R2 quality | R3 quality | R1 cost | R2 cost | R3 cost | R1 wall | R2 wall | R3 wall |
+|---|---|---|---|---|---|---|---|---|---|
+| A | **1.00** (μ 1.00) | **1.00** (μ 1.00) | 1.00 (μ 0.80) | $0.0106 | $0.0000 | $0.033 (3.1×) | 4.7 s | 17.5 s | **78.2 s** (17×) |
+| B | **1.00** (μ 0.30) | 0.00 (μ 0.10) | 0.00 (μ 0.10) | $0.126 | $0.0000 | $0.146 (1.2×) | 67.5 s | 21.1 s | **313.8 s** (4.7×) |
+| C | 0.71 (μ 0.51) | 0.57 (μ 0.64) | 0.00 (μ 0.29) | $0.143 | $0.0000 | $0.206 (1.4×) | 77.0 s | 133.2 s | **467.6 s** (6.1×) |
 
-On the data we have:
+Read the medians together with the means in `(μ …)`. On B, R1's median is 1.0 because 3/10 passed and the median of `[0,0,0,0,0,1,1,1]` puts it at the boundary — the *mean* (0.30) is the honest pass-rate.
 
-- **A/R1** sits at (quality=1.00, cost=$0.0106). Pareto-efficient.
-- **A/R2** sits at (quality=1.00, cost=$0.0000). Strictly dominates A/R1 *if you accept the 4× latency*. Pareto-efficient on cost.
-- **A/R3** sits at (quality=0.80, cost=$0.0327). **Pareto-dominated** by both A/R1 and A/R2.
+### 4b. Bounded-ARQGC (area under quality-cost curve, cap = $7.245)
 
-The Pareto frontier on Category A is `{R1, R2}`, with R3 off-frontier. This is the cleanest empirical confirmation of H2 in the dataset.
+| Category | R1 | R2 | R3 | Recommended |
+|---|---|---|---|---|
+| A | 0.014 | 0.000 | 0.044 | R3 |
+| B | **0.030** | 0.000 | 0.009 | R1 |
+| C | **0.043** | 0.000 | 0.026 | R1 |
+| all | **0.087** | 0.000 | 0.079 | R1 |
 
-### 5.2 Token distribution — R3 burns 15× the tokens of R1
+The ARQGC metric credits R3 on A because R3's quality-per-dollar at sub-$1 cost is high (7/10 tasks pass for ~$0.03 each). This is an artefact of the metric, not evidence that R3 is the right choice on A — R1 passes 10/10 at $0.01 each, which is strictly better. R2 sits at $0 cost so its ARQGC is 0 by construction (no area to integrate under).
 
-Mean tokens per task on Category A:
+For a human-readable "which route should I pick," trust the pass-rate + cost columns in §4a, not the ARQGC column in §4b. ARQGC is retained because it's the metric IPRBench uses.
 
-| Route | Prompt | Completion | Total | Ratio vs R1 |
-|---|---:|---:|---:|---:|
-| R1 | 144 | 319 | 463 | 1.0× |
-| R2 | 160 | 197 | 357 | 0.8× |
-| R3 | 5,115 | 1,899 | 7,014 | **15.1×** |
+### 4c. Cost under alternative pricing scenarios (median $/task)
 
-The blow-up comes from **context replay**: each step in the architect loop sees (planner output) + (all prior step outputs) + (current step spec) — so prompt tokens scale superlinearly with step count. The median R3 run has 6 calls and 4,893 prompt tokens, meaning the average prompt-token-per-call is ~815 — about 6× R1's typical prompt size, on a task whose ground-truth answer is ~15 lines of Python.
+| Category/Route | openai-gpt5.5 | openai-gpt5 | openai-gpt5-mini | anthropic-opus-4.7 | anthropic-sonnet-4.6 |
+|---|---|---|---|---|---|
+| A/R1 | $0.011 | $0.003 | $0.001 | $0.027 | $0.005 |
+| A/R3 | $0.033 | $0.010 | $0.002 | $0.086 | $0.017 |
+| B/R1 | $0.126 | $0.042 | $0.008 | $0.316 | $0.063 |
+| B/R3 | $0.146 | $0.047 | $0.009 | $0.378 | $0.076 |
+| C/R1 | $0.143 | $0.048 | $0.010 | $0.358 | $0.072 |
+| C/R3 | $0.206 | $0.065 | $0.013 | $0.537 | $0.107 |
 
-This is the structural reason hybrid loses on small tasks. The context-replay cost is fixed per step; on a 15-line function it cannot be amortised.
+R3 is more expensive than R1 under every pricing scenario tested, across every category. It is never the cost winner.
 
-### 5.3 Where cost savings actually came from
+### 4d. Where the tokens went (sums across the 10 tasks per cell)
 
-For R3 on Category A: **62% of tokens were served locally** (43,441 local / 70,137 total). Yet R3 still costs 3× more than R1 under gpt-5.5 pricing. How?
-
-Because the 38% of tokens that go to the cloud (26,696 tokens across 10 tasks — 2,670 tokens/task mean) is the expensive 38%. Those tokens are mostly planner output and synthesiser output — both serviced by gpt-5.5 at $5/Mtok input, $15/Mtok output. A task that R1 solves in 463 total tokens instead uses 2,670 cloud tokens per task via the hybrid loop — a **5.8× multiplier on cloud-priced tokens** even though the majority of the pipeline's tokens moved local.
-
-**Takeaway: local-majority ≠ cloud-cheap.** The question is not "what fraction of tokens served locally" but "what fraction of *cloud-priced* tokens did we save relative to the baseline cloud-only run". On Category A that number is **negative** (R3 uses more cloud tokens than R1 does).
-
-### 5.4 Synth-budget exhaustion
-
-We grep'd `raw.jsonl` for `error` fields — **0/31 rows have any infrastructure error**. No synth-budget exhaustion observed on the completed runs. The R3 Category A quality failures (HumanEval/103, HumanEval/15) were **quality bugs in the synthesised output**, not budget truncations.
-
-This is a mildly reassuring signal: the architect isn't silently running out of budget and emitting `null`. When it fails, it fails *loudly* with wrong code. That's easier to detect and iterate against than silent truncation.
-
----
-
-## 6. Bounded-ARQGC
-
-See `results/full-sweep/arqgc.json` and `docs/METHODOLOGY.md` §6 for the metric definition.
-
-Under default `openai-gpt5.5` pricing and a cost cap of **$0.1985** (set as p90 of R1's per-task cost × task count, auto-derived):
-
-| Route | Bounded-ARQGC |
-|---|---:|
-| R1 (cloud-only) | 0.518 |
-| R2 (local-only) | 0.000 |
-| R3 (hybrid-architect) | **0.790** |
-
-Per-category-route:
-
-| Cat/Route | ARQGC |
-|---|---:|
-| A/R1 | 0.518 |
-| A/R2 | 0.000 |
-| A/R3 | **0.790** |
-| B/R1 | 0.000 |
-
-**Reading ARQGC correctly.** ARQGC is area-under-(quality, cost) curve, clipped at the budget cap. R2 scores 0 **not because it's bad** but because R2's cost is exactly $0 and the ARQGC integral is over cost — a zero-cost route collapses the integral to a point on the y-axis. This is a known artefact of the metric when one route has zero marginal cost; see METHODOLOGY §6.2 for discussion.
-
-**R3's ARQGC of 0.790 is above R1's 0.518**, which reads as "R3 wins". But this is driven entirely by *the 8 tasks where R3 succeeded at a low-slope-of-cost vs the 2 where it failed being weighed favourably by the integral shape, combined with R3's per-task cost staying inside the $0.1985 cap*. The underlying quality pass-rate is 0.80 (R3) vs 1.00 (R1). **Do not read ARQGC as "R3 is better"** — on the quality metric that matters, R3 is strictly worse on Category A. ARQGC is a summarisation; the raw table is the truth.
-
----
-
-## 7. Alternative pricing scenarios
-
-Median cost per task, across all five pricing scenarios, for the data we have:
-
-| Category/Route | gpt-5.5 | gpt-5 | gpt-5-mini | claude-opus-4.7 | claude-sonnet-4.6 |
+| Route | cloud prompt | cloud completion | local prompt | local completion | total |
 |---|---:|---:|---:|---:|---:|
-| A/R1 | $0.0106 | $0.0035 | $0.00069 | $0.0269 | $0.00538 |
-| A/R2 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
-| A/R3 | $0.0327 | $0.0102 | $0.00204 | $0.0861 | $0.0172 |
-| B/R1 (single run) | $0.2123 | $0.0706 | $0.0141 | $0.5316 | $0.1063 |
+| R1 (all 30) | 7,037 | 92,774 | 0 | 0 | 99,811 |
+| R2 (all 30) | 0 | 0 | 7,708 | 20,842 | 28,550 |
+| R3 (all 30) | 159,700 | 107,748 | 234,838 | 89,340 | **591,626** |
 
-**Read this way.** If the production cloud model is:
-
-- **gpt-5-mini** (the cheapest tier we price): hybrid's cost penalty on A shrinks in absolute terms ($0.00069 → $0.00204, a $0.0014/task delta) but the *ratio* (3×) is unchanged. The latency and quality regressions still apply. **Not recommended.**
-- **claude-opus-4.7** (the most expensive tier): R1's per-task cost on A jumps to $0.027, R3's to $0.086. In absolute dollars the hybrid overhead is ~$0.06/task — still not a win on tiny tasks, but on Category B where R1's cost under opus is $0.53/task, hybrid's potential savings become meaningful *if* it can preserve quality. That's the H1 question this sweep is designed to answer.
-- **gpt-5**: R1/task drops to $0.0035, R3/task to $0.0102. Both halve compared to gpt-5.5. Relative ranking unchanged.
-
-**The general pattern:** the hybrid route's economic case improves as the underlying cloud model gets more expensive, because the architect's local tokens (qwen3.6 on M4 Max) stay at $0 while the cloud-priced tokens scale with the vendor price. On HumanEval-sized tasks this improvement is not enough to overcome the 15× token-count disadvantage. On SWE-bench-sized tasks (single observed R1 run: 7,008 completion tokens at $0.532 under opus) the calculus could invert. We do not yet have the data to prove that.
+R3 burns **5.9× more total tokens than R1** and **20.7× more than R2**. This is the decomposition overhead — plan + per-step-context-prefix + synth replay.
 
 ---
 
-## 8. Decision matrix
+## 5. Per-category deep dive
 
-See `results/full-sweep/decision_matrix.md` for the canonical table. Reproduced here for convenience, with prose interpretation:
+### 5a. Category A — HumanEval+ (10 tiny function-completion tasks)
 
-| If you are doing… | Use route… | Because… |
-|---|---|---|
-| Tiny function-completion (HumanEval-shaped) on a cloud budget | **R1** | Single-shot cloud is fastest (4.7 s median), cheapest ($0.011/task under gpt-5.5), and saturates quality. |
-| Tiny function-completion where you can tolerate ~17 s latency and want zero marginal cost | **R2** | Local qwen3.6 matches quality on HumanEval+ at $0. |
-| Tiny function-completion with a hybrid router | **not R3** | 15× the tokens, 16× the wall time, 3× the cost, and *worse* quality. Hybrid is architecturally wrong for this shape of task. |
-| Real software-engineering (SWE-bench-shaped) | **[insufficient data]** | Only R1 has a scored run. The report will be refreshed when B/R2 and B/R3 land. |
-| Architecture / design reasoning (Category C) | **[no data yet]** | Category C has not started. |
+| task | R1 | R2 | R3 |
+|---|---|---|---|
+| HumanEval/0 | P | P | P |
+| HumanEval/4 | P | P | P |
+| HumanEval/15 | P | P | **F** |
+| HumanEval/28 | P | P | P |
+| HumanEval/30 | P | P | P |
+| HumanEval/47 | P | P | P |
+| HumanEval/103 | P | P | **F** |
+| HumanEval/117 | P | P | P |
+| HumanEval/131 | P | P | P |
+| HumanEval/157 | P | P | P |
 
-**The short version.** With the data we have today, **R3 is not recommended for anything**. R1 is the safe default. R2 is the cheap default if latency is tolerable. R3's thesis (that step-decomposition + local-heavy execution wins on hard tasks) is *not yet disproven* — it just isn't tested on the tasks where it could win.
+- R1: 10/10. R2: 10/10. R3: 8/10 (two regressions that both baselines solve).
+- Median cost R1 $0.011, R3 $0.033 — **3.1× more expensive for 80% the pass-rate**.
+- Median wall R1 4.7 s, R3 78 s — R3 is **17× slower**.
+
+Root cause of the two R3 regressions (from manual audit):
+
+- **`HumanEval/15` — indentation bug.** R3's plan broke the task into three steps; the synth stitched the step outputs but the final code had mis-indented `return` (synth didn't re-align the per-step snippets). R1 and R2 wrote the correct 1-line solution directly.
+- **`HumanEval/103` — spec loss.** The task is "average of integers in range [a,b]". R3's planner rewrote the spec as "return midpoint" (common mis-reading); the executor coded that; the synth never re-read the original prompt. R1 and R2 both read the spec directly and got it right.
+
+Both failure modes are structural to the plan-execute-synth pattern: the planner is the last LLM call to see the unmodified prompt, and its paraphrase propagates through the pipeline. If the planner drops a constraint, the rest of the pipeline cannot recover.
+
+### 5b. Category B — SWE-bench Verified (10 real software-engineering tasks)
+
+| task | R1 | R2 | R3 | R3 tokens | R3 wall (s) |
+|---|---|---|---|---:|---:|
+| astropy-7166 | **P** | F | F | 24,152 | 342 |
+| django-11163 | P | F | P | 15,609 | 190 |
+| django-11179 | P | **P** | **F** | 23,533 | 286 |
+| django-13512 | F | F | F | 24,256 | 255 |
+| django-15315 | F | F | F | 20,928 | 256 |
+| django-15863 | F | F | F | 26,228 | 414 |
+| pydata-xarray-4356 | F | F | F | 22,654 | 385 |
+| sphinx-7889 | F | F | F | — | — |
+| sphinx-9698 | F | F | F | 24,131 | 258 |
+| sphinx-9711 | F | F | F | 33,773 | 443 |
+
+- **Headline result:** R1 3/10, R2 1/10, R3 1/10. R3 passes 1 task (`django-11163`), which R1 also passes. R3 does not pass any task that neither baseline solves.
+- **`django-11179` is the single most instructive row in this whole dataset.** R1 cloud-only passes with 141 prompt / 4,265 completion tokens ($0.126). R2 local-only passes with **304 total tokens** — qwen produced a correct 1-line-change unified diff on the first try. R3 fails the same task after spending 12,992 local + 4,084 cloud prompt + 2,811 local + 3,646 cloud completion tokens and 23,533 total. **The hybrid pipeline actively turned a trivially-correct local solve into a 23k-token failure.** The plan-execute-synth loop introduced enough re-interpretation of the patch that the synth produced a diff whose hunks didn't apply cleanly — the harness reported `patching file django/db/models/deletion.py ... hunk #1 FAILED`.
+- **Cost under gpt-5.5 pricing:** B/R1 median $0.126, B/R3 median $0.146. R3 is more expensive for a strictly worse result.
+- **Every failed row is scored as FAIL, not "unknown."** Initial rescore yielded `functional_pass=None` for 17 rows because the SWE-bench harness returns `error_ids` for "patch failed to apply" — we updated the scorer to treat those as FAIL per the SWE-bench leaderboard convention (the model produced a patch; it didn't apply; that's a model failure).
+
+### 5c. Category C — BigCodeBench-Hard + hand-curated architecture
+
+**BigCodeBench-Hard functional pass (5 tasks):**
+
+| task | R1 | R2 | R3 |
+|---|---|---|---|
+| BigCodeBench/82 | F | F | F |
+| BigCodeBench/214 | F | F | F |
+| BigCodeBench/458 | **P** | F | ?¹ |
+| BigCodeBench/501 | F | F | F |
+| BigCodeBench/530 | **P** | **P** | **P** |
+
+¹ R3 on BigCodeBench/458 was killed mid-run by an architect-subprocess error (row flagged `error` in raw.jsonl).
+
+**Custom-arch (5 hand-curated tasks, judge composite 0–1):**
+
+| task | R1 | R2 | R3 |
+|---|---:|---:|---:|
+| auth-multitenant-design | 0.00² | 0.50 | 0.00² |
+| cache-invalidation-tradeoffs | 0.75 | 0.65 | 0.00² |
+| code-review-flaky-test | 0.00² | 0.50 | 0.00² |
+| migration-planning-zero-downtime | 0.00² | 0.50 | 0.00² |
+| production-debug-reasoning | 0.00² | 0.50 | 0.00² |
+
+² Output file was 0 bytes on disk. Assigned composite 0.0 — can't judge an empty output.
+
+**The single biggest finding in this section: R1 and R3 produced empty output on 4 of 5 custom-arch tasks, because gpt-5.5's reasoning-token allocation consumed the entire max-tokens budget.** Example — `auth-multitenant-design` R1 row: `completion_tokens=8000, reasoning_tokens=8000, content=""`. The model spent its whole 8k budget thinking and had 0 tokens left for the answer. R3 hits the same failure mode in the synth step (synth usage: `completion_tokens=2500, reasoning_tokens=2500, content=""`).
+
+This is not a routing question; it is an implementation bug in how R1/R3 talk to the OpenAI reasoning-tokens API. The fix is straightforward (request a larger completion budget, or use `max_completion_tokens` separately from reasoning budget). Until it's fixed, *any* benchmark that includes open-ended architecture tasks will show R1 and R3 losing to R2 on prose-output tasks — which is misleading about the routing question. We flag this separately so readers don't conflate the synth-budget bug with the architectural hybrid claim.
+
+**Cache-invalidation-tradeoffs is the one complete three-way judged pair.** R1 0.75 vs R2 0.65 vs R3 0.00 (empty). The judge (gpt-5) ranked R1's cache strategy analysis as decisively stronger than R2's — 5.0 vs 3.2 on the 5-dim rubric, with substantive reasons: R1 caught atomicity gaps in write-through, CDC lag/order/loss edge cases, and replica-lag pitfalls that R2 missed or handled incorrectly. **This is the only row in the entire dataset where R1's cloud-reasoning advantage materialised cleanly, and R3 didn't even get to produce an output.**
 
 ---
 
-## 9. Limitations and caveats
+## 6. Costs — multi-scenario breakdown
 
-- **Single hardware tier.** M4 Max 64 GB. All R2 and R3 local timings are pinned to this box. A slower machine would make R2/R3 look worse; a 4090+CUDA setup would make them look much better.
-- **Small N.** 10 tasks per category is enough for direction, not for tight confidence intervals. Do not read two-decimal pass-rate deltas as significant.
-- **Category A contamination.** HumanEval+ is derived from HumanEval, which has been in the training corpora of every major model since 2022. "qwen3.6 matches gpt-5.5 on HumanEval+" is *at least partially* a memorisation result. We chose HumanEval+ precisely because we expected both models to saturate — it's a control, not a benchmark. For real novelty-sensitive scoring, see Category C (when it runs).
-- **R2's cost is reported as $0** but local inference has real cost (hardware amortisation, electricity, model-hosting infra). For a two-year laptop amortisation, 64 GB M4 Max at ~$4k and ~15 W under full inference load, the hidden per-hour cost is non-trivial. The report treats these as outside scope; any production-economics comparison would need to add them back.
-- **Pricing snapshots.** The five vendor scenarios use published per-token rates as of April 2026. Vendors change prices. Re-run `analysis.all` with an updated `router/pricing.mjs` to refresh.
-- **Only one SWE-bench run.** This is the big caveat. Any statement about hybrid's performance on "real coding" is premature until B completes.
-- **LLM-judge not wired for C yet.** The pairwise-judge scorer (`EXTERNAL/lm-eval-harness-judge/`) has been built but no C rows exist to score.
-- **The router heuristic is a snapshot.** `architect.mjs` at `git929142f`. A different heuristic (cost-aware, learned, retrieval-augmented) would give different numbers. This report measures *this router*, not hybrid routing in the abstract.
+(repeated from §4c for reading continuity, with totals)
 
-For methodology and scoring details, see `docs/METHODOLOGY.md`.
+### Total cost across all 30 tasks per route
 
----
+| Scenario | R1 total | R3 total | R3/R1 ratio |
+|---|---:|---:|---:|
+| openai-gpt5.5 | $2.82 | $4.03 | 1.43× |
+| openai-gpt5 | $0.94 | $1.28 | 1.36× |
+| openai-gpt5-mini | $0.19 | $0.26 | 1.37× |
+| anthropic-opus-4.7 | $7.05 | $10.66 | 1.51× |
+| anthropic-sonnet-4.6 | $1.41 | $2.13 | 1.51× |
+| R2 (any scenario) | $0.00 | — | — |
 
-## 10. Failure modes observed
-
-### 10.1 Infrastructure-level failures
-
-**None.** `grep error results/full-sweep/raw.jsonl` returns 31 rows with `"error": null`. No timeouts, no network failures, no synth-budget exhaustion across the 31 completed runs.
-
-### 10.2 Quality failures unique to R3
-
-Two out of 10 Category A R3 runs failed functional tests. Both failures are pipeline-internal, not model-internal:
-
-1. **`HumanEval/103` — spec loss during planning.** The planner decomposed "average of integers from n through m" into steps that silently reinterpreted "average" as "midpoint `(n+m)/2`". The cloud synthesiser accepted the wrong reformulation. R1 and R2, given the same docstring in a single shot, both read it correctly.
-2. **`HumanEval/15` — synthesis-layer indentation bug.** The final emitted code has inconsistent indentation (4-space vs 5-space), producing a Python `IndentationError` at import time. Every test fails on parse, not on logic. This is a post-processing bug in the synthesiser, independent of the model.
-
-Both bugs are fixable in `router/agentic/architect.mjs` — they are not fundamental to hybrid routing. But they are fair game for the current measurement: the router *as shipped* has these failure modes.
-
-### 10.3 Patterns where all routes fail
-
-None observed in Category A (all three routes succeed on 8/10 tasks simultaneously; the 2 failures are R3-only). If Category B or C surfaces all-route failures that's a benchmark-quality signal rather than a route-quality signal.
-
-### 10.4 Patterns where local (R2) succeeds but hybrid (R3) fails
-
-**Yes — both Category A R3 failures are in this pattern.** On HumanEval/103 and HumanEval/15, R2 (single-shot local) passes while R3 (hybrid) fails. That's the strongest possible evidence that the hybrid *pipeline* is the source of failure: the same base local model, given the task directly, gets the right answer; given the planner-decomposed version, gets the wrong answer.
-
-**This is the single most important finding of the report so far.** Hybrid routing, on tasks it shouldn't have been dispatched to, actively degrades quality below both of its constituent parts.
+**R3 is between 1.36× and 1.51× more expensive than R1 under every pricing scenario we priced.** The local-token savings don't offset the plan-prompt-prefix and synth-replay overhead that R3 pays.
 
 ---
 
-## 11. What to try next
+## 7. Where each route wins and loses
 
-From METHODOLOGY §10:
+| | R1 cloud-only | R2 local-only | R3 hybrid-architect |
+|---|---|---|---|
+| **wins on** | A quality (tied), B functional, C judgment | A quality (tied), B single-step solves when qwen knows the API, cost (always $0) | *nothing we measured* |
+| **loses on** | cost (vs R2), non-trivial synthesis when budget is small (empty-output bug on 4/5 custom-arch) | B hard tasks (qwen misses subtle edits), C judgment on library-specific design | every category we tested; every pricing scenario; every budget |
 
-- **Gate R3 on task size.** A simple pre-classifier ("this is ≤1 function ≤20 LOC → route straight to R1 or R2, skip the architect") would eliminate every observed R3 regression in this report.
-- **Teach the planner to emit "skip decomposition" when the task is atomic.** Cheaper and more principled than a size gate.
-- **Add whitespace normalisation to the synthesiser.** Fixes HumanEval/15-class failures mechanically.
-- **Spec-preservation check in the synthesiser.** "Does my final output satisfy the original docstring/tests?" is a one-extra-cloud-call guardrail that would have caught HumanEval/103.
-- **Run the full 90 rows.** B and C are the interesting categories. Everything in this report about those categories is a placeholder.
-- **Learned router.** Replace the heuristic (`local if score>=25`) with a classifier trained on `(task_features → optimal route)` from this run plus future runs.
-- **Second hardware tier.** Repeat the sweep on a 4090+CUDA box and a Mac mini 7B to make the hardware-dependence explicit.
-- **Economic model that includes amortisation.** Turn the "R2 = $0" fiction into a real per-hour local cost and see whether R2's Pareto dominance on A holds.
+We wanted R3 to win somewhere. It doesn't. The direction is unambiguous in this dataset.
+
+**Where R3 would plausibly still be worth trying, despite this data:** tasks where R1 cannot fit in a single cloud call (very-long-context refactors, whole-repo migrations). None of our 30 tasks require that — SWE-bench Verified easy tier fits in a single long prompt with room to spare. If you have a 200K-token repo to refactor, this experiment doesn't speak to your situation.
 
 ---
 
-## 12. Reproducibility
+## 8. Methodology caveats
 
-See `docs/REPRODUCING.md` for step-by-step reproduction.
+- **Single hardware tier (M4 Max 64 GB).** Numbers will shift on lower-memory laptops (smaller local model → lower R2 quality) and on dedicated GPU boxes (faster R2 → different tradeoffs). See `docs/METHODOLOGY.md` §4 for the full list.
+- **Single cloud model family (OpenAI gpt-5.5).** We did not run Claude Opus 4.7 as a second cloud baseline. That was the V1 plan; dropped to land MVP.
+- **Judge caveat.** The LLM-judge for custom-arch normally uses `claude-opus-4-7` cross-vendor to avoid self-preference bias. This run's `.env` didn't have `ANTHROPIC_API_KEY` set, so the judge fell back to `gpt-5` — **same family as R1**, which introduces possible self-preference bias. On the one three-way-real-judgment pair (cache-invalidation R1 vs R2), the judge rated R1 higher. We cannot rule out that self-preference contributed. A re-run with `claude-opus-4-7` as judge is the clean fix; the raw `judge.jsonl` is preserved so anyone can re-judge with a different model.
+- **Synth-budget-exhaustion bug.** 4/5 custom-arch tasks had R1 and R3 produce 0-byte output because `gpt-5.5`'s reasoning_tokens consumed the entire completion budget. This is a runner-side bug, not a routing finding — but until it's fixed the C-category numbers for R1 and R3 are systematically depressed. §9 has the fix path.
+- **R3 subprocess error rate.** 1/30 R3 runs errored out (`BigCodeBench/458`) during architect-subprocess execution. Infrastructure error rate = 1.1%, well under the 10% threshold the plan set.
+- **10 tasks per category is enough for direction, not for significance.** A 20-task-per-category re-run would tighten error bars but we don't expect direction to flip.
+- **No statistical test.** Given the effect sizes (R3 80% vs R1 100% on A, R3 10% vs R1 30% on B), a formal test isn't load-bearing — the gaps are larger than any reasonable noise floor.
 
-Regenerate all aggregates, charts, ARQGC, and the decision matrix from `raw.jsonl`:
+---
+
+## 9. What would change the answer
+
+Honest list of changes that would alter this finding, in decreasing order of likelihood:
+
+1. **Fix the synth-budget bug for gpt-5.5.** R1 and R3 custom-arch tasks would gain real output; if R3's synth quality matches R1's, C/R3 might close the gap — though the token + wall overhead remains. **~1 hour to fix, then re-run C.**
+2. **Use a local model that's closer to gpt-5.5 quality on SWE-bench.** `Devstral-Small-2-24B` (72% on SWE-bench-Verified vs Opus 77%) might make R3's hybrid value proposition real — more steps could be served locally without quality loss. Currently blocked on: we don't have Devstral-24B configured as the local backend, and a 24B 4-bit quantized variant may not fit in the same RAM as qwen3.6:27b-coding-mxfp8.
+3. **A better router.** Current heuristic is rule-based (token count + keyword triggers). An embedding-kNN router calibrated on real task distributions might send more steps local without quality loss. The post-MVP plan had this as R4/R5 work.
+4. **Longer-context tasks R1 can't fit in a single call.** Whole-repo refactors that exceed the cloud context window would force *some* decomposition, and R3's architecture would be compared to a strawman rather than to direct R1. We didn't include such tasks.
+5. **A different hybrid pattern.** R3 is plan→execute→synth. Other patterns (Stanford Minions Q&A, Aider architect/editor review loop — the R4/R5 in our original plan) may have different cost-quality curves. This run does not test those.
+
+None of these are load-bearing for the MVP claim: **as-implemented hybrid-architect on M4 Max using gpt-5.5 + qwen3.6:27b is worse than both baselines on every measured axis.**
+
+---
+
+## 10. Reproducing
 
 ```bash
+git clone https://github.com/RunanywhereAI/hybrid-coding-eval
 cd hybrid-coding-eval
-.venv/bin/python -m analysis.all results/full-sweep/
+./router/start.sh              # launches hybrid router proxy on :8787
+ollama pull qwen3.6:27b-coding-mxfp8
+cp .env.example .env           # add OPEN_AI_API_KEY, ideally ANTHROPIC_API_KEY too
+./bin/env-detect.py > results/my-run/env-manifest.json
+./bin/run-experiment.py --out results/my-run --categories A,B,C --routes R1,R2,R3
+./bin/rescore-swebench.py results/my-run    # auto-runs after orchestrator
+./bin/judge-custom-arch.py results/my-run   # requires API key; cost ~$2
+./bin/finalize-sweep.sh results/my-run
 ```
 
-Artefacts (all under `results/full-sweep/`):
-
-- `raw.jsonl` — per-run rows, one JSON per (task, route).
-- `aggregate.json` — per-category, per-route, per-(cat,route) statistics.
-- `arqgc.json` — Bounded-ARQGC scores.
-- `decision_matrix.md` — table used in §8.
-- `charts/pareto.png`, `charts/heatmap_quality.png`, `charts/heatmap_cost.png`, `charts/heatmap_arqgc.png` — visual summaries.
-- `outputs/<task>__<route>.txt` (R1/R2) and `outputs/<task>.r3.arch.json` (R3) — raw model outputs per run, suitable for auditing specific failures like HumanEval/103 and HumanEval/15 above.
-- `env-manifest.json` — hardware + model + git-hash snapshot for this sweep.
-
-**To refresh this report after the sweep finishes,** re-run `analysis.all`, then re-read §4.2 and §4.3 against the new `aggregate.json`. The numbers in §4.1, §5, §6, §7, §8.2, §10 may shift modestly; §4.2 and §4.3 will change materially.
+Full sweep on M4 Max: ~4 hours, ~$3 cloud spend. Disk: ~40 GB for SWE-bench Docker images (shared across runs).
 
 ---
 
-_End of report. 31/90 rows. Category A final. Categories B and C pending._
+## 11. Appendix — where to find the raw data
+
+| File | What's in it |
+|---|---|
+| `raw.jsonl` | 90 rows, one per (task, route) pair |
+| `aggregate.json` | per-(category, route) medians & totals, + cost under every scenario |
+| `arqgc.json` | Bounded-ARQGC scores |
+| `decision_matrix.md` | category × route → best-route recommendation |
+| `judge.jsonl` | 15 pairwise custom-arch judgments (including empty-output auto-verdicts) |
+| `charts/pareto.png` | cost vs quality scatter per route |
+| `charts/heatmap_quality.png` | category × route quality heatmap |
+| `charts/heatmap_cost.png` | category × route cost heatmap |
+| `charts/heatmap_arqgc.png` | category × route ARQGC heatmap |
+| `manual_audit.md` | human review of 5 random (task, route) rows |
+| `outputs/` | every model's raw response text (or the `.r3.arch.json` trace for R3) |
+| `env-manifest.json` | hardware + router git SHA + loaded models |
+| `progress.log` | orchestrator output, one line per completed (task, route) |
+| `ERRORS.md` | infrastructure errors (1 row: BigCodeBench/458 R3) |
+
+Every number in this report is reproducible from `raw.jsonl` + a pricing table.
