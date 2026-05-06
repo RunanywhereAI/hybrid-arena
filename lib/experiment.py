@@ -178,6 +178,10 @@ def _runner_for(route: str) -> Callable[..., ResultRow]:
         from runners import r3_hybrid_architect
 
         return r3_hybrid_architect.run
+    if route == "R4":
+        from runners import r4_minion
+
+        return r4_minion.run
     raise ValueError(f"unknown route {route!r}")
 
 
