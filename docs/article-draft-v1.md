@@ -1,4 +1,9 @@
-# Hybrid local/cloud routing for coding agents: the data says don't bother (yet)
+# [v1 DRAFT] Hybrid local/cloud routing for coding agents: the data says don't bother (yet)
+
+> ⚠️ **v1 draft — superseded by the v2 numbers.** The main body below tells the v1 story; the postscript at the
+> bottom reflects the v2 correction. The canonical, clean-slate report is [`results/final/REPORT.md`](../results/final/REPORT.md).
+> Keep reading only if you want the narrative arc; use `results/final/REPORT.md` for the current claims.
+
 
 We built a hybrid local/cloud routing system for coding agents. Ran it on 30 public-benchmark and hand-curated tasks spanning tiny-function-completion (HumanEval+), real software engineering (SWE-bench Verified), and architecture/reasoning (BigCodeBench-Hard + 5 hand-curated design tasks). **On every category, the hybrid route was Pareto-dominated by plain cloud-only and plain local-only.** It's slower, more expensive, and it introduces quality regressions that neither of its constituent parts have — including on the one category the hybrid pipeline was explicitly designed to win (SWE-bench).
 

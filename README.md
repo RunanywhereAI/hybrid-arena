@@ -3,141 +3,117 @@
 > *A benchmark + harness that answers, with reproducible numbers, the question:*
 > ***For my coding task and my hardware — should I run it local, hybrid, or cloud?***
 
-This project measures **cost × quality × latency** across five routing strategies on a curated set of public coding benchmarks (HumanEval+, MBPP+, BigCodeBench-Hard, SWE-bench Verified, LiveCodeBench, Aider Polyglot). Same task, same scoring, five routes — local-only, cloud-only, two architect-mode hybrids, and the Aider-style architect/editor split — measured on whatever hardware you've got.
+**Status: MVP complete.** 30 tasks × 4 routes × 2 local-model variants = 180 graded runs, on one M4 Max laptop.
 
-The output is a **decision matrix**: given (task category, hardware tier) → recommended route + expected cost + expected quality.
+## 👉 Start here
 
-**Status: planning + research phase.** This README will get a real quick-start once the MVP runner lands. For now: read [`PLAN.md`](./PLAN.md) and [`docs/PRIOR_ART.md`](./docs/PRIOR_ART.md).
+- **[`results/REPORT.md`](./results/REPORT.md) — the single canonical report. Read this.**
+- [`results/raw.jsonl`](./results/raw.jsonl) — the merged 180-row dataset with variant tags.
+- [`results/runs/`](./results/runs/) — four per-variant sub-directories, each with its own `run-notes.md`, `raw.jsonl`, outputs, progress logs, env manifest. Preserved as-is for transparency.
 
----
+## What the four routes are
 
-## Why this exists
+| route | what it does |
+|---|---|
+| **R1 cloud-only** | one shot to `gpt-5.5` |
+| **R2 local-only** | one shot to qwen3.6:27b-coding or devstral:24b via Ollama |
+| **R3 hybrid-architect** | cloud plans → per-step heuristic routing → cloud synth |
+| **R4 hybrid-minion** | Stanford Minion-style supervisor/worker Q&A; cloud never re-sees raw context |
 
-Every coding-tool vendor claims their hybrid setup saves 30–80 %. **None of them publish reproducible numbers on a benchmark you can run yourself.** The literature on routing has matured — Stanford's Minions, Aider's architect/editor, Cursor's Tab/Composer, RouteLLM, FrugalGPT, CodePRM — but the measurements are inside paywalls or controlled lab settings.
+(A planned R5 — Aider's architect/editor review loop — is the next post-MVP route.)
 
-This project's contribution is small but specific: **a public, reproducible harness that runs the same task through five distinct routes on commodity hardware and emits a per-task score sheet**. We use upstream benchmark harnesses (mini-SWE-agent, EvalPlus, Aider's bench, BigCodeBench's eval) so the quality scoring isn't ours to defend — it's the same number SWE-bench's leaderboard uses.
+## The headline
 
----
+| Category | R1 cloud | Best hybrid | Winner |
+|---|:-:|:-:|:-:|
+| A — HumanEval+ (10) | 10/10 | R3-devstral 10/10, R2 10/10 | three-way tie; R1 cheapest/fastest |
+| B — SWE-bench Verified (10) | 3/10 | **R4 Minion 4/10** at $0.083/task vs R1 $0.126 | **R4** |
+| C — architecture/reasoning (10) | ties R3 | R3 ties R1 on judge, wins ARQGC | R3 ≈ R1 |
 
-## What the five routes are
+**Hybrid routing is not categorically worse than cloud-only.** An earlier v1 draft claimed it was; that conclusion was load-bearing on a runner bug (synth-budget exhaustion on reasoning models) and a weak local model on SWE-bench. Fix both, try Stanford's Minion pattern, and hybrid reaches parity on every category and wins outright on SWE-bench. Full story in [`results/REPORT.md`](./results/REPORT.md).
 
-| route | what it does | the comparison it provides |
-|---|---|---|
-| **R1 cloud-single** | one shot to gpt-5.5 (or claude-opus-4-7) | the floor for cost + the ceiling for quality |
-| **R2 local-only** | one shot to qwen3.6-27b-coding (or whatever fits your hardware) | "is local good enough?" measured directly |
-| **R3 hybrid-architect** | cloud plans → per-step heuristic routing → cloud synth | what we built first; has known synth-replay tax |
-| **R4 hybrid-minion** | Stanford Minion-style stateful Q&A; cloud never sees raw context | designed to fix R3's tax |
-| **R5 local + cloud-review** | Aider's architect/editor pattern + DevMinion's review loop | the most-deployed real hybrid in production |
-
-For each task, every route writes:
-- `output.txt` — the generated code/answer
-- `metrics.json` — cost (USD broken down), latency, token counts, decision trace
-- `quality.json` — functional test results, judge scores, composite
-
----
-
-## Quick repo layout
+## Repo layout
 
 ```
 hybrid-coding-eval/
-├── README.md            ← this file
-├── PLAN.md              ← detailed multi-phase plan (read this next)
+├── README.md                      ← you are here
+├── results/
+│   ├── REPORT.md                  ← 👉 THE one report to read
+│   ├── raw.jsonl                  ← 180 rows, merged, variant-tagged
+│   ├── env-manifests/             ← hardware profile per variant
+│   └── runs/
+│       ├── README.md              ← index of the four runs
+│       ├── 01-v1-qwen-original/   ← v1 sweep (superseded)
+│       ├── 02-v2-qwen-fixed-synth/ ← synth-budget fix + Opus judge
+│       ├── 03-v2-devstral/         ← local-model swap
+│       └── 04-r4-minion/           ← R4 Minion on SWE-bench
 ├── docs/
-│   ├── PRIOR_ART.md     ← synthesised research findings (May 2026)
-│   ├── METHODOLOGY.md   ← (TBW) how the eval works, biases acknowledged
-│   ├── REPRODUCING.md   ← (TBW) how to run on your own machine
-│   └── DECISIONS.md     ← (TBW) design choices + rationale
-├── benchmark/           ← task fixtures + adapters to upstream harnesses
-├── runners/             ← R1–R5 implementations
-├── scorers/             ← functional + LLM-judge + composite
-├── env/                 ← hardware envelope detection + tier-aware model selection
-├── results/<date>-<machine>/  ← run artefacts
-├── viz/                 ← Pareto plots + decision-matrix heatmaps
-├── research/            ← raw deep-research outputs (source for PRIOR_ART.md)
-└── article/             ← the published artefact
+│   ├── PLAN.md                    ← original multi-phase plan
+│   ├── METHODOLOGY.md             ← how the eval works, biases acknowledged
+│   ├── REPRODUCING.md             ← copy-paste instructions for a fresh machine
+│   ├── ARCHITECTURE.md            ← code layout + data flow
+│   ├── ROUTING_STRATEGIES.md      ← deep-dive on each route
+│   ├── PRIOR_ART.md               ← May 2026 research synthesis
+│   ├── OSS_REVIEW.md              ← pre-public audit record
+│   ├── RUNANYWHERE_INTEGRATION.md ← future-work design doc
+│   ├── article-draft-v1.md        ← long-form article (v1 narrative + v2 postscript)
+│   └── history/                   ← pre-MVP archival notes
+├── router/                        ← hybrid proxy (Node.js, zero deps, port 8787)
+├── runners/                       ← R1/R2/R3/R4 Python runners
+├── scorers/                       ← pytest + SWE-bench harness + LLM-judge
+├── benchmark/                     ← 4 task adapters (HumanEval+, SWE-bench, BigCodeBench, custom)
+├── analysis/                      ← aggregate / ARQGC / decision-matrix / charts
+├── lib/                           ← pricing tables, sandbox, metrics schema
+├── bin/                           ← CLIs (run-experiment, rescore, rejudge, env-detect)
+└── EXTERNAL/
+    ├── minions/                   ← Stanford Minion library (MIT, vendored for R4)
+    └── lm-eval-harness-judge/     ← MT-Bench judge reference (Apache 2.0)
 ```
-
----
-
-## Headlines from the prior-art synthesis
-
-(Full numbers in [`docs/PRIOR_ART.md`](./docs/PRIOR_ART.md).)
-
-- **The frontier-vs-open gap on real software-engineering tasks (SWE-bench Verified) is now ~5 percentage points** when the open model is task-specialised (Devstral-Small-2-24B at 72.2 % vs Claude Opus 4.6 at 77.2 %). Routing decisions matter, but the gap to close is smaller than people think.
-- **The contamination-resistant gap is wider** — on LiveCodeBench Hard, GPT-5 sits at 68.4 % vs Qwen3-Coder 55.9 % (13 pp). Hybrid routing earns its keep on novel reasoning, less so on saturated function generation.
-- **Production hybrid systems claim 30–60 % cost reduction** consistently. 60–80 % numbers exist but come from blog-post anecdotes, not papers.
-- **Q5_K_M is the quantization sweet spot for coding** at 98 % quality retention. NVFP4 is fast but drops 18 pp on hard reasoning — avoid for coding.
-- **Memory bandwidth, not core count, is the dominant predictor of local tok/s on Apple Silicon.** M3 Max 64 GB beats M4 Pro 48 GB on large-model inference. Counter-intuitive, frequently wrong-bought.
-- **Break-even on a Mac M4 Pro 48 GB is ~5 months for a light dev, <1 month for a heavy dev.** RTX 4090 used at $1,180 is the sweet spot for serious individual deployment.
-- **The known failure modes of hybrid in production**: token-limit prediction failures, calibration drift, session-state inconsistency, synth-budget exhaustion on reasoning models. Our eval should expose all four.
-
----
-
-## What's done so far
-
-- ✅ Project scaffolded
-- ✅ Research run (4 parallel deep-research queries via Exa + Perplexity sonar-deep-research) saved under `research/`
-- ✅ [`docs/PRIOR_ART.md`](./docs/PRIOR_ART.md) synthesis (citations to research/)
-- ✅ [`PLAN.md`](./PLAN.md) finalised with 45-task MVP benchmark + 5 routes + Bounded-ARQGC headline metric
-- ⏳ Next: MVP build (~1 week of focused work — see PLAN.md §9)
-
----
-
-## Origin
-
-Spun out of routing work in the [opencode hybrid router](../opencode/router/), which produced a 3-task article (`opencode/hybridarchitecturearticle.md`) demonstrating the cost-quality tradeoff. The article was honest but anecdotal — three projects, one hardware tier, manual quality review. This project is the rigorous version: more tasks, multiple hardware tiers, automated functional scoring on a public benchmark, peer-reviewable metric.
-
-The opencode router itself is one of the integration targets: route R3 calls into it directly. Routes R1, R2, R4, R5 are independent.
-
----
 
 ## Quick start
 
-> The full, copy-pasteable instructions are in [`docs/REPRODUCING.md`](./docs/REPRODUCING.md). A 30-second read first:
-
 ```bash
-# 1. Clone and install the harness
 git clone https://github.com/RunanywhereAI/hybrid-coding-eval
 cd hybrid-coding-eval
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# 2. Configure cloud + local endpoints
-cp .env.example .env        # then edit to add OPEN_AI_API_KEY
-# Local: make sure Ollama is running with qwen3.6:27b-coding-mxfp8 pulled
-ollama pull qwen3.6:27b-coding-mxfp8
+cp .env.example .env                         # add OPEN_AI_API_KEY (+ ANTHROPIC_API_KEY if you want the Opus judge)
+ollama pull qwen3.6:27b-coding-mxfp8         # or devstral:24b
 
-# 3. Run the smoke sweep (3 tasks × 3 routes ≈ 15 min on M4 Max)
-python -m runners.orchestrator --smoke
+./router/start.sh                            # launches the hybrid router proxy on :8787
 
-# 4. Aggregate + chart
-python -m analysis.aggregate results/smoke/
+# smoke sweep — 3 tasks × 3 routes ≈ 10 min
+./bin/run-experiment.py --smoke --out results/my-smoke
+
+# full sweep — 30 tasks × 4 routes ≈ 4-5h
+./bin/run-experiment.py --out results/my-run --categories A,B,C --routes R1,R2,R3,R4
+./bin/rescore-swebench.py results/my-run
+./bin/rejudge-custom-arch.py results/my-run   # needs ANTHROPIC_API_KEY
+.venv/bin/python -m analysis.all results/my-run
 ```
 
-See [`docs/REPRODUCING.md`](./docs/REPRODUCING.md) for the full 30-task sweep, hardware notes, troubleshooting, and Docker/SWE-bench setup.
-
----
+Full instructions in [`docs/REPRODUCING.md`](./docs/REPRODUCING.md). Wall ~5h on M4 Max, ~$15 API spend.
 
 ## Where to read next
 
-- [`PLAN.md`](./PLAN.md) — detailed multi-phase plan, task list, open questions.
-- [`docs/METHODOLOGY.md`](./docs/METHODOLOGY.md) — how the eval works, what we measure, what we do **not** claim.
-- [`docs/REPRODUCING.md`](./docs/REPRODUCING.md) — copy-paste reproduction on a fresh machine.
-- [`docs/PRIOR_ART.md`](./docs/PRIOR_ART.md) — synthesised research findings (May 2026), with citations.
-- [`docs/ROUTING_STRATEGIES.md`](./docs/ROUTING_STRATEGIES.md) — details for each of the five routes (R1–R5).
-- [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — code layout + data-flow.
-
----
+1. **[`results/REPORT.md`](./results/REPORT.md)** — the single canonical report. (Seriously, read this first.)
+2. [`results/runs/README.md`](./results/runs/README.md) — index of the four experimental runs.
+3. Any individual run's `run-notes.md` (or v1 `REPORT.md`) under `results/runs/NN-*/`.
+4. [`docs/METHODOLOGY.md`](./docs/METHODOLOGY.md) — how the eval works, biases acknowledged.
+5. [`docs/REPRODUCING.md`](./docs/REPRODUCING.md) — copy-paste reproduction on a fresh machine.
+6. [`docs/ROUTING_STRATEGIES.md`](./docs/ROUTING_STRATEGIES.md) — deep-dive on each route.
+7. [`docs/PRIOR_ART.md`](./docs/PRIOR_ART.md) — May 2026 research synthesis (benchmarks, local-model perf, hybrid architectures).
+8. [`docs/PLAN.md`](./docs/PLAN.md) — the original multi-phase project plan (planning artifact, not findings).
+9. [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — code layout + data flow.
+10. [`docs/article-draft-v1.md`](./docs/article-draft-v1.md) — long-form article. Body tells the v1 story; postscript has the v2 correction. Authoritative numbers are in `results/REPORT.md`.
 
 ## License and attribution
 
 - **Code** (harness, router, runners, scorers, analysis, viz): MIT — see [`LICENSE`](./LICENSE).
-- **Results, metrics, figures, prior-art synthesis, article**: CC-BY-4.0 — see [`LICENSE-DATA`](./LICENSE-DATA).
-- **Third-party code and research we build on**: see [`NOTICE.md`](./NOTICE.md). In particular:
-  - `EXTERNAL/lm-eval-harness-judge/` is vendored from [lm-sys/FastChat](https://github.com/lm-sys/FastChat) (Apache 2.0).
-  - `EXTERNAL/minions/` references [HazyResearch/minions](https://github.com/HazyResearch/minions) (MIT) — not tracked in git, cloned locally by users.
-  - Benchmarks (HumanEval+, MBPP+, BigCodeBench-Hard, SWE-bench Verified, LiveCodeBench, Aider Polyglot) each retain their upstream licenses; see adapter READMEs under [`benchmark/`](./benchmark/) and the paper citations in [`NOTICE.md`](./NOTICE.md).
+- **Results, metrics, figures, article**: CC-BY-4.0 — see [`LICENSE-DATA`](./LICENSE-DATA).
+- **Third-party code and research we build on**: see [`NOTICE.md`](./NOTICE.md) and [`EXTERNAL/README.md`](./EXTERNAL/README.md).
 
-Suggested citation (if you use our numbers in a paper or article):
+Suggested citation (if you use our numbers):
 
 > Monga, Sanchit and contributors. *hybrid-coding-eval: reproducible cost/latency/quality benchmark for local vs cloud vs hybrid LLM routing on coding tasks.* 2026. https://github.com/RunanywhereAI/hybrid-coding-eval

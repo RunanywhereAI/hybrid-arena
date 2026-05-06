@@ -1,7 +1,18 @@
-# Hybrid vs. cloud-only for real coding tasks — final report
+# [SUPERSEDED v1 report] Hybrid vs. cloud-only for real coding tasks
 
-_Generated from `results/full-sweep/` — 90 rows (30 tasks × 3 routes), all scored._
-_Regenerate aggregates:_ `python -m analysis.all results/full-sweep/`
+> ⚠️ **This is the v1 report for run 01 only.** Two main claims below were later invalidated
+> (R3 loses on category C; R3 is worse than R1 on every category). Both were driven by a
+> runner bug (synth-budget exhaustion on reasoning-model calls) + a weak local model on
+> SWE-bench. See `../run-notes.md` in runs 02, 03, 04 for what changed.
+>
+> **Canonical report:** [`../../REPORT.md`](../../REPORT.md) (two dirs up). Always prefer that
+> for current claims.
+>
+> Kept here verbatim because §12 at the bottom documented the fix path and is a useful
+> reasoning trail for how the project's conclusions evolved.
+
+_Generated from this run's `raw.jsonl` — 90 rows (30 tasks × 3 routes), all scored._
+_Regenerate aggregates:_ `python -m analysis.all results/runs/01-v1-qwen-original/`
 
 ---
 
@@ -303,16 +314,16 @@ Two caveats the v1 report flagged for a reader:
 
 One generalisation test:
 
-3. **Stronger local model** — swap `qwen3.6:27b-coding-mxfp8` → `devstral:24b` at the router via `LOCAL_MODEL=devstral:24b`. Router and runners are model-agnostic (no qwen-specific branches); single env-var change, zero code changes. Re-run all 30 tasks × R2 + R3 = 60 new rows in `results/full-sweep-devstral/`.
+3. **Stronger local model** — swap `qwen3.6:27b-coding-mxfp8` → `devstral:24b` at the router via `LOCAL_MODEL=devstral:24b`. Router and runners are model-agnostic (no qwen-specific branches); single env-var change, zero code changes. Re-run all 30 tasks × R2 + R3 = 60 new rows in `results/runs/03-v2-devstral/`.
 
 One stretch-goal route:
 
 4. **R4 Minion-style protocol on SWE-bench** — wrap the Stanford Minions library (`EXTERNAL/minions/minions/minion.py`, MIT) via an OpenAI-compatible proxy adapter. Supervisor = `router/always-cloud`; worker = `router/always-local`. Run on 10 SWE-bench Verified tasks (category B only, per post-MVP plan).
 
 Results live in:
-- `results/full-sweep-v2/` — 30 rows (C × R1, R2, R3) with synth-budget fix + Opus rejudge.
-- `results/full-sweep-devstral/` — 60 rows (R2 + R3 × all 30 tasks) with Devstral local model.
-- `results/full-sweep-r4/` — 10 rows (R4 × B-category).
+- `results/runs/02-v2-qwen-fixed-synth/` — 30 rows (C × R1, R2, R3) with synth-budget fix + Opus rejudge.
+- `results/runs/03-v2-devstral/` — 60 rows (R2 + R3 × all 30 tasks) with Devstral local model.
+- `results/runs/04-r4-minion/` — 10 rows (R4 × B-category).
 
 ### 12b. What the v2 numbers show
 
@@ -361,7 +372,7 @@ Three things to note:
 
 ### 12d. R4 Minion on SWE-bench Verified
 
-10 tasks, `results/full-sweep-r4/raw.jsonl`:
+10 tasks, `results/runs/04-r4-minion/raw.jsonl`:
 
 | task | R1 | R2 (qwen) | R2 (devstral) | R3 (qwen) | R3 (devstral) | R4 |
 |---|---|---|---|---|---|---|
