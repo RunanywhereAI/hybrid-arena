@@ -322,7 +322,7 @@ async function main() {
       model: opts.synthesizer,
       system: SYNTH_SYSTEM,
       user: `ORIGINAL TASK:\n${opts.task}\n\nEXECUTED STEPS:\n\n${stepsBlob}\n\nProduce the final answer.`,
-      maxTokens: 2500,
+      maxTokens: 8000,
       temperature: 0.3,
     });
     const sCost = synthResult.cost ? fmtUSD(synthResult.cost.usd) : "$?";

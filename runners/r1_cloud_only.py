@@ -250,7 +250,7 @@ def run(
     proxy_url: str = "http://127.0.0.1:8787",
     hardware_profile_ref: str = "",
     output_dir: Path | None = None,
-    max_tokens: int = 8000,
+    max_tokens: int = 16000,
     temperature: float = 0.3,
     timeout_s: int = 600,
 ) -> ResultRow:
