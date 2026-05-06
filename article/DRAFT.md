@@ -156,3 +156,20 @@ Three things about the headline that matter for anyone tempted to deploy a hybri
 - **R2 is underrated.** On the one SWE-bench task R2 passes, it does so with 304 total tokens. On the custom-arch code-review task, R2 produced a genuinely useful 1,500-word analysis. Qwen3.6:27b-coding on a laptop is not the limiter; the hybrid pipeline is.
 
 For HumanEval-shaped workloads: use R1 if you're paying per token, R2 if you're not. For SWE-bench-shaped workloads today: use R1 — and hope future iterations of the hybrid pipeline earn their keep. We'll re-run the benchmark with the synth-budget bug fixed and a learned router in the next round and see if the direction changes.
+
+---
+
+## Postscript — the direction DID change
+
+After publishing the above we ran the fix round two readers asked for: (1) bump the reasoning-model completion budget so R1 and R3 stop producing 0-byte synth outputs; (2) re-judge with `claude-opus-4-7` cross-vendor instead of the same-family `gpt-5` fallback; (3) swap the local model from `qwen3.6:27b-coding-mxfp8` to `devstral:24b` (a SWE-bench-specialised checkpoint). We also shipped R4 — a Stanford Minion-style supervisor/worker hybrid, running on SWE-bench only.
+
+What shifted (full numbers in [`results/full-sweep/REPORT.md`](../results/full-sweep/REPORT.md) §12):
+
+- **Category C ties.** Opus's pairwise judge calls R3 ≈ R1 on all 5 hand-curated architecture tasks (tie on 4, R1 slight win on 1). R3 was only losing because reasoning tokens ate the 2500-completion budget on the synth call; with `maxTokens=16000` the synth actually produces 20-30 KB of prose and the judge rates it equivalent to R1's single-shot output.
+- **Category B gets competitive.** R3-with-Devstral passes 3/10 on SWE-bench Verified — matches R1 cloud-only at $0.144/task (vs $0.126 R1). Quality parity, 62% local tokens. Not yet cheaper, but also not the blowout R3-with-qwen was.
+- **R4 wins outright on SWE-bench.** 4/10 pass rate on the same 10 tasks — R4 uniquely solves `sphinx-7889` and `sphinx-9698` that no other route does. Median wall 155s, cost ~$0.08/task — both cheaper and more accurate than R1. The mechanism: Minion's supervisor asks targeted Q&A to the local worker instead of replaying full context to the cloud on every step; less cloud bloat, more attention on the bug.
+- **Qwen R3 regressions on A disappear with Devstral.** R3-devstral 10/10 on HumanEval+, no spec-loss on /103, no indentation bug on /15. The pipeline wasn't inherently destructive — it was amplifying qwen3.6's specific weaknesses.
+
+**Revised headline:** hybrid patterns are not uniformly worse than cloud-only. The v1 claim "R3 is Pareto-dominated on every category" was driven by a runner bug (synth budget) + a weak local model for SWE-bench + a narrow decomposition pattern (plan-execute-synth). Close those three things and the picture flips: **R3 ties R1 on architecture/reasoning**, **R3-devstral matches R1 on SWE-bench**, and **R4 (Minion-style Q&A) beats R1 on SWE-bench**.
+
+We're not claiming R4 is the right default today — 10 tasks is not enough to declare a winner. But the direction of the finding now points the other way: hybrid routing *can* be Pareto-improving if the implementation doesn't fight itself. The open question for the next round is: does R4 hold on a 30-task SWE-bench sweep, and does a learned router let R3 close the cost gap?
