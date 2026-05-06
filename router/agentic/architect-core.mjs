@@ -239,7 +239,7 @@ export async function runArchitect(opts) {
       model: o.synthesizer,
       system: SYNTH_SYSTEM,
       user: `ORIGINAL TASK:\n${o.task}\n\nEXECUTED STEPS:\n\n${stepsBlob}\n\nProduce the final answer.`,
-      maxTokens: 8000,
+      maxTokens: 16000,
       temperature: 0.3,
     });
     if (synth.routerChoice === "local") totalLocal++;
