@@ -36,3 +36,4 @@ vendor/*/.git/
 # historical log is already tracked and stays as reference.
 router/logs/*.jsonl
 !router/logs/decisions.jsonl
+*.egg-info/

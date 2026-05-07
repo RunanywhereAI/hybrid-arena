@@ -25,8 +25,7 @@ import subprocess
 
 import pytest
 
-from scorers.swebench import extract_diff, score
-
+from hybrid_coding_eval.scorers.swebench import extract_diff, score
 
 # ---------------------------------------------------------------------------
 # Fast tests — pure function, no Docker.
@@ -147,7 +146,7 @@ docker_required = pytest.mark.skipif(
 
 @pytest.fixture(scope="module")
 def one_task():
-    from benchmark.swebench_verified.adapter import load_tasks
+    from hybrid_coding_eval.benchmarks.swebench_verified.adapter import load_tasks
 
     tasks = load_tasks(n=10, seed=42, difficulty="easy")
     return tasks[0]

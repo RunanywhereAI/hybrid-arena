@@ -47,7 +47,6 @@ if str(_REPO_ROOT) not in sys.path:
 
 from hybrid_coding_eval.benchmarks.swebench_verified.adapter import load_tasks  # noqa: E402
 
-
 EXIT_OK = 0
 EXIT_GRADING_MISMATCH = 1
 EXIT_ENV_UNAVAILABLE = 2

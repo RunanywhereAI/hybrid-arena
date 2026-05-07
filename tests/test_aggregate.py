@@ -19,15 +19,20 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from lib.metrics import Latency, Quality, ResultRow, Routing, TokenUsage  # noqa: E402
-from lib.results import append_row  # noqa: E402
-
-from analysis.aggregate import aggregate_results, rows_to_frame  # noqa: E402
-from analysis.cost_scenarios import (  # noqa: E402
+from hybrid_coding_eval.analysis.aggregate import aggregate_results, rows_to_frame  # noqa: E402
+from hybrid_coding_eval.analysis.cost_scenarios import (  # noqa: E402
     PRICING_SCENARIOS,
     compute_row_cost,
     compute_scenario_costs,
 )
+from hybrid_coding_eval.core.metrics import (  # noqa: E402
+    Latency,
+    Quality,
+    ResultRow,
+    Routing,
+    TokenUsage,
+)
+from hybrid_coding_eval.core.results import append_row  # noqa: E402
 
 
 def _mk_row(

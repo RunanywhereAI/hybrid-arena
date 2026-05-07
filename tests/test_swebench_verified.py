@@ -6,7 +6,7 @@ and they do NOT hit the network (the pinned ``tasks.jsonl`` is used).
 
 from __future__ import annotations
 
-from benchmark.swebench_verified.adapter import (
+from hybrid_coding_eval.benchmarks.swebench_verified.adapter import (
     EASY_DIFFICULTY_VALUES,
     Task,
     load_tasks,

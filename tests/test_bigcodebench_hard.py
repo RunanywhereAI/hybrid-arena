@@ -14,12 +14,11 @@ Three tests:
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
-from benchmark.bigcodebench_hard.adapter import (
+from hybrid_coding_eval.benchmarks.bigcodebench_hard.adapter import (
+    _PINNED_JSONL,
     ID_PREFIX,
     Task,
-    _PINNED_JSONL,
     load_tasks,
 )
 

@@ -19,7 +19,6 @@ from __future__ import annotations
 import json
 import os
 import sys
-from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
@@ -46,9 +45,15 @@ if _env.is_file():
         if k and k not in os.environ:
             os.environ[k] = v
 
-from benchmark.custom_arch import adapter as custom_arch_adapter  # noqa: E402
+from hybrid_coding_eval.benchmarks.custom_arch import adapter as custom_arch_adapter  # noqa: E402
 from hybrid_coding_eval.core.experiment import _read_output_text  # noqa: E402
-from hybrid_coding_eval.core.metrics import Quality, ResultRow, TokenUsage, Latency, Routing  # noqa: E402
+from hybrid_coding_eval.core.metrics import (  # noqa: E402
+    Latency,
+    Quality,
+    ResultRow,
+    Routing,
+    TokenUsage,
+)
 from scorers import llm_judge  # noqa: E402
 
 

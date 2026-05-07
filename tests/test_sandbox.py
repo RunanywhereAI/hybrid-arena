@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from lib.sandbox import run_in_sandbox
+from hybrid_coding_eval.core.sandbox import run_in_sandbox
 
 
 def _docker_available() -> bool:

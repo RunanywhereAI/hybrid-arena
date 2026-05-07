@@ -39,7 +39,6 @@ from typing import Any
 
 import httpx
 
-
 SCHEMA_VERSION = 1
 
 # Memory-bandwidth lookup (GB/s) by chip name. M-series don't expose this

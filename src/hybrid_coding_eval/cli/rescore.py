@@ -24,9 +24,17 @@ else:  # pragma: no cover
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE / 'src'))
 
-from benchmark.swebench_verified import adapter as swebench_adapter  # noqa: E402
+from hybrid_coding_eval.benchmarks.swebench_verified import (
+    adapter as swebench_adapter,  # noqa: E402
+)
 from hybrid_coding_eval.core.experiment import _read_output_text  # noqa: E402
-from hybrid_coding_eval.core.metrics import ResultRow, TokenUsage, Latency, Quality, Routing  # noqa: E402
+from hybrid_coding_eval.core.metrics import (  # noqa: E402
+    Latency,
+    Quality,
+    ResultRow,
+    Routing,
+    TokenUsage,
+)
 from scorers import swebench as swebench_scorer  # noqa: E402
 
 

@@ -30,7 +30,6 @@ from typing import Any
 
 from hybrid_coding_eval.core.metrics import Quality
 
-
 # ---------------------------------------------------------------------------
 # Diff extraction
 # ---------------------------------------------------------------------------

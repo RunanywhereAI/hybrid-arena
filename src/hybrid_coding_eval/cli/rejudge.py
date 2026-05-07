@@ -47,9 +47,15 @@ if "ANTHROPIC_API_KEY" not in os.environ:
           "cross-vendor judge; it does not fall back to gpt-5.", file=sys.stderr)
     sys.exit(2)
 
-from benchmark.custom_arch import adapter as custom_arch_adapter  # noqa: E402
+from hybrid_coding_eval.benchmarks.custom_arch import adapter as custom_arch_adapter  # noqa: E402
 from hybrid_coding_eval.core.experiment import _read_output_text  # noqa: E402
-from hybrid_coding_eval.core.metrics import Quality, ResultRow, TokenUsage, Latency, Routing  # noqa: E402
+from hybrid_coding_eval.core.metrics import (  # noqa: E402
+    Latency,
+    Quality,
+    ResultRow,
+    Routing,
+    TokenUsage,
+)
 from scorers import llm_judge  # noqa: E402
 
 JUDGE_MODEL = "claude-opus-4-7"

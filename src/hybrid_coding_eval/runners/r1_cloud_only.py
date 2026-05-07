@@ -45,7 +45,13 @@ if str(_REPO_ROOT) not in sys.path:
 
 import httpx  # noqa: E402
 
-from hybrid_coding_eval.core.metrics import Latency, Quality, ResultRow, Routing, TokenUsage  # noqa: E402
+from hybrid_coding_eval.core.metrics import (  # noqa: E402
+    Latency,
+    Quality,
+    ResultRow,
+    Routing,
+    TokenUsage,
+)
 from hybrid_coding_eval.core.results import append_row  # noqa: E402
 
 __all__ = ["run", "build_prompt", "ROUTE", "ROUTER_MODEL"]

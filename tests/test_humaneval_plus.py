@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
-from benchmark.humaneval_plus.adapter import Task, load_tasks
+from hybrid_coding_eval.benchmarks.humaneval_plus.adapter import Task, load_tasks
 
 
 def test_load_tasks_returns_ten_with_default_seed(tmp_path: Path) -> None:

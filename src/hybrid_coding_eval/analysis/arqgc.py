@@ -23,9 +23,8 @@ from __future__ import annotations
 
 from typing import Iterable
 
-from hybrid_coding_eval.core.metrics import ResultRow
-
 from hybrid_coding_eval.analysis.cost_scenarios import compute_row_cost
+from hybrid_coding_eval.core.metrics import ResultRow
 
 __all__ = [
     "bounded_arqgc",

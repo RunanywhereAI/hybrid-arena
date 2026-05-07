@@ -53,7 +53,7 @@ except ModuleNotFoundError:  # pragma: no cover — during migration
                 return parent
         raise RuntimeError("repo_root not resolvable")
 
-from ._shared import REPO_ROOT, load_task_by_id, proxy_health, task_prompt
+from ._shared import REPO_ROOT, load_task_by_id, task_prompt
 
 logger = logging.getLogger(__name__)
 

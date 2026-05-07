@@ -47,13 +47,12 @@ else:  # pragma: no cover
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from hybrid_coding_eval.core.metrics import ResultRow  # noqa: E402
-from hybrid_coding_eval.core.results import load_results  # noqa: E402
-
 from hybrid_coding_eval.analysis.cost_scenarios import (  # noqa: E402
     PRICING_SCENARIOS,
     compute_row_cost,
 )
+from hybrid_coding_eval.core.metrics import ResultRow  # noqa: E402
+from hybrid_coding_eval.core.results import load_results  # noqa: E402
 
 __all__ = [
     "aggregate_results",

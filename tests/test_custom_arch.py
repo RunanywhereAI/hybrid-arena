@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from benchmark.custom_arch import RUBRIC_DIMENSIONS, load_tasks
+from hybrid_coding_eval.benchmarks.custom_arch import RUBRIC_DIMENSIONS, load_tasks
 
 EXPECTED_KINDS = {
     "architecture-design",

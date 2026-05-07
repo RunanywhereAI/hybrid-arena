@@ -22,8 +22,8 @@ from pathlib import Path
 
 import pytest
 
-from runners._shared import load_task_by_id, proxy_health
-from runners.r3_hybrid_architect import run as r3_run
+from hybrid_coding_eval.runners._shared import load_task_by_id, proxy_health
+from hybrid_coding_eval.runners.r3_hybrid_architect import run as r3_run
 
 PROXY_URL = os.environ.get("HYBRID_PROXY_URL", "http://127.0.0.1:8787")
 

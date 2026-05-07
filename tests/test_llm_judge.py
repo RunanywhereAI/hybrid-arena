@@ -14,8 +14,8 @@ from pathlib import Path
 
 import pytest
 
-from benchmark.custom_arch import load_tasks
-from scorers.llm_judge import (
+from hybrid_coding_eval.benchmarks.custom_arch import load_tasks
+from hybrid_coding_eval.scorers.llm_judge import (
     JudgmentResult,
     judge_pairwise,
     judge_to_quality,

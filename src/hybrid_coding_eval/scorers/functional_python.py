@@ -117,7 +117,7 @@ def extract_python_code(model_output: str) -> str:
     else:
         # Fences exist but all have non-python language tags (e.g. ```sh).
         # Fall back to treating the whole message as code.
-        return text
+        return model_output
 
     # Put the largest block first — models sometimes emit a tiny example
     # fence before the real solution, or vice versa. Largest-first makes

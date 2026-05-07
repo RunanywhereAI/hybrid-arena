@@ -84,6 +84,7 @@ for _mod_name, _rel in [
 # classes to exist; we'll never produce instances of them.
 import types as _types  # noqa: E402
 
+
 class _StubClient:
     """Placeholder for Together/Gemini/Sambanova; never instantiated."""
     pass
@@ -95,8 +96,8 @@ _clients_pkg.GeminiClient = _StubClient
 _clients_pkg.SambanovaClient = _StubClient
 sys.modules["minions.clients"] = _clients_pkg
 
-from minions.clients.openai import OpenAIClient  # noqa: E402
 from minions import minion as _minion_mod  # noqa: E402
+from minions.clients.openai import OpenAIClient  # noqa: E402
 
 
 def _ensure_minion_shape(d: dict, text: str) -> dict:
@@ -344,7 +345,6 @@ def run(
         # as an infrastructure failure, recover the last-round supervisor
         # content from the exception chain if we can, and keep the usage
         # counters we already accumulated via the OpenAIClient.
-        import re as _re
         # Try pulling the diff out of the exception args — Minion prints
         # the failed blob before re-raising, so it's in the traceback.
         err_msg = f"minion_error: {type(exc).__name__}: {str(exc)[:200]}"
@@ -443,6 +443,7 @@ def run(
 
 def main() -> int:
     import argparse
+
     from hybrid_coding_eval.benchmarks.swebench_verified import adapter as swe_adapter
 
     ap = argparse.ArgumentParser()

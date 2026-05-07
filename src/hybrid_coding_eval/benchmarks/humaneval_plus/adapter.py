@@ -15,9 +15,8 @@ from __future__ import annotations
 
 import json
 import random
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Iterable
 
 DEFAULT_CACHE_FILE = Path(__file__).parent / "tasks.jsonl"
 CATEGORY = "A"
