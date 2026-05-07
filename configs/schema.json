@@ -1,0 +1,345 @@
+{
+  "$defs": {
+    "BenchmarkConfig": {
+      "additionalProperties": false,
+      "description": "Which categories × routes × how many tasks.",
+      "properties": {
+        "categories": {
+          "default": [
+            "A",
+            "B",
+            "C"
+          ],
+          "items": {
+            "enum": [
+              "A",
+              "B",
+              "C"
+            ],
+            "type": "string"
+          },
+          "title": "Categories",
+          "type": "array"
+        },
+        "routes": {
+          "default": [
+            "R1",
+            "R2",
+            "R3",
+            "R4"
+          ],
+          "items": {
+            "enum": [
+              "R1",
+              "R2",
+              "R3",
+              "R4"
+            ],
+            "type": "string"
+          },
+          "title": "Routes",
+          "type": "array"
+        },
+        "tasks_per_category": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Cap N per category, e.g. {'A': 3, 'B': 3, 'C': 3}.",
+          "title": "Tasks Per Category"
+        },
+        "seeds": {
+          "default": [
+            42
+          ],
+          "items": {
+            "type": "integer"
+          },
+          "title": "Seeds",
+          "type": "array"
+        },
+        "smoke": {
+          "default": false,
+          "description": "Take one task per category (deterministic).",
+          "title": "Smoke",
+          "type": "boolean"
+        }
+      },
+      "title": "BenchmarkConfig",
+      "type": "object"
+    },
+    "ModelsConfig": {
+      "additionalProperties": false,
+      "description": "Which models make up cloud / local / judge / router-classifier slots.",
+      "properties": {
+        "cloud": {
+          "description": "Cloud model id (e.g. 'gpt-5.5'). Used by R1 + R3 + R4 supervisor.",
+          "title": "Cloud",
+          "type": "string"
+        },
+        "cloud_fallback": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Fallback cloud model if ``cloud`` 404s (e.g. 'gpt-5').",
+          "title": "Cloud Fallback"
+        },
+        "local": {
+          "description": "Local model id as Ollama tag (e.g. 'devstral:24b').",
+          "title": "Local",
+          "type": "string"
+        },
+        "judge": {
+          "default": "claude-opus-4-7",
+          "description": "LLM-judge model for custom-arch scoring (C-category).",
+          "title": "Judge",
+          "type": "string"
+        },
+        "router_classifier": {
+          "default": "qwen3:0.6b",
+          "description": "Small local model used by the llm-classifier router strategy.",
+          "title": "Router Classifier",
+          "type": "string"
+        },
+        "local_base_url": {
+          "default": "http://127.0.0.1:11434/v1",
+          "description": "Ollama OpenAI-compatible endpoint.",
+          "title": "Local Base Url",
+          "type": "string"
+        },
+        "cloud_base_url": {
+          "default": "https://api.openai.com/v1",
+          "description": "Cloud base URL.",
+          "title": "Cloud Base Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cloud",
+        "local"
+      ],
+      "title": "ModelsConfig",
+      "type": "object"
+    },
+    "PricingConfig": {
+      "additionalProperties": false,
+      "description": "Official API per-M-token scenarios for the report.",
+      "properties": {
+        "scenarios": {
+          "default": [
+            "openai-gpt5.5",
+            "openai-gpt5",
+            "openai-gpt5-mini",
+            "anthropic-claude-opus-4.7",
+            "anthropic-claude-sonnet-4.6",
+            "anthropic-claude-haiku-4.5"
+          ],
+          "description": "Named pricing scenarios to re-price the dataset under.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Scenarios",
+          "type": "array"
+        },
+        "primary": {
+          "default": "openai-gpt5.5",
+          "description": "Scenario used for headline numbers in decision matrices.",
+          "title": "Primary",
+          "type": "string"
+        }
+      },
+      "title": "PricingConfig",
+      "type": "object"
+    },
+    "RouterConfig": {
+      "additionalProperties": false,
+      "description": "Router-proxy deployment + strategy knobs.",
+      "properties": {
+        "strategy": {
+          "default": "heuristic",
+          "description": "Which routing strategy R3's per-step executor uses.",
+          "enum": [
+            "always-local",
+            "always-cloud",
+            "rules",
+            "heuristic",
+            "llm-classifier",
+            "embedding-knn",
+            "cascade"
+          ],
+          "title": "Strategy",
+          "type": "string"
+        },
+        "port": {
+          "default": 8787,
+          "description": "Router proxy port.",
+          "title": "Port",
+          "type": "integer"
+        },
+        "banner": {
+          "default": true,
+          "description": "Prefix a one-line ``[router] …`` note on the first delta.",
+          "title": "Banner",
+          "type": "boolean"
+        },
+        "heuristic_threshold": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Override the heuristic cutoff in router/strategies.mjs.",
+          "title": "Heuristic Threshold"
+        },
+        "prompt_cache": {
+          "default": false,
+          "description": "Turn on OpenAI prompt caching on static R3 prefixes.",
+          "title": "Prompt Cache",
+          "type": "boolean"
+        }
+      },
+      "title": "RouterConfig",
+      "type": "object"
+    },
+    "ScoringConfig": {
+      "additionalProperties": false,
+      "description": "Scoring-pipeline toggles.",
+      "properties": {
+        "skip": {
+          "default": false,
+          "description": "Run routes without inline scoring.",
+          "title": "Skip",
+          "type": "boolean"
+        },
+        "judge_temperature": {
+          "default": 0.0,
+          "title": "Judge Temperature",
+          "type": "number"
+        },
+        "swebench_image": {
+          "default": "hybrid-eval-python:latest",
+          "description": "Docker image tag for the functional sandbox.",
+          "title": "Swebench Image",
+          "type": "string"
+        }
+      },
+      "title": "ScoringConfig",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Top-level benchmark-run configuration.\n\nTwo required fields (``variant_tag`` and ``out_dir``) + one required\n``models`` block. Everything else has MVP-matching defaults so a\nminimal YAML is:\n\n    variant_tag: my-variant\n    out_dir: results/runs/XX-my-variant\n    models:\n      cloud: gpt-5.5\n      local: devstral:24b",
+  "properties": {
+    "variant_tag": {
+      "description": "Stable identifier written into every ResultRow.variant. Used by analysis to group rows by sweep.",
+      "title": "Variant Tag",
+      "type": "string"
+    },
+    "out_dir": {
+      "description": "Where to write raw.jsonl / outputs/ / run-notes.md.",
+      "format": "path",
+      "title": "Out Dir",
+      "type": "string"
+    },
+    "models": {
+      "$ref": "#/$defs/ModelsConfig"
+    },
+    "router": {
+      "$ref": "#/$defs/RouterConfig",
+      "default": {
+        "strategy": "heuristic",
+        "port": 8787,
+        "banner": true,
+        "heuristic_threshold": null,
+        "prompt_cache": false
+      }
+    },
+    "benchmark": {
+      "$ref": "#/$defs/BenchmarkConfig",
+      "default": {
+        "categories": [
+          "A",
+          "B",
+          "C"
+        ],
+        "routes": [
+          "R1",
+          "R2",
+          "R3",
+          "R4"
+        ],
+        "tasks_per_category": null,
+        "seeds": [
+          42
+        ],
+        "smoke": false
+      }
+    },
+    "pricing": {
+      "$ref": "#/$defs/PricingConfig",
+      "default": {
+        "scenarios": [
+          "openai-gpt5.5",
+          "openai-gpt5",
+          "openai-gpt5-mini",
+          "anthropic-claude-opus-4.7",
+          "anthropic-claude-sonnet-4.6",
+          "anthropic-claude-haiku-4.5"
+        ],
+        "primary": "openai-gpt5.5"
+      }
+    },
+    "scoring": {
+      "$ref": "#/$defs/ScoringConfig",
+      "default": {
+        "skip": false,
+        "judge_temperature": 0.0,
+        "swebench_image": "hybrid-eval-python:latest"
+      }
+    },
+    "resume": {
+      "default": false,
+      "description": "Skip (task_id, route) pairs already in raw.jsonl.",
+      "title": "Resume",
+      "type": "boolean"
+    },
+    "git_sha_pin": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "If set, assert current git HEAD matches this SHA before running — guards against accidental replays of a dataset from a dirty working tree.",
+      "title": "Git Sha Pin"
+    }
+  },
+  "required": [
+    "variant_tag",
+    "out_dir",
+    "models"
+  ],
+  "title": "BenchConfig",
+  "type": "object"
+}
