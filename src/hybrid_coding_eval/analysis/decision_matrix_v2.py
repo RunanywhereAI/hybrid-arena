@@ -220,11 +220,25 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv or sys.argv[1:])
 
     root = repo_root()
-    raw = args.raw or (root / "results" / "raw.jsonl")
     out_dir = args.out_dir or (root / "results" / "reprice")
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    rows = load_results(raw)
+    if args.raw:
+        rows = load_results(args.raw)
+    else:
+        # MVP's ``results/raw.jsonl`` is the concatenation of run dirs
+        # 01–04, so merging them in again would double-count. Pull in
+        # only post-MVP run dirs (05+) alongside the merged MVP set.
+        rows = list(load_results(root / "results" / "raw.jsonl"))
+        for run_dir in sorted((root / "results" / "runs").glob("*")):
+            if not run_dir.is_dir():
+                continue
+            if run_dir.name.startswith(("01-", "02-", "03-", "04-")):
+                continue  # part of MVP raw.jsonl already
+            raw = run_dir / "raw.jsonl"
+            if raw.is_file():
+                rows.extend(load_results(raw))
+
     data = build_matrix(rows)
 
     md_path = out_dir / "decision_matrix.md"

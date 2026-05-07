@@ -113,9 +113,23 @@ def main(argv: list[str] | None = None) -> int:
 
     src_outputs = src_dir / "outputs"
 
-    # Collect (task, out_a, out_b, pair_label) tuples.
+    def _route_output_path(base: Path, tid: str, route: str) -> Path | None:
+        """R3 outputs use .r3.answer.txt; R1/R2/R4 use _R<n>.txt."""
+        slug = tid.replace("/", "__")
+        if route == "R3":
+            p = base / f"{slug}.r3.answer.txt"
+            return p if p.is_file() else None
+        p = base / f"{slug}_{route}.txt"
+        return p if p.is_file() else None
+
+    # Collect (task, out_a, out_b, pair_label) tuples. Only custom-arch
+    # pairings (prose deliverables) — bigcodebench pairs in the same
+    # judge.jsonl are functional tasks and should be scored by the
+    # pytest harness, not re-judged.
     pairings: list[tuple] = []
     for tid, recs in prior.items():
+        if not tid.startswith("custom-arch/"):
+            continue
         task = tasks_by_id.get(tid)
         if task is None:
             continue
@@ -127,15 +141,15 @@ def main(argv: list[str] | None = None) -> int:
             if pair in seen:
                 continue
             seen.add(pair)
-            out_a = (src_outputs / f"{tid.replace('/', '__')}_{pair[0]}.txt")
-            out_b = (src_outputs / f"{tid.replace('/', '__')}_{pair[1]}.txt")
-            if not out_a.is_file() or not out_b.is_file():
+            out_a_path = _route_output_path(src_outputs, tid, pair[0])
+            out_b_path = _route_output_path(src_outputs, tid, pair[1])
+            if out_a_path is None or out_b_path is None:
                 continue
             pairings.append(
                 (
                     task,
-                    out_a.read_text(encoding="utf-8"),
-                    out_b.read_text(encoding="utf-8"),
+                    out_a_path.read_text(encoding="utf-8"),
+                    out_b_path.read_text(encoding="utf-8"),
                     pair,
                 )
             )

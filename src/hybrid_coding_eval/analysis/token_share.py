@@ -37,9 +37,15 @@ def _local_tokens(r: ResultRow) -> int:
 
 
 def _collect_all(root: Path) -> list[ResultRow]:
+    # MVP raw.jsonl = concatenation of runs 01–04. Avoid double-counting
+    # by only pulling in the new (post-MVP) run dirs on top of MVP.
     rows: list[ResultRow] = []
     rows.extend(load_results(root / "results" / "raw.jsonl"))
     for run_dir in sorted((root / "results" / "runs").glob("*")):
+        if not run_dir.is_dir():
+            continue
+        if run_dir.name.startswith(("01-", "02-", "03-", "04-")):
+            continue
         raw = run_dir / "raw.jsonl"
         if raw.is_file():
             rows.extend(load_results(raw))
@@ -77,7 +83,7 @@ def _render(rows: list[ResultRow], scenario: str = "openai-gpt5.5") -> str:
     route_totals: dict[str, list[int]] = defaultdict(lambda: [0, 0, 0, 0.0])
     # route → [n_rows, total_cloud, total_local, total_cost]
 
-    for (route, cat), rs in sorted(buckets):
+    for (route, cat), rs in sorted(buckets.items()):
         valid = [r for r in rs if not r.error]
         n = len(valid)
         total_cloud = sum(_cloud_tokens(r) for r in valid)

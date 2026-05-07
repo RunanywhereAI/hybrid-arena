@@ -372,19 +372,43 @@ def _call_judge(
     temperature: float,
     max_tokens: int,
 ) -> str:
-    """Dispatch judge call by model id prefix."""
+    """Dispatch judge call by model id prefix.
+
+    The caller may pass an Anthropic-default api_key via
+    :func:`_resolve_api_key`; if the model is OpenAI-family we re-resolve
+    the key from the environment so mixed-vendor triple-judge runs
+    (Opus + Sonnet + gpt-5.5) don't 401 on the OpenAI side.
+    """
     is_openai = model.startswith("gpt-") or model.startswith("o1") or model.startswith("o3")
     if is_openai:
+        openai_key = (
+            os.environ.get("OPENAI_API_KEY")
+            or os.environ.get("OPEN_AI_API_KEY")
+            or (api_key if api_key.startswith("sk-") and not api_key.startswith("sk-ant") else None)
+        )
+        if not openai_key:
+            raise RuntimeError(
+                "judge model is OpenAI-family but no OPENAI_API_KEY / "
+                "OPEN_AI_API_KEY is set in the environment"
+            )
         return _call_openai(
-            api_key=api_key,
+            api_key=openai_key,
             model=model,
             system=system,
             user=user,
             temperature=temperature,
             max_tokens=max_tokens,
         )
+    anth_key = (
+        os.environ.get("ANTHROPIC_API_KEY")
+        or (api_key if api_key.startswith("sk-ant") else None)
+    )
+    if not anth_key:
+        raise RuntimeError(
+            "judge model is Anthropic-family but ANTHROPIC_API_KEY is not set"
+        )
     return _call_anthropic(
-        api_key=api_key,
+        api_key=anth_key,
         model=model,
         system=system,
         user=user,

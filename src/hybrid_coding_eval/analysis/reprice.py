@@ -31,12 +31,21 @@ from hybrid_coding_eval.core.results import load_results
 
 def collect_rows(root: Path) -> list[tuple[ResultRow, str]]:
     """Return ``(row, source_run)`` pairs across the MVP dataset plus
-    every ``results/runs/NN-*/raw.jsonl``."""
+    every POST-MVP ``results/runs/NN-*/raw.jsonl``.
+
+    ``results/raw.jsonl`` is the concatenation of runs 01–04 (the MVP
+    preserved set), so merging those in again would double-count. Only
+    runs 05+ are added on top.
+    """
     out: list[tuple[ResultRow, str]] = []
     mvp = root / "results" / "raw.jsonl"
     for r in load_results(mvp):
         out.append((r, "mvp/raw.jsonl"))
     for run_dir in sorted((root / "results" / "runs").glob("*")):
+        if not run_dir.is_dir():
+            continue
+        if run_dir.name.startswith(("01-", "02-", "03-", "04-")):
+            continue  # already in mvp/raw.jsonl
         raw = run_dir / "raw.jsonl"
         if not raw.is_file():
             continue
