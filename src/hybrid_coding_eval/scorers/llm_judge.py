@@ -1,7 +1,7 @@
 """Bias-corrected pairwise LLM-judge scorer (Category C).
 
 This module is the Python port (and rubric-adaptation) of the MT-Bench
-pairwise judge shipped in ``EXTERNAL/lm-eval-harness-judge/src/``. We do
+pairwise judge shipped in ``vendor/lm-eval-harness-judge/src/``. We do
 NOT import from that vendored directory; it is reference-only. Here we
 use the five-dimension rubric attached to each ``benchmark.custom_arch``
 ``Task`` to drive per-axis scoring, then run the judge twice — once with
