@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Subprocess shim the Python R3 runner calls. Reads one JSON object from
 // stdin describing the run, invokes runArchitect() from
-// router/agentic/architect-core.mjs, and prints exactly one JSON object to
+// router/pipelines/architect/core.mjs (sibling), and prints exactly one JSON object to
 // stdout with the full trace the Python side needs. Progress events are
 // emitted to stderr (one JSON per line, prefixed "EVENT ") so the parent can
 // tail them for debugging without parsing stdout.
@@ -27,7 +27,7 @@
 //     "finalOutput": "..."
 //   }
 
-import { runArchitect, answerFromRun, stripBanner } from "../router/agentic/architect-core.mjs";
+import { runArchitect, answerFromRun, stripBanner } from "./core.mjs";
 
 async function readAllStdin() {
   return await new Promise((resolve, reject) => {

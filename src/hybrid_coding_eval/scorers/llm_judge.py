@@ -37,7 +37,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from lib.metrics import Quality
+from hybrid_coding_eval.core.metrics import Quality
 
 # Lazy import of ``anthropic`` happens inside :func:`judge_pairwise` so that
 # importing this module in environments without the SDK (e.g. static type

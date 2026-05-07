@@ -37,13 +37,30 @@ from pathlib import Path
 from typing import Any
 
 # Make the vendored Minion library importable. It expects to be on
-# ``sys.path`` at the ``EXTERNAL/minions`` level (i.e. the directory
-# that contains the ``minions/`` package).
-_REPO_ROOT = Path(__file__).resolve().parent.parent
+# ``sys.path`` at the ``EXTERNAL/minions`` (legacy) / ``vendor/minions``
+# (post-T-05) level — i.e. the directory that contains the ``minions/``
+# package. Post-mono-repo-reorg this file lives under
+# ``src/hybrid_coding_eval/runners/`` so ``parent.parent.parent.parent``
+# (or a pyproject-walker) is the true repo root.
+try:
+    from hybrid_coding_eval.core.paths import repo_root as _resolve_repo_root
+    _REPO_ROOT = _resolve_repo_root()
+except ModuleNotFoundError:  # pragma: no cover — during migration
+    _here = Path(__file__).resolve()
+    for _p in (_here, *_here.parents):
+        if (_p / "pyproject.toml").is_file():
+            _REPO_ROOT = _p
+            break
+    else:
+        _REPO_ROOT = Path(__file__).resolve().parent.parent
+
 # Make both our repo root (for ``lib.metrics`` et al.) and the vendored
 # Minion library importable.
 sys.path.insert(0, str(_REPO_ROOT))
-sys.path.insert(0, str(_REPO_ROOT / "EXTERNAL" / "minions"))
+_MINIONS_VENDOR = _REPO_ROOT / "vendor" / "minions"
+_MINIONS_LEGACY = _REPO_ROOT / "EXTERNAL" / "minions"
+_MINIONS_DIR = _MINIONS_VENDOR if _MINIONS_VENDOR.exists() else _MINIONS_LEGACY
+sys.path.insert(0, str(_MINIONS_DIR))
 
 # The Stanford Minions package __init__ imports optional backends
 # (mistral, sambanova) that break on recent SDK versions. We load the
@@ -51,7 +68,7 @@ sys.path.insert(0, str(_REPO_ROOT / "EXTERNAL" / "minions"))
 # names, then import Minion normally.
 import importlib.util as _iu  # noqa: E402
 
-_MINIONS = _REPO_ROOT / "EXTERNAL" / "minions"
+_MINIONS = _MINIONS_DIR
 for _mod_name, _rel in [
     ("minions.usage", "minions/usage.py"),
     ("minions.clients.base", "minions/clients/base.py"),
@@ -156,7 +173,21 @@ _minion_mod._extract_json = _resilient_extract_json
 # uses ``json.loads`` directly (not _extract_json), which raises on the
 # same pathological inputs. If it succeeds but yields a dict missing
 # `message`/`decision`, we fill them in defensively.
-_orig_json_loads = _minion_mod.json.loads
+#
+# CRITICAL: the previous version of this shim did
+# ``_minion_mod.json.loads = _resilient_json_loads``, which mutates the
+# *global* :mod:`json` module (Python modules are singletons in
+# :data:`sys.modules`). That had a silent blast radius — every
+# ``json.loads`` call anywhere in the process would inject Minion's
+# four extra keys into any dict it parsed, corrupting unrelated
+# JSON-reading code (env-detect manifests, test fixtures, …).
+#
+# Instead we bind a *proxy* module onto ``_minion_mod.json`` so Minion's
+# own call sites route through our ``_resilient_json_loads`` while the
+# real global :mod:`json` stays untouched.
+import json as _real_json  # noqa: E402
+
+_orig_json_loads = _real_json.loads
 
 
 def _resilient_json_loads(text, *args, **kwargs):
@@ -171,10 +202,20 @@ def _resilient_json_loads(text, *args, **kwargs):
         raise
 
 
-_minion_mod.json.loads = _resilient_json_loads
+class _JsonProxy:
+    """Expose the real json module attributes, override only loads."""
+
+    loads = staticmethod(_resilient_json_loads)
+    dumps = staticmethod(_real_json.dumps)
+    load = staticmethod(_real_json.load)
+    dump = staticmethod(_real_json.dump)
+    JSONDecodeError = _real_json.JSONDecodeError
+
+
+_minion_mod.json = _JsonProxy()
 from minions.minion import Minion  # noqa: E402
 
-from lib.metrics import (  # noqa: E402
+from hybrid_coding_eval.core.metrics import (  # noqa: E402
     Latency,
     Quality,
     ResultRow,
@@ -229,7 +270,7 @@ def _minion_prompt(task: Any) -> tuple[str, list[str]]:
     (so the worker reads it locally) and the question-to-answer into
     task (so the supervisor decides what to ask the worker).
     """
-    from runners._shared import task_prompt
+    from hybrid_coding_eval.runners._shared import task_prompt
 
     prompt = task_prompt(task)
     tid = task.id
@@ -402,7 +443,7 @@ def run(
 
 def main() -> int:
     import argparse
-    from benchmark.swebench_verified import adapter as swe_adapter
+    from hybrid_coding_eval.benchmarks.swebench_verified import adapter as swe_adapter
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--task-id", help="specific SWE-bench task id (else first)")

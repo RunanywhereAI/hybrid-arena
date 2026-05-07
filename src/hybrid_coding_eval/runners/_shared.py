@@ -169,19 +169,19 @@ def load_task_by_id(task_source: str, task_id: str) -> Any:
     prefix is added automatically.
     """
     if task_source == "humaneval_plus":
-        from benchmark.humaneval_plus.adapter import load_tasks as loader
+        from hybrid_coding_eval.benchmarks.humaneval_plus.adapter import load_tasks as loader
 
         ns = "humaneval-plus/"
     elif task_source == "swebench_verified":
-        from benchmark.swebench_verified.adapter import load_tasks as loader
+        from hybrid_coding_eval.benchmarks.swebench_verified.adapter import load_tasks as loader
 
         ns = "swebench-verified/"
     elif task_source == "bigcodebench_hard":
-        from benchmark.bigcodebench_hard.adapter import load_tasks as loader
+        from hybrid_coding_eval.benchmarks.bigcodebench_hard.adapter import load_tasks as loader
 
         ns = "bigcodebench-hard/"
     elif task_source == "custom_arch":
-        from benchmark.custom_arch.adapter import load_tasks as loader
+        from hybrid_coding_eval.benchmarks.custom_arch.adapter import load_tasks as loader
 
         ns = "custom-arch/"
     else:
@@ -202,4 +202,15 @@ def load_task_by_id(task_source: str, task_id: str) -> Any:
 # Paths
 # --------------------------------------------------------------------------- #
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+try:
+    from hybrid_coding_eval.core.paths import repo_root as _resolve_repo_root
+
+    REPO_ROOT = _resolve_repo_root()
+except ModuleNotFoundError:  # pragma: no cover — during migration
+    _here = Path(__file__).resolve()
+    for _p in (_here, *_here.parents):
+        if (_p / "pyproject.toml").is_file():
+            REPO_ROOT = _p
+            break
+    else:
+        REPO_ROOT = _here.parent.parent

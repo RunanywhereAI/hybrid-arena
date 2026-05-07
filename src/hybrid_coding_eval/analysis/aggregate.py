@@ -37,14 +37,20 @@ from typing import Iterable
 import pandas as pd
 
 # Make ``lib`` / ``analysis`` importable when run as a script.
-_REPO_ROOT = Path(__file__).resolve().parent.parent
+_here = Path(__file__).resolve()
+for _p in (_here, *_here.parents):
+    if (_p / "pyproject.toml").is_file():
+        _REPO_ROOT = _p
+        break
+else:  # pragma: no cover
+    _REPO_ROOT = _here.parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from lib.metrics import ResultRow  # noqa: E402
-from lib.results import load_results  # noqa: E402
+from hybrid_coding_eval.core.metrics import ResultRow  # noqa: E402
+from hybrid_coding_eval.core.results import load_results  # noqa: E402
 
-from analysis.cost_scenarios import (  # noqa: E402
+from hybrid_coding_eval.analysis.cost_scenarios import (  # noqa: E402
     PRICING_SCENARIOS,
     compute_row_cost,
 )

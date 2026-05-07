@@ -40,14 +40,27 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from lib.metrics import Latency, Quality, ResultRow, Routing, TokenUsage
-from lib.results import append_row
+from hybrid_coding_eval.core.metrics import Latency, Quality, ResultRow, Routing, TokenUsage
+from hybrid_coding_eval.core.results import append_row
+
+try:
+    from hybrid_coding_eval.core.paths import repo_root as _repo_root
+except ModuleNotFoundError:  # pragma: no cover — during migration
+    def _repo_root() -> Path:
+        here = Path(__file__).resolve()
+        for parent in (here, *here.parents):
+            if (parent / "pyproject.toml").is_file():
+                return parent
+        raise RuntimeError("repo_root not resolvable")
 
 from ._shared import REPO_ROOT, load_task_by_id, proxy_health, task_prompt
 
 logger = logging.getLogger(__name__)
 
-_ARCHITECT_SHIM = Path(__file__).resolve().parent / "_architect_runner.mjs"
+# Node subprocess shim lives at router/pipelines/architect/runner.mjs (moved
+# from runners/_architect_runner.mjs in T-03 so Node files stay under
+# router/, not mixed into the Python package tree).
+_ARCHITECT_SHIM = _repo_root() / "router" / "pipelines" / "architect" / "runner.mjs"
 _ROUTE = "R3"
 
 

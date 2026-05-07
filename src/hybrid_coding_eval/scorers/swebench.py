@@ -28,7 +28,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from lib.metrics import Quality
+from hybrid_coding_eval.core.metrics import Quality
 
 
 # ---------------------------------------------------------------------------

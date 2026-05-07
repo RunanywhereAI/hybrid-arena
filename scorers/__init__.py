@@ -1,7 +1,15 @@
-"""Scorers that convert a model's raw output for a task into a ``Quality`` row.
+"""Compat shim — real code lives at :mod:`hybrid_coding_eval.scorers`."""
 
-Each scorer takes (task, model_output, ...) and returns a
-``lib.metrics.Quality``. Scorers are pure functions of their inputs: they do
-not write results themselves — the runner is responsible for assembling a
-``ResultRow`` and persisting it.
-"""
+import sys
+from pathlib import Path
+
+_SRC = Path(__file__).resolve().parent.parent / "src"
+if str(_SRC) not in sys.path:
+    sys.path.insert(0, str(_SRC))
+
+import hybrid_coding_eval.scorers as _new  # noqa: E402
+
+globals().update({k: v for k, v in _new.__dict__.items() if not k.startswith("_")})
+for _sub in ("functional_python", "llm_judge", "swebench"):
+    _mod = __import__(f"hybrid_coding_eval.scorers.{_sub}", fromlist=[_sub])
+    sys.modules[f"scorers.{_sub}"] = _mod

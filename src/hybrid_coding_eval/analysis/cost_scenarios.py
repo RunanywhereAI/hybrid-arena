@@ -23,9 +23,9 @@ from typing import Iterable
 
 import pandas as pd
 
-from lib.metrics import ResultRow
-from lib.pricing import compute_cost
-from lib.results import PRICING_SCENARIOS as _NAMED_SCENARIOS
+from hybrid_coding_eval.core.metrics import ResultRow
+from hybrid_coding_eval.core.pricing import compute_cost
+from hybrid_coding_eval.core.results import PRICING_SCENARIOS as _NAMED_SCENARIOS
 
 __all__ = [
     "PRICING_SCENARIOS",

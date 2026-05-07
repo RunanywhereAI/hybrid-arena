@@ -33,13 +33,19 @@ import sys
 import tempfile
 from pathlib import Path
 
-# Allow running as a standalone script (``python benchmark/swebench_verified/verify_harness.py``)
-# by ensuring the repo root is on sys.path before the intra-repo import.
-_REPO_ROOT = Path(__file__).resolve().parents[2]
+# Allow running as a standalone script by walking up to the repo root
+# (pyproject.toml marker) — robust to the file's position in the tree.
+_here = Path(__file__).resolve()
+for _p in (_here, *_here.parents):
+    if (_p / "pyproject.toml").is_file():
+        _REPO_ROOT = _p
+        break
+else:  # pragma: no cover
+    _REPO_ROOT = _here.parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from benchmark.swebench_verified.adapter import load_tasks  # noqa: E402
+from hybrid_coding_eval.benchmarks.swebench_verified.adapter import load_tasks  # noqa: E402
 
 
 EXIT_OK = 0

@@ -44,8 +44,8 @@ import logging
 import re
 from typing import Any
 
-from lib.metrics import Quality
-from lib.sandbox import run_in_sandbox
+from hybrid_coding_eval.core.metrics import Quality
+from hybrid_coding_eval.core.sandbox import run_in_sandbox
 
 logger = logging.getLogger(__name__)
 

@@ -45,8 +45,8 @@ if str(_REPO_ROOT) not in sys.path:
 
 import httpx  # noqa: E402
 
-from lib.metrics import Latency, Quality, ResultRow, Routing, TokenUsage  # noqa: E402
-from lib.results import append_row  # noqa: E402
+from hybrid_coding_eval.core.metrics import Latency, Quality, ResultRow, Routing, TokenUsage  # noqa: E402
+from hybrid_coding_eval.core.results import append_row  # noqa: E402
 
 __all__ = ["run", "build_prompt", "ROUTE", "ROUTER_MODEL"]
 
@@ -413,19 +413,19 @@ def run(
 def _load_task(source: str, task_id: str) -> Any:
     """Look up one task by id from the requested benchmark adapter."""
     if source == "humaneval_plus":
-        from benchmark.humaneval_plus.adapter import load_tasks
+        from hybrid_coding_eval.benchmarks.humaneval_plus.adapter import load_tasks
 
         tasks = load_tasks()
     elif source == "swebench_verified":
-        from benchmark.swebench_verified.adapter import load_tasks
+        from hybrid_coding_eval.benchmarks.swebench_verified.adapter import load_tasks
 
         tasks = load_tasks()
     elif source == "bigcodebench_hard":
-        from benchmark.bigcodebench_hard.adapter import load_tasks
+        from hybrid_coding_eval.benchmarks.bigcodebench_hard.adapter import load_tasks
 
         tasks = load_tasks()
     elif source == "custom_arch":
-        from benchmark.custom_arch.adapter import load_tasks
+        from hybrid_coding_eval.benchmarks.custom_arch.adapter import load_tasks
 
         tasks = load_tasks()
     else:

@@ -81,19 +81,19 @@ def load_category_tasks(
     pairs: list[tuple[str, Any]] = []
     for source in CATEGORY_SOURCES[category]:
         if source == "humaneval_plus":
-            from benchmark.humaneval_plus.adapter import load_tasks
+            from hybrid_coding_eval.benchmarks.humaneval_plus.adapter import load_tasks
 
             pairs.extend((source, t) for t in load_tasks(n=10))
         elif source == "swebench_verified":
-            from benchmark.swebench_verified.adapter import load_tasks
+            from hybrid_coding_eval.benchmarks.swebench_verified.adapter import load_tasks
 
             pairs.extend((source, t) for t in load_tasks(n=10))
         elif source == "bigcodebench_hard":
-            from benchmark.bigcodebench_hard.adapter import load_tasks
+            from hybrid_coding_eval.benchmarks.bigcodebench_hard.adapter import load_tasks
 
             pairs.extend((source, t) for t in load_tasks(n=5))
         elif source == "custom_arch":
-            from benchmark.custom_arch.adapter import load_tasks
+            from hybrid_coding_eval.benchmarks.custom_arch.adapter import load_tasks
 
             pairs.extend((source, t) for t in load_tasks())
         else:  # pragma: no cover — guarded by CATEGORY_SOURCES

@@ -10,8 +10,8 @@
 //
 // Returns { plan, stepResults, synth, totals }.
 
-import { lastUserText } from "../strategies.mjs";
-import { costFor } from "../pricing.mjs";
+import { lastUserText } from "../../strategies.mjs";
+import { costFor } from "../../pricing.mjs";
 
 export const PLAN_SYSTEM = (maxSteps) => `You are a planning architect. Given a coding/technical task, decompose it into a sequence of small, independently-executable steps.
 

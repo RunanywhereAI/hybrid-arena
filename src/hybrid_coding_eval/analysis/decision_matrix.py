@@ -29,14 +29,20 @@ import sys
 from pathlib import Path
 
 # Repo-root path dance so running as ``python -m analysis.decision_matrix`` works.
-_REPO_ROOT = Path(__file__).resolve().parent.parent
+_here = Path(__file__).resolve()
+for _p in (_here, *_here.parents):
+    if (_p / "pyproject.toml").is_file():
+        _REPO_ROOT = _p
+        break
+else:  # pragma: no cover
+    _REPO_ROOT = _here.parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from analysis.arqgc import bounded_arqgc  # noqa: E402
-from analysis.cost_scenarios import PRICING_SCENARIOS  # noqa: E402
-from lib.pricing import fmt_usd  # noqa: E402
-from lib.results import load_results  # noqa: E402
+from hybrid_coding_eval.analysis.arqgc import bounded_arqgc  # noqa: E402
+from hybrid_coding_eval.analysis.cost_scenarios import PRICING_SCENARIOS  # noqa: E402
+from hybrid_coding_eval.core.pricing import fmt_usd  # noqa: E402
+from hybrid_coding_eval.core.results import load_results  # noqa: E402
 
 __all__ = ["build_decision_matrix"]
 

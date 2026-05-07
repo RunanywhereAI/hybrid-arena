@@ -18,7 +18,7 @@ import { mkdirSync, appendFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { STRATEGIES, lastUserText, totalPromptTokens } from "./strategies.mjs";
-import { runArchitect, answerFromRun, userTaskFromMessages } from "./agentic/architect-core.mjs";
+import { runArchitect, answerFromRun, userTaskFromMessages } from "./pipelines/architect/core.mjs";
 import { costFor, fmtUSD } from "./pricing.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
