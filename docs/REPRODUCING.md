@@ -1,12 +1,16 @@
 # Reproducing the hybrid-coding-eval experiment
 
-Copy-paste instructions for running the **30-task × 3-route** benchmark on a
-fresh machine. Every command below has been executed verbatim from a clean
-checkout — if one fails, the fix is in
-[§9 Troubleshooting](#9-troubleshooting).
+Copy-paste instructions for running the benchmark on a fresh machine. Every
+command below has been executed verbatim from a clean checkout — if one
+fails, the fix is in [§9 Troubleshooting](#9-troubleshooting).
 
 See [`METHODOLOGY.md`](./METHODOLOGY.md) for *why* we chose these tasks,
 routes, and scoring pipelines. This document is the *how*.
+
+> **Post-mono-repo-reorg.** The canonical way to run a sweep is now
+> `./bench run --config configs/variants/<name>.yaml`. Legacy
+> `./bin/run-experiment.py ...` shims still work — see `CLAUDE.md` for the
+> full `bench` CLI.
 
 ---
 

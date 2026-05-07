@@ -75,22 +75,31 @@ hybrid-coding-eval/
 ```bash
 git clone https://github.com/RunanywhereAI/hybrid-coding-eval
 cd hybrid-coding-eval
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt && pip install -e .
 
 cp .env.example .env                         # add OPEN_AI_API_KEY (+ ANTHROPIC_API_KEY if you want the Opus judge)
-ollama pull qwen3.6:27b-coding-mxfp8         # or devstral:24b
+ollama pull devstral:24b                     # or qwen3.6:27b-coding-mxfp8
 
 ./router/start.sh                            # launches the hybrid router proxy on :8787
 
-# smoke sweep — 3 tasks × 3 routes ≈ 10 min
-./bin/run-experiment.py --smoke --out results/my-smoke
+# smoke sweep (1 task × 3 routes ≈ 10 min)
+./bench run --config configs/variants/04-r4-devstral-minion.yaml --smoke
 
 # full sweep — 30 tasks × 4 routes ≈ 4-5h
-./bin/run-experiment.py --out results/my-run --categories A,B,C --routes R1,R2,R3,R4
-./bin/rescore-swebench.py results/my-run
-./bin/rejudge-custom-arch.py results/my-run   # needs ANTHROPIC_API_KEY
-.venv/bin/python -m analysis.all results/my-run
+./bench run --config configs/variants/04-r4-devstral-minion.yaml
+./bench rescore  results/runs/04-r4-minion/       # post-sweep SWE-bench rescore
+./bench rejudge  results/runs/04-r4-minion/       # post-sweep Opus re-judge (ANTHROPIC_API_KEY)
+./bench analyze  results/runs/04-r4-minion/
+```
+
+### Drop in a new model
+
+```bash
+cp configs/variants/_template.yaml configs/variants/my-model.yaml
+# edit variant_tag + models.cloud or models.local, then:
+./bench run --config configs/variants/my-model.yaml
+./bench analyze results/runs/my-variant/
 ```
 
 Full instructions in [`docs/REPRODUCING.md`](./docs/REPRODUCING.md). Wall ~5h on M4 Max, ~$15 API spend.
