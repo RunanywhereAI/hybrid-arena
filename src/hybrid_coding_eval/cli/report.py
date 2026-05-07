@@ -382,8 +382,19 @@ def _output_path_hint(task_id: str, route: str, variant: str | None) -> str:
 
 
 def _cmd_appendix_tasks(argv: list[str]) -> int:
+    # Merge MVP dataset + post-MVP run dirs (05+). Avoid double-counting
+    # runs 01-04 which are already baked into results/raw.jsonl.
     raw = _RESULTS / "raw.jsonl"
-    rows = load_results(raw)
+    rows = list(load_results(raw))
+    for run_dir in sorted((_RESULTS / "runs").glob("*")):
+        if not run_dir.is_dir():
+            continue
+        if run_dir.name.startswith(("01-", "02-", "03-", "04-")):
+            continue
+        inner = run_dir / "raw.jsonl"
+        if inner.is_file():
+            rows.extend(load_results(inner))
+
     bundles = _bundles_for_rows(rows)
     body = _render_appendix_tasks(bundles)
     out = _REPORTS / "APPENDIX_TASKS.md"
