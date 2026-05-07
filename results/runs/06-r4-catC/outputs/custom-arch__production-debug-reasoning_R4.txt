@@ -1,0 +1,60 @@
+The most likely root cause is database connection pool saturation or database-side contention triggered by a morning workload, such as a scheduled report, batch job, analytics process, backup, or peak user activity around 09:00.
+
+This conclusion fits the symptom pattern because:
+- The failures are 504s from the reverse proxy, meaning the application is not responding before the proxy timeout.
+- Only `/search` and `/reports/*` are degraded, which suggests the issue affects database-heavy endpoints rather than the whole application.
+- CPU and memory on the application servers are normal, making general application server overload less likely.
+- Application logs show no clear errors, which is consistent with requests waiting on database connections, slow queries, locks, or long-running transactions rather than crashing.
+- The morning-only pattern strongly suggests a scheduled job or predictable traffic spike competing for database resources.
+
+Recommended diagnostics:
+1. Check database connection pool metrics around the incident window:
+   - Active connections
+   - Idle connections
+   - Pool wait time
+   - Pool saturation/exhaustion
+   - Queued requests waiting for a connection
+
+2. Check database performance around 09:00:
+   - Slow query logs
+   - Query latency for `/search` and `/reports/*`
+   - Lock waits
+   - Long-running transactions
+   - Database CPU, I/O, memory, and total connection count
+
+3. Review scheduled workloads:
+   - Cron jobs
+   - Report generation
+   - ETL or analytics jobs
+   - Backups or maintenance tasks
+   - Any job starting shortly before or during the 504 window
+
+4. Correlate proxy and application timing:
+   - Reverse proxy upstream response time
+   - Application request duration
+   - Proxy timeout settings
+   - Whether requests are spending time waiting on database calls
+
+Branching logic:
+- If the DB connection pool is saturated, investigate why connections are being held too long, identify expensive queries or jobs, and reduce contention.
+- If slow queries spike around 09:00, optimize those queries, add indexes, cache results, or move heavy work out of the request path.
+- If lock waits or long-running transactions appear, identify and fix the blocking transaction or job.
+- If DB metrics are healthy, investigate less likely causes such as network latency, reverse proxy timeout misconfiguration, downstream dependencies, or endpoint-specific throttling.
+- Rate limiting is less likely because it would usually produce 429 responses rather than proxy-side 504s.
+
+Short-term mitigations:
+- Temporarily pause, reschedule, or reduce concurrency of the morning scheduled job.
+- Limit concurrency for expensive `/search` and `/reports/*` requests.
+- Add caching for common search/report queries.
+- Carefully increase the database connection pool size only if the database has capacity to handle more connections.
+- Adjust proxy/application timeouts only as a temporary measure and only if longer waits are acceptable.
+
+Long-term fixes:
+- Optimize database queries used by `/search` and `/reports/*`.
+- Add or improve indexes.
+- Move expensive report generation to asynchronous/background processing.
+- Reschedule heavy batch jobs outside peak usage periods.
+- Add read replicas or dedicated reporting infrastructure if reporting workloads compete with production traffic.
+- Add monitoring and alerts for DB pool saturation, pool wait time, query latency, lock waits, long-running transactions, and proxy 504 rates.
+
+Conclusive answer: the best-matching hypothesis is database connection pool saturation or database contention caused by a morning workload. The first diagnostic should be to check database pool saturation, pool wait time, and database query latency around 09:00, especially for `/search` and `/reports/*`.

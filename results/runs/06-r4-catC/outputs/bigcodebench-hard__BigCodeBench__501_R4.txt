@@ -1,0 +1,33 @@
+The task is to implement a Python function `task_func(json_str, filename, sheet_name="sheet1")` that converts a JSON array into an Excel file and returns the absolute path of the created file. The gathered information is sufficient to complete the task. The key correction to the draft implementation is that it must import the `json` module before calling `json.loads()`.
+
+```python
+import os
+import json
+import pandas as pd
+
+
+def task_func(json_str, filename, sheet_name="sheet1"):
+    if not isinstance(json_str, (str, bytes, bytearray)):
+        raise TypeError("`json_str` must be a string, bytes, or bytearray.")
+
+    try:
+        data = json.loads(json_str)
+    except json.JSONDecodeError:
+        raise ValueError("Invalid JSON string provided.")
+
+    if not isinstance(data, list):
+        raise ValueError("JSON string must represent an array.")
+
+    df = pd.DataFrame(data)
+    abs_path = os.path.abspath(filename)
+
+    try:
+        with pd.ExcelWriter(abs_path) as writer:
+            df.to_excel(writer, sheet_name=sheet_name, index=False)
+    except Exception as e:
+        raise Exception(f"Error writing to file: {e}")
+
+    return abs_path
+```
+
+This implementation validates that the JSON input is a string-like object, parses it, ensures it represents an array, converts it into a pandas DataFrame, writes it to the specified Excel sheet, and returns the absolute file path. It also raises clear exceptions for invalid input, invalid JSON, non-array JSON, and file-writing failures.

@@ -1,0 +1,67 @@
+The pytest test is likely failing intermittently in CI because it combines several non-hermetic, timing-sensitive, and shared-state assumptions. Some are true sources of flakiness; at least one appears to be a correctness or test-design bug.
+
+Key findings:
+
+1. The test depends on an external service: it enqueues a job for `https://httpbin.org/uuid`. CI failures can occur because of DNS issues, TLS problems, rate limiting, slow responses, blocked outbound traffic, or httpbin downtime.
+
+2. The test uses a fixed sleep: `time.sleep(2)` assumes the asynchronous job will always finish within two seconds. That may pass locally but fail on slower or more heavily loaded CI runners.
+
+3. The worker binds to a fixed port: `start_worker(port=8080)`. Port 8080 may already be in use in CI, especially with parallel jobs, reused runners, or leaked processes.
+
+4. The fixture does not show any readiness check. It starts the worker and immediately yields, so the test may enqueue work or call the HTTP endpoint before the worker is actually ready.
+
+5. The result-store assertion is global-state-sensitive. The test does `results = list(store.values())` and asserts `len(results) == 1`. If the store is shared, uncleared, or affected by parallel tests, this can fail even if the job under test works.
+
+6. The test hard-codes `localhost:8080` in the HTTP assertion. That duplicates the port assumption and may also be sensitive to IPv4/IPv6 or binding differences.
+
+7. There is a likely schema/correctness issue. The test asserts `result["fields"].keys() == {"uuid", "fetched_at", "attempts"}`, but then separately checks `result["attempts"]` and `result["fetched_at"]` at the top level. Either those values belong inside `result["fields"]`, or the `fields` assertion is wrong. This is not merely flaky; it suggests the test may be asserting the wrong shape.
+
+8. The timing assertion `result["fetched_at"] > time.time() - 5` is brittle. It depends on wall-clock timing and can fail under slow CI execution or clock differences. If the purpose is only to verify that a timestamp was recorded, assert that it exists and is valid. If recency matters, record a `started_at` before enqueueing and compare against a bounded interval with tolerance.
+
+Separation of issues:
+
+True flakiness:
+- External dependency on `httpbin.org`.
+- Fixed `time.sleep(2)` for async completion.
+- Fixed port 8080.
+- Missing worker readiness check.
+- Possible shared result-store state.
+- Hard-coded `localhost:8080` endpoint.
+- Brittle wall-clock timing assertion.
+
+Correctness or test-design bugs:
+- Inconsistent schema assertions around `fields`, `attempts`, and `fetched_at`.
+- Asserting `len(results) == 1` instead of asserting the result for the specific `job_id`.
+- Potentially testing too many things at once: job execution, external HTTP fetching, result persistence, and worker HTTP API.
+
+Concrete fixes:
+
+1. Replace the external `https://httpbin.org/uuid` dependency with a local stub HTTP server or mocked HTTP client response. The test should control the response body, for example `{"uuid": "test-uuid"}`.
+
+2. Replace `time.sleep(2)` with polling by `job_id` until the result reaches a terminal state or a deadline expires. For example, poll `store.get(job_id)` until `result["status"] == "done"`, with a timeout such as 10 or 30 seconds and a short polling interval.
+
+3. Start the worker on an ephemeral port by using `port=0`, then read the actual bound port from the worker object. Use that actual port in the test instead of hard-coding 8080.
+
+4. Add a worker readiness check in the fixture. The fixture should not yield until the worker is listening, for example by polling a health endpoint or opening a socket connection.
+
+5. Isolate or clear the queue and result store for each test. Do not assert over all `store.values()`. Instead, look up the result for the submitted `job_id`.
+
+6. Use the worker's actual base URL, for example `worker.base_url`, when calling the HTTP endpoint. Also pass a timeout to `requests.get`, such as `requests.get(url, timeout=5)`.
+
+7. Fix the schema assertion. Decide whether `uuid`, `fetched_at`, and `attempts` live under `result["fields"]` or at the top level, and make all assertions consistent with that contract.
+
+8. Relax or improve the timestamp assertion. Prefer validating that `fetched_at` is present and parseable, or compare it against a `started_at` captured before enqueueing and an `ended_at` captured after completion with reasonable tolerance.
+
+Prioritized top fixes:
+
+1. Replace `time.sleep(2)` with poll-with-deadline for the specific `job_id`. This addresses the core asynchronous race and makes failures easier to diagnose.
+
+2. Remove the external `httpbin.org` dependency by using a local stub or mock. This makes the test hermetic and removes a major CI-only failure source.
+
+3. Use an ephemeral worker port plus a readiness check, and call the worker through its actual base URL. This eliminates port conflicts and startup races.
+
+4. Isolate result-store state and assert by `job_id` rather than asserting `len(results) == 1`.
+
+5. Correct the result schema and timing assertions so the test verifies the intended contract instead of relying on brittle or inconsistent assumptions.
+
+In short, the highest-impact changes are to make the test hermetic, wait for conditions instead of sleeping, avoid fixed ports, isolate state, and fix the inconsistent result schema assertions.
