@@ -1,0 +1,47 @@
+From: Priya <priya@example.com>
+Subject: [PATCH] Accept a user-supplied `starts_at` on booking creation
+
+Clients (web + iOS) now send an ISO-8601 `starts_at` when creating a
+booking. We reject anything in the past and return 201 otherwise.
+
+--- a/bookings/api.py
++++ b/bookings/api.py
+@@ -1,5 +1,7 @@
+ import datetime
+ from fastapi import APIRouter, HTTPException
++from pydantic import BaseModel
+ from .store import save_booking
+
+ router = APIRouter()
+
+@@ -7,7 +9,19 @@
+-@router.post("/bookings")
+-def create_booking(user_id: str):
+-    booking = save_booking(user_id=user_id, starts_at=datetime.datetime.utcnow())
+-    return {"id": booking.id}
++class CreateBooking(BaseModel):
++    user_id: str
++    starts_at: str  # ISO-8601 from the client
++
++
++@router.post("/bookings", status_code=201)
++def create_booking(req: CreateBooking):
++    try:
++        starts_at = datetime.datetime.fromisoformat(req.starts_at)
++    except ValueError:
++        raise HTTPException(status_code=400, detail="invalid starts_at")
++    if starts_at < datetime.datetime.utcnow():
++        raise HTTPException(status_code=400, detail="starts_at is in the past")
++    booking = save_booking(user_id=req.user_id, starts_at=starts_at)
++    return {"id": booking.id}
+--- a/bookings/tests/test_api.py
++++ b/bookings/tests/test_api.py
+@@ -7,3 +7,10 @@
+ def test_create_booking_ok(client):
+     resp = client.post("/bookings", json={"user_id": "u1", "starts_at": "2030-01-01T10:00:00"})
+     assert resp.status_code == 201
++
++
++def test_create_booking_rejects_past(client):
++    resp = client.post("/bookings", json={"user_id": "u1", "starts_at": "2000-01-01T10:00:00"})
++    assert resp.status_code == 400
