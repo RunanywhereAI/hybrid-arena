@@ -41,14 +41,16 @@ __all__ = [
 #: Category A = HumanEval+ (tiny function-completion).
 #: Category B = SWE-bench Verified (repo-level agentic).
 #: Category C = BigCodeBench-Hard (functional) + custom_arch (judge).
+#: Category D = real_dev (real-developer tasks, 5 shapes D1-D5).
 CATEGORY_SOURCES: dict[str, list[str]] = {
     "A": ["humaneval_plus"],
     "B": ["swebench_verified"],
     "C": ["bigcodebench_hard", "custom_arch"],
+    "D": ["real_dev"],
 }
 
 #: Valid --routes values.
-ROUTES: tuple[str, ...] = ("R1", "R2", "R3", "R4")
+ROUTES: tuple[str, ...] = ("R1", "R2", "R3", "R4", "R5")
 
 
 # --------------------------------------------------------------------------- #
@@ -94,6 +96,10 @@ def load_category_tasks(
             pairs.extend((source, t) for t in load_tasks(n=5))
         elif source == "custom_arch":
             from hybrid_coding_eval.benchmarks.custom_arch.adapter import load_tasks
+
+            pairs.extend((source, t) for t in load_tasks())
+        elif source == "real_dev":
+            from hybrid_coding_eval.benchmarks.real_dev.adapter import load_tasks
 
             pairs.extend((source, t) for t in load_tasks())
         else:  # pragma: no cover — guarded by CATEGORY_SOURCES
@@ -182,6 +188,10 @@ def _runner_for(route: str) -> Callable[..., ResultRow]:
         from hybrid_coding_eval.runners import r4_minion
 
         return r4_minion.run
+    if route == "R5":
+        from hybrid_coding_eval.runners import r5_devminion
+
+        return r5_devminion.run
     raise ValueError(f"unknown route {route!r}")
 
 
@@ -258,6 +268,17 @@ def score_row(row: ResultRow, source: str, task: Any) -> Quality | None:
     if source == "custom_arch":
         # Category-C hand-curated — judge runs in T4.3. Leave quality empty.
         return None
+
+    if source == "real_dev":
+        # Category-D scoring (P2.1). Stub currently returns all-None Quality;
+        # we still call it so the dispatch wires up end-to-end today.
+        from hybrid_coding_eval.benchmarks.real_dev import scorers as real_dev_scorers
+
+        try:
+            return real_dev_scorers.score(task, model_output, context={})
+        except Exception as exc:  # pragma: no cover — scorer should handle its own errors
+            logger.warning("real_dev.score failed for %s: %s", row.task_id, exc)
+            return None
 
     logger.warning("no scorer wired up for source %r", source)
     return None

@@ -50,8 +50,8 @@ RouteStrategy = Literal[
     "embedding-knn",
     "cascade",
 ]
-Category = Literal["A", "B", "C"]
-Route = Literal["R1", "R2", "R3", "R4"]
+Category = Literal["A", "B", "C", "D"]
+Route = Literal["R1", "R2", "R3", "R4", "R5"]
 
 
 class ModelsConfig(BaseModel):
