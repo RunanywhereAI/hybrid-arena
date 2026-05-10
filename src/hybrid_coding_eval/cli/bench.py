@@ -89,6 +89,25 @@ def _cmd_run(args: argparse.Namespace) -> int:
     if config.scoring.skip:
         argv.append("--skip-scoring")
 
+    # Task caps — ``run-experiment.py`` only takes a single ``--tasks N``
+    # flag (cap applied uniformly across the selected categories). So we
+    # can only forward a per-category cap when every listed category has
+    # the *same* cap. The single-category case (e.g. the real_dev smoke)
+    # falls out for free.
+    tpc = config.benchmark.tasks_per_category
+    if tpc:
+        caps = [tpc[c] for c in config.benchmark.categories if c in tpc]
+        if caps and len(set(caps)) == 1:
+            argv += ["--tasks", str(caps[0])]
+        elif caps:
+            logger.warning(
+                "tasks_per_category has heterogeneous caps %r for categories %r; "
+                "--tasks only supports a single uniform cap — skipping forward. "
+                "Use a dedicated variant per category for now.",
+                tpc,
+                config.benchmark.categories,
+            )
+
     # Write a config-manifest alongside the run so the YAML-→actual-run
     # mapping is auditable.
     out_dir = Path(config.out_dir)

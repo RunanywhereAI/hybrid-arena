@@ -141,14 +141,34 @@ def _prompt_for_custom_arch(task: Any) -> str:
     return prompt
 
 
+def _prompt_for_real_dev(task: Any) -> str:
+    """Category-D (real_dev) tasks carry their fixture files in a
+    sibling directory; the adapter's ``task_prompt`` helper inlines them
+    in a shape-aware way (``### path``-labeled fences for D1/D2/D5,
+    a "Before:" block for D3, a "PR diff:" block for D4).
+
+    We delegate instead of duplicating the fixture-loading logic here so
+    R1 and the evaluator scorer agree on what the model saw.
+    """
+    from hybrid_coding_eval.benchmarks.real_dev.adapter import task_prompt as rd_task_prompt
+
+    return rd_task_prompt(task)
+
+
 def build_prompt(task: Any) -> str:
     """Dispatch to the right per-benchmark prompt builder.
 
     Duck-typed on the ``Task`` shape: HumanEval+ has ``prompt`` + ``tests``,
     BigCodeBench has ``instruct_prompt``, SWE-bench has
     ``problem_statement`` + ``base_commit``, custom-arch has ``prompt`` +
-    ``rubric``.
+    ``rubric``, real_dev has ``category == 'D'`` and optional ``fixtures_dir``.
     """
+    # real_dev (category D) check runs BEFORE SWE-bench — D2 tasks *also*
+    # carry ``problem_statement`` + ``base_commit`` to make them look like
+    # SWE-bench rows. But they live under category D and want the real_dev
+    # fixture-inlining prompt builder, not the raw SWE-bench one.
+    if getattr(task, "category", None) == "D":
+        return _prompt_for_real_dev(task)
     if hasattr(task, "problem_statement") and hasattr(task, "base_commit"):
         return _prompt_for_swebench(task)
     if hasattr(task, "instruct_prompt"):

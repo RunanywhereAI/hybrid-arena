@@ -133,13 +133,28 @@ def _resolve_api_key(explicit: str | None) -> str:
 
 
 def _rubric_lines(task: Any) -> str:
-    """Format the task's rubric as a bullet list for the prompt."""
+    """Format the task's rubric as a bullet list for the prompt.
+
+    Rubric values can be either:
+
+    - a ``custom_arch.Rubric``-style object exposing ``.description`` (the
+      judge's original shape), or
+    - a plain string (``real_dev`` tasks carry rubrics as dict[str, str]
+      since the dimensions map directly to the judge's five axes).
+
+    Either shape is accepted so the same judge can score Category C and
+    Category D without per-benchmark rubric wrapping.
+    """
     rubric = getattr(task, "rubric", {}) or {}
     lines: list[str] = []
     for dim in _DIMENSIONS:
         desc = ""
         if dim in rubric:
-            desc = getattr(rubric[dim], "description", "") or ""
+            entry = rubric[dim]
+            if isinstance(entry, str):
+                desc = entry
+            else:
+                desc = getattr(entry, "description", "") or ""
         if not desc:
             # Fall back to a generic description so the judge still has a
             # prompt even for tasks that don't define this axis.

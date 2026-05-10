@@ -153,15 +153,21 @@ def test_category_d_dispatch_does_not_crash() -> None:
 
 
 def test_scorers_score_returns_quality_for_each_shape() -> None:
-    """The scorer stub must not crash for any valid shape and must return a
-    Quality object (currently all-None; P2.1 populates the fields)."""
+    """The P2.1 dispatcher must not crash for any valid shape and must
+    return a :class:`Quality` object.
+
+    Task inputs here are deliberately minimal (no fixtures_dir, no tests,
+    no rubric) so each branch hits its early-return guard rather than
+    actually running pytest or the judge. The contract checked here is
+    structural (never raises, always returns a ``Quality``); behavioural
+    assertions on each branch live in ``tests/scorers/test_real_dev_scorers.py``.
+    """
     for shape in ("D1", "D2", "D3", "D4", "D5"):
         t = Task(id=f"real-dev/{shape.lower()}-x", shape=shape, prompt="stub")
         q = real_dev_scorers.score(t, model_output="", context={})
         assert isinstance(q, Quality)
-        # Stub — every field is None today; P2.1 fills them in.
-        assert q.functional_pass is None
-        assert q.tests_passed is None
-        assert q.tests_total is None
-        assert q.judge_win_rate is None
-        assert q.composite is None
+        # Branches are allowed to return either:
+        #   - all-None ("not graded" — D2 deferred, D3/D4 missing fixtures)
+        #   - a zero/failing Quality (D1/D5 short-circuit when fixtures_dir
+        #     is missing — the model can't possibly have passed tests).
+        # We just assert they don't crash and return the right type.
