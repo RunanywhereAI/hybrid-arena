@@ -175,3 +175,177 @@ def test_bench_config_schema_accepts_r5(route: str) -> None:
     except ValidationError as exc:  # pragma: no cover - reproduction aid
         pytest.fail(f"schema rejected valid route {route!r}: {exc}")
     assert cfg.benchmark.routes == [route]
+
+
+# ---------------------------------------------------------------------------
+# P3.1b — deliverable extraction from the DevMinion workspace
+# ---------------------------------------------------------------------------
+
+
+class _FakeTask:
+    """Minimal duck-typed task for testing _extract_deliverables_from_workspace."""
+
+    def __init__(self, *, id: str, category: str, shape: str | None = None) -> None:
+        self.id = id
+        self.category = category
+        self.shape = shape
+
+
+def test_extract_humaneval_concats_py_in_fenced_block(tmp_path: Path) -> None:
+    """HumanEval+ (cat A) output should be a single ```python fenced block
+    containing the workspace's solution file, NOT DevMinion's final
+    assessment JSON. This is the core regression for P3.1b.
+    """
+    from hybrid_coding_eval.runners.r5_devminion import _extract_deliverables_from_workspace
+
+    ws = tmp_path / "ws"
+    ws.mkdir()
+    (ws / "solution.py").write_text(
+        "def closest_integer(value):\n    return int(round(float(value)))\n"
+    )
+    # Bookkeeping files the runner must ignore.
+    (ws / "test_step_1.py").write_text("assert True\n")
+    (ws / "docs").mkdir()
+    (ws / "docs" / "step_01_impl.md").write_text("# notes\n")
+    (ws / "test_files").mkdir()
+    (ws / "test_files" / "test_foo.py").write_text("assert False\n")
+
+    task = _FakeTask(id="humaneval-plus/HumanEval_99", category="A")
+    out = _extract_deliverables_from_workspace(ws, task, {})
+
+    # Real deliverable is present, wrapped in a python fence.
+    assert "def closest_integer" in out
+    assert out.lstrip().startswith("```python")
+    # No leaked meta content.
+    assert "FINAL ASSESSMENT" not in out
+    assert "step_01_impl" not in out
+    assert "test_step_1" not in out
+
+
+def test_extract_real_dev_d1_emits_labeled_fences(tmp_path: Path) -> None:
+    """D1 output should include ``### filename.py`` headers so the
+    real_dev scorer's _extract_labeled_fences can map files to targets.
+    """
+    from hybrid_coding_eval.runners.r5_devminion import _extract_deliverables_from_workspace
+
+    ws = tmp_path / "ws"
+    ws.mkdir()
+    (ws / "middleware.py").write_text("class RateLimiter: ...\n")
+    (ws / "test_rate_limit.py").write_text("def test_x(): pass\n")
+
+    task = _FakeTask(id="real-dev/d1-rate-limit", category="D", shape="D1")
+    out = _extract_deliverables_from_workspace(ws, task, {})
+
+    assert "### middleware.py" in out
+    assert "class RateLimiter" in out
+    # No test file leaked.
+    assert "test_rate_limit" not in out
+
+
+def test_extract_swebench_finds_diff_in_session_log(tmp_path: Path) -> None:
+    """SWE-bench output should pull a unified diff out of the session
+    log when DevMinion left one in a local_response or final_assessment.
+    """
+    from hybrid_coding_eval.runners.r5_devminion import _extract_deliverables_from_workspace
+
+    ws = tmp_path / "ws"
+    ws.mkdir()  # empty — diff only exists in session log
+
+    diff_text = (
+        "```diff\n"
+        "diff --git a/foo.py b/foo.py\n"
+        "--- a/foo.py\n"
+        "+++ b/foo.py\n"
+        "@@ -1,1 +1,1 @@\n"
+        "-print('bug')\n"
+        "+print('fixed')\n"
+        "```\n"
+    )
+    result = {
+        "session_log": {
+            "steps_completed": [
+                {
+                    "attempts": [
+                        {"local_response": diff_text, "code_changes": {}},
+                    ],
+                }
+            ],
+        },
+    }
+    task = _FakeTask(id="swebench-verified/foo__bar-1", category="B")
+    out = _extract_deliverables_from_workspace(ws, task, result)
+    assert "diff --git" in out
+    assert "+print('fixed')" in out
+
+
+def test_extract_uses_last_successful_code_changes(tmp_path: Path) -> None:
+    """When the session log has ``final_code_changes`` on the last merged
+    step, those files should take precedence over the workspace walk.
+    """
+    from hybrid_coding_eval.runners.r5_devminion import _last_successful_code_changes
+
+    result = {
+        "session_log": {
+            "steps_completed": [
+                {
+                    "final_code_changes": {
+                        "solution.py": "def closest_integer(v): pass\n"
+                    },
+                    "attempts": [],
+                },
+                {
+                    "final_code_changes": {
+                        "solution.py": "def closest_integer(v): return 1\n"
+                    },
+                    "attempts": [],
+                },
+            ],
+        },
+    }
+    picked = _last_successful_code_changes(result)
+    # Last step wins.
+    assert picked == {"solution.py": "def closest_integer(v): return 1\n"}
+
+
+def test_harvest_from_response_unwraps_json_shape() -> None:
+    """DevMinion workers sometimes wrap code inside ``"files": {...}`` inside
+    a ```json fence with triple-quoted Python strings. Our last-ditch
+    harvester must recover the code anyway.
+    """
+    from hybrid_coding_eval.runners.r5_devminion import _harvest_files_from_response
+
+    blob = (
+        "Here's the implementation:\n\n"
+        "```json\n"
+        "{\n"
+        '    "files": {\n'
+        '        "solution.py": """\n'
+        "def closest_integer(value):\n"
+        "    return int(round(float(value)))\n"
+        '"""\n'
+        "    }\n"
+        "}\n"
+        "```\n"
+    )
+    out = _harvest_files_from_response(blob)
+    assert "solution.py" in out
+    assert "def closest_integer" in out["solution.py"]
+    assert "return int(round" in out["solution.py"]
+
+
+def test_workspace_bookkeeping_filter() -> None:
+    """Internal scaffolding directories (docs/, test_files/, .backups/,
+    __pycache__/) should never surface in the deliverable output.
+    """
+    from hybrid_coding_eval.runners.r5_devminion import _is_workspace_bookkeeping
+
+    ws = Path("/tmp/ws")
+    assert _is_workspace_bookkeeping(ws / ".backups" / "step1.tar.gz", ws)
+    assert _is_workspace_bookkeeping(ws / "__pycache__" / "x.cpython-39.pyc", ws)
+    assert _is_workspace_bookkeeping(ws / "docs" / "step_01.md", ws)
+    assert _is_workspace_bookkeeping(ws / "test_files" / "test_foo.py", ws)
+    # Top-level test_*.py is also bookkeeping (predefined runbook test).
+    assert _is_workspace_bookkeeping(ws / "test_step_1.py", ws)
+    # solution.py is NOT bookkeeping.
+    assert not _is_workspace_bookkeeping(ws / "solution.py", ws)
+    assert not _is_workspace_bookkeeping(ws / "middleware.py", ws)

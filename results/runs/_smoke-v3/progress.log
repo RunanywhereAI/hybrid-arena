@@ -1,11 +1,11 @@
-[  1/  8] A R1 humaneval-plus/HumanEval_99                      wall=8790ms tokens=603 PASS
-[  2/  8] A R5 humaneval-plus/HumanEval_99                      wall=150643ms tokens=18350 FAIL
-[  3/  8] B R1 swebench-verified/sphinx-doc__sphinx-7889        wall=98707ms tokens=6352 FAIL
-[  4/  8] B R5 swebench-verified/sphinx-doc__sphinx-7889        wall=423881ms tokens=37618 FAIL
-[  5/  8] C R1 bigcodebench-hard/BigCodeBench/214               wall=12676ms tokens=916 FAIL
-[  6/  8] C R5 bigcodebench-hard/BigCodeBench/214               wall=318576ms tokens=32575 FAIL
-[  7/  8] D R1 real-dev/d1-rate-limit                           wall=11621ms tokens=3574 PASS
-[  8/  8] D R5 real-dev/d1-rate-limit                           wall=789844ms tokens=54523 FAIL
+[  1/  8] A R1 humaneval-plus/HumanEval_99                      wall=6949ms tokens=452 PASS
+[  2/  8] A R5 humaneval-plus/HumanEval_99                      wall=204543ms tokens=21612 FAIL
+[  3/  8] B R1 swebench-verified/sphinx-doc__sphinx-7889        wall=65010ms tokens=4225 FAIL
+[  4/  8] B R5 swebench-verified/sphinx-doc__sphinx-7889        wall=767404ms tokens=67800 FAIL
+[  5/  8] C R1 bigcodebench-hard/BigCodeBench/214               wall=13474ms tokens=924 FAIL
+[  6/  8] C R5 bigcodebench-hard/BigCodeBench/214               wall=271698ms tokens=30363 FAIL
+[  7/  8] D R1 real-dev/d1-rate-limit                           wall=10382ms tokens=3415 PASS
+[  8/  8] D R5 real-dev/d1-rate-limit                           wall=703851ms tokens=55519 PASS
 
 ## summary
 - planned pairs: 8
