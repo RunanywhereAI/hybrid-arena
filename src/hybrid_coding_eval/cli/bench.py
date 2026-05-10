@@ -177,6 +177,59 @@ def _cmd_analyze(args: argparse.Namespace) -> int:
     return int(analyze_main([str(args.results_dir)]) or 0)
 
 
+# ---------- subcommand: token-budget --------------------------------------
+
+
+def _cmd_token_budget(args: argparse.Namespace) -> int:
+    # Lazy imports — pandas + pricing tables aren't needed by other subcommands.
+    from hybrid_coding_eval.analysis.token_budget import (
+        HEADLINE_SCENARIOS,
+        compute_token_budget,
+        render_csv,
+        render_markdown,
+    )
+    from hybrid_coding_eval.core.results import load_results
+
+    results_path: Path = args.results_path
+    # Accept either a raw.jsonl file directly OR a runs/*/ directory
+    # (we look for ``raw.jsonl`` inside it).
+    if results_path.is_dir():
+        jsonl = results_path / "raw.jsonl"
+        if not jsonl.is_file():
+            print(
+                f"error: no raw.jsonl found under {results_path}",
+                file=sys.stderr,
+            )
+            return 2
+        source = str(jsonl)
+    elif results_path.is_file():
+        source = str(results_path)
+    else:
+        print(f"error: path not found: {results_path}", file=sys.stderr)
+        return 2
+
+    rows = load_results(source)
+    if not rows:
+        print(f"warning: {source} contained no parseable rows", file=sys.stderr)
+
+    scenarios = (
+        [s.strip() for s in args.scenarios.split(",") if s.strip()]
+        if args.scenarios
+        else list(HEADLINE_SCENARIOS)
+    )
+
+    out_md: Path = args.out_md or Path("reports/TOKEN_BUDGET.md")
+    out_csv: Path = args.out_csv or (out_md.parent / "token_budget.csv")
+
+    df = compute_token_budget(rows, scenarios)
+    render_markdown(df, scenarios, out_md, source=source)
+    render_csv(df, out_csv)
+
+    print(f"wrote {out_md} ({len(df)} rows × {len(scenarios)} scenarios)")
+    print(f"wrote {out_csv}")
+    return 0
+
+
 # ---------- subcommand: report --------------------------------------------
 
 
@@ -266,6 +319,34 @@ def main(argv: list[str] | None = None) -> int:
     p_analyze = sub.add_parser("analyze", help="Aggregate + ARQGC + charts.")
     p_analyze.add_argument("results_dir", type=Path)
     p_analyze.set_defaults(func=_cmd_analyze)
+
+    p_tb = sub.add_parser(
+        "token-budget",
+        help="Token-first analysis — emit TOKEN_BUDGET.md + token_budget.csv.",
+    )
+    p_tb.add_argument(
+        "results_path",
+        type=Path,
+        help="Path to raw.jsonl OR a runs/*/ dir containing raw.jsonl.",
+    )
+    p_tb.add_argument(
+        "--out-md",
+        type=Path,
+        default=None,
+        help="Markdown output path (default reports/TOKEN_BUDGET.md).",
+    )
+    p_tb.add_argument(
+        "--out-csv",
+        type=Path,
+        default=None,
+        help="CSV output path (default next to the .md).",
+    )
+    p_tb.add_argument(
+        "--scenarios",
+        default=None,
+        help="Comma-separated scenario names (default: 6 headline scenarios).",
+    )
+    p_tb.set_defaults(func=_cmd_token_budget)
 
     p_report = sub.add_parser(
         "report", help="Regenerate reports/ARTICLE, APPENDICES, etc."
