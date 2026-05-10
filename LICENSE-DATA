@@ -23,6 +23,19 @@ It does NOT apply to:
   Apache 2.0 for MBPP and FastChat-judge prompts, BigCodeBench-Hard's
   Apache 2.0, SWE-bench Verified's CC-BY-4.0, etc.). See the adapter
   README under each `benchmark/<name>/` subdirectory.
+- Category-D real-developer task fixtures under
+  `src/hybrid_coding_eval/benchmarks/real_dev/fixtures/`. These retain
+  their per-task licenses:
+    - D1, D3, D4, D5 fixtures (hand-crafted by the authors): CC-BY-4.0,
+      same terms as this file.
+    - D2 reference patches and regression tests (derived from public
+      GitHub issues in permissively-licensed upstream projects): follow
+      the upstream project's license — MIT for
+      `python-jsonschema/jsonschema` and `pytest-dev/pytest`,
+      BSD-3-Clause for `pallets/click` and `pallets/werkzeug`.
+  Per-task source URLs, upstream repos, and SPDX identifiers are
+  enumerated in `NOTICE.md` under "Category D — real-developer tasks".
+  No GPL, AGPL, or proprietary code is used.
 - Source code (licensed under MIT; see `LICENSE`).
 - Vendored third-party code (see `NOTICE.md`).
 
