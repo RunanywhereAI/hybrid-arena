@@ -1,0 +1,15 @@
+{
+  "service": "billing",
+  "API_KEY": "sk-live-abc123",
+  "db_password": "hunter2",
+  "region": "us-west-2",
+  "ACCESS_TOKEN": "ghp_xxx",
+  "port": 8080,
+  "Secret_Phrase": "open sesame",
+  "nested": {
+    "api_key": "should-stay",
+    "token": "also-stay",
+    "notes": "nested keys are preserved verbatim"
+  },
+  "tags": ["prod", "east"]
+}
