@@ -1,6 +1,6 @@
 # Token budget — where the tokens went
 
-Generated from `results/raw.jsonl` at `2026-05-10T20:31:02Z`; cost is derived from tokens at read time using `configs/pricing/pricing_tables.json`.
+Generated from `results/runs/07-v3-devstral-all-routes/raw.jsonl` at `2026-05-11T16:05:06Z`; cost is derived from tokens at read time using `configs/pricing/pricing_tables.json`.
 
 Every row below is one `(task_id, route, variant)` run from the committed dataset. `cloud_fraction` is the share of prompt+completion tokens that left the laptop; local tokens cost $0 by construction. `cost_<scenario>_usd` is re-derived from the stored tokens against the pinned pricing table, so the same dataset can be re-priced under any scenario without re-running inference.
 
@@ -12,16 +12,16 @@ Rows where `functional_pass = True`, sorted by `cloud_fraction` ascending (ties 
 
 | task_id | route | variant | cat | cloud_frac | tokens | $openai-gpt5.5 | $openai-gpt5 | $openai-gpt5-mini | $anthropic-claude-opus-4.7 | $anthropic-claude-sonnet-4.6 | $anthropic-claude-haiku-4.5 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| humaneval-plus/HumanEval_15 | R2 | v1-qwen | A | 0% | 191 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
-| humaneval-plus/HumanEval_13 | R2 | v1-qwen | A | 0% | 205 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
-| humaneval-plus/HumanEval_121 | R2 | v1-qwen | A | 0% | 265 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
-| swebench-verified/django__django-11179 | R2 | v1-qwen | B | 0% | 304 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
-| humaneval-plus/HumanEval_77 | R2 | v1-qwen | A | 0% | 312 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
-| humaneval-plus/HumanEval_161 | R2 | v1-qwen | A | 0% | 319 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
-| humaneval-plus/HumanEval_154 | R2 | v1-qwen | A | 0% | 345 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
-| humaneval-plus/HumanEval_103 | R2 | v1-qwen | A | 0% | 395 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
-| humaneval-plus/HumanEval_99 | R2 | v1-qwen | A | 0% | 406 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
-| humaneval-plus/HumanEval_118 | R2 | v1-qwen | A | 0% | 547 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
+| humaneval-plus/HumanEval_15 | R2 |  | A | 0% | 1,387 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
+| humaneval-plus/HumanEval_13 | R2 |  | A | 0% | 1,406 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
+| humaneval-plus/HumanEval_99 | R2 |  | A | 0% | 1,470 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
+| humaneval-plus/HumanEval_154 | R2 |  | A | 0% | 1,472 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
+| humaneval-plus/HumanEval_121 | R2 |  | A | 0% | 1,478 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
+| humaneval-plus/HumanEval_118 | R2 |  | A | 0% | 1,482 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
+| humaneval-plus/HumanEval_161 | R2 |  | A | 0% | 1,534 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
+| humaneval-plus/HumanEval_103 | R2 |  | A | 0% | 1,580 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
+| humaneval-plus/HumanEval_123 | R2 |  | A | 0% | 1,826 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
+| bigcodebench-hard/BigCodeBench/530 | R2 |  | C | 0% | 2,107 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
 
 ## 2. Per-(category, route) median table
 
@@ -29,16 +29,26 @@ One row per `(category, route)` cell. `median_cloud_frac` is the median across t
 
 | cat | route | n_rows | median_cloud_frac | pass_rate | med_$openai-gpt5.5 | med_$openai-gpt5 | med_$openai-gpt5-mini | med_$anthropic-claude-opus-4.7 | med_$anthropic-claude-sonnet-4.6 | med_$anthropic-claude-haiku-4.5 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| A | R1 | 10 | 100% | 100% | $0.0106 | $0.0035 | $0.0007 | $0.0269 | $0.0054 | $0.0018 |
-| A | R2 | 20 | 0% | 95% | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
-| A | R3 | 20 | 39% | 90% | $0.0327 | $0.0102 | $0.0020 | $0.0861 | $0.0172 | $0.0057 |
-| B | R1 | 10 | 100% | 30% | $0.1260 | $0.0419 | $0.0084 | $0.3155 | $0.0631 | $0.0210 |
-| B | R2 | 20 | 0% | 5% | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
-| B | R3 | 20 | 36% | 20% | $0.1439 | $0.0465 | $0.0093 | $0.3688 | $0.0738 | $0.0246 |
-| B | R4 | 10 | 89% | 40% | $0.2224 | $0.0701 | $0.0140 | $0.5801 | $0.1160 | $0.0387 |
-| C | R1 | 20 | 100% | 29% | $0.1176 | $0.0391 | $0.0078 | $0.2947 | $0.0589 | $0.0196 |
-| C | R2 | 20 | 0% | 20% | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
-| C | R3 | 30 | 49% | 26% | $0.2430 | $0.0778 | $0.0156 | $0.6271 | $0.1254 | $0.0418 |
+| A | R1 | 10 | 100% | 100% | $0.0119 | $0.0039 | $0.0008 | $0.0301 | $0.0060 | $0.0020 |
+| A | R2 | 10 | 0% | 90% | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
+| A | R3 | 10 | 37% | 100% | $0.0380 | $0.0119 | $0.0024 | $0.0996 | $0.0199 | $0.0066 |
+| A | R4 | 10 | 90% | 100% | $0.0659 | $0.0207 | $0.0041 | $0.1723 | $0.0345 | $0.0115 |
+| A | R5 | 10 | 50% | 40% | $0.2488 | $0.0811 | $0.0162 | $0.6334 | $0.1267 | $0.0422 |
+| B | R1 | 10 | 100% | 30% | $0.1058 | $0.0352 | $0.0070 | $0.2649 | $0.0530 | $0.0177 |
+| B | R2 | 10 | 0% | 0% | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
+| B | R3 | 10 | 34% | 30% | $0.1369 | $0.0442 | $0.0088 | $0.3509 | $0.0702 | $0.0234 |
+| B | R4 | 10 | 86% | 30% | $0.2025 | $0.0634 | $0.0127 | $0.5309 | $0.1062 | $0.0354 |
+| B | R5 | 10 | 53% | 0% | $0.3902 | $0.1278 | $0.0256 | $0.9890 | $0.1978 | $0.0659 |
+| C | R1 | 10 | 100% | 20% | $0.1400 | $0.0466 | $0.0093 | $0.3506 | $0.0701 | $0.0234 |
+| C | R2 | 10 | 0% | 20% | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
+| C | R3 | 10 | 57% | 0% | $0.3010 | $0.0975 | $0.0195 | $0.7696 | $0.1539 | $0.0513 |
+| C | R4 | 10 | 89% | 0% | $0.1201 | $0.0377 | $0.0075 | $0.3139 | $0.0628 | $0.0209 |
+| C | R5 | 10 | 52% | 0% | $0.4934 | $0.1605 | $0.0321 | $1.2561 | $0.2512 | $0.0837 |
+| D | R1 | 20 | 100% | — | $0.0354 | $0.0111 | $0.0022 | $0.0931 | $0.0186 | $0.0062 |
+| D | R2 | 20 | 0% | — | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 | $0.0000 |
+| D | R3 | 20 | 35% | — | $0.1234 | $0.0394 | $0.0079 | $0.3170 | $0.0634 | $0.0211 |
+| D | R4 | 20 | 86% | — | $0.1611 | $0.0487 | $0.0097 | $0.4328 | $0.0866 | $0.0289 |
+| D | R5 | 20 | 49% | — | $0.4043 | $0.1329 | $0.0266 | $1.0210 | $0.2042 | $0.0681 |
 
 ## 3. Decision matrix — cloud_fraction bands (costed under `openai-gpt5.5`)
 
@@ -46,11 +56,11 @@ Bucket every run by its `cloud_fraction` into 4 equal-width bands, then report h
 
 | cloud_fraction band | n_tasks | pass_rate | mean $openai-gpt5.5/task |
 |---|---:|---:|---:|
-| 0-25% | 64 | 43% | $0.0010 |
-| 25-50% | 45 | 44% | $0.1045 |
-| 50-75% | 17 | 60% | $0.2979 |
-| 75-100% | 54 | 47% | $0.1622 |
+| 0-25% | 51 | 42% | $0.0005 |
+| 25-50% | 64 | 46% | $0.2251 |
+| 50-75% | 30 | 0% | $0.3738 |
+| 75-100% | 105 | 54% | $0.1304 |
 
 ---
 
-_n_rows=180 | scenarios=6 | derivation: tokens × pinned pricing_tables.json (sha256 pinned in `hybrid_coding_eval.core.pricing.PRICING_META`)._
+_n_rows=250 | scenarios=6 | derivation: tokens × pinned pricing_tables.json (sha256 pinned in `hybrid_coding_eval.core.pricing.PRICING_META`)._
