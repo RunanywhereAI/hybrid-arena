@@ -3,54 +3,77 @@
 > *A benchmark + harness that answers, with reproducible numbers, the question:*
 > ***For my coding task and my hardware — should I run it local, hybrid, or cloud?***
 
-**Status: mono-repo reorg complete.** 200 graded rows across 4 routes, 6 benchmarks-worth of re-priceable scenarios, on one M4 Max laptop. MVP 180 rows + Wave 2 R4-on-Cat-A (10) + R4-on-Cat-C (10) + triple-judge audit (30 verdicts).
+**Status: v3 sweep complete.** 250 graded rows across 5 routes (R1, R2, R3, R4, R5) and 8 task shapes (A HumanEval+, B SWE-bench Verified, C BigCodeBench + custom-arch, D1-D5 real-developer-tasks). M4 Max + devstral:24b local + gpt-5.5 cloud + claude-opus-4-7 judge. Plus a 96-verdict triple-judge robustness audit on D3+D4.
 
 ## 👉 Start here
 
 - **[`reports/ARTICLE.md`](./reports/ARTICLE.md) — the canonical article. Read this.**
+- [`reports/DECISION_TABLE.md`](./reports/DECISION_TABLE.md) — per-shape × route pass / cost / cloud-fraction grid.
+- [`reports/TOKEN_BUDGET.md`](./reports/TOKEN_BUDGET.md) — token-first headline; every cost is derived from stored tokens × pinned pricing.
 - [`reports/APPENDIX_TASKS.md`](./reports/APPENDIX_TASKS.md) — every `(task, route, variant)` row verbatim: problem, prompt, output, score, judge reasoning.
 - [`reports/APPENDIX_SCENARIOS.md`](./reports/APPENDIX_SCENARIOS.md) — multi-scenario decision matrix + $/correct under every pricing tier.
-- [`reports/APPENDIX_ROUTES.md`](./reports/APPENDIX_ROUTES.md) — worked example per R1/R2/R3/R4 with full trace.
-- [`results/raw.jsonl`](./results/raw.jsonl) — the merged dataset.
-- [`results/REPORT_v1_mvp.md`](./results/REPORT_v1_mvp.md) — the MVP report (preserved, frozen).
-- [`results/runs/`](./results/runs/) — per-variant subdirectories: run-notes, raw.jsonl, outputs, minion_logs, env-manifest. Preserved as-is.
+- [`reports/APPENDIX_ROUTES.md`](./reports/APPENDIX_ROUTES.md) — worked example per R1/R2/R3/R4/R5 with full trace.
+- [`results/runs/07-v3-devstral-all-routes/`](./results/runs/07-v3-devstral-all-routes/) — the v3 sweep: 250 rows, run-notes, raw.jsonl, outputs, charts, aggregate.json.
+- [`results/runs/11-judge-robust-D/`](./results/runs/11-judge-robust-D/) — 96 triple-judge verdicts; D3+D4 robustness audit.
+- [`results/runs/`](./results/runs/) — index of all runs (MVP 01-06 + v3 sweep 07 + robustness audits 10-11).
 
-## What the four routes are
+## What the five routes are
 
 | route | what it does |
 |---|---|
 | **R1 cloud-only** | one shot to `gpt-5.5` |
-| **R2 local-only** | one shot to qwen3.6:27b-coding or devstral:24b via Ollama |
+| **R2 local-only** | one shot to `devstral:24b` via Ollama |
 | **R3 hybrid-architect** | cloud plans → per-step heuristic routing → cloud synth |
 | **R4 hybrid-minion** | Stanford Minion-style supervisor/worker Q&A; cloud never re-sees raw context |
-
-(A planned R5 — Aider's architect/editor review loop — is the next post-MVP route.)
+| **R5 hybrid-devminion** | Stanford DevMinion architect/editor review loop, up to 3 rounds; cloud architect → local editor → cloud reviewer |
 
 ## The headline
 
-| Category | R1 cloud | Best hybrid | Winner |
-|---|:-:|:-:|:-:|
-| A — HumanEval+ (10) | 10/10 | R3-devstral 10/10, R2 10/10 | three-way tie; R1 cheapest/fastest |
-| B — SWE-bench Verified (10) | 3/10 | **R4 Minion 4/10** at $0.083/task vs R1 $0.126 | **R4** |
-| C — architecture/reasoning (10) | ties R3 | R3 ties R1 on judge, wins ARQGC | R3 ≈ R1 |
+Per-shape decision distilled from [`reports/DECISION_TABLE.md`](./reports/DECISION_TABLE.md) (8 shapes × 5 routes, 250 rows, gpt-5.5 cloud / devstral:24b local).
 
-**Hybrid routing is not categorically worse than cloud-only.** An earlier v1 draft claimed it was; that conclusion was load-bearing on a runner bug (synth-budget exhaustion on reasoning models) and a weak local model on SWE-bench. Fix both, try Stanford's Minion pattern, and hybrid reaches parity on every category and wins outright on SWE-bench. Full story in [`reports/ARTICLE.md`](./reports/ARTICLE.md); MVP report preserved at [`results/REPORT_v1_mvp.md`](./results/REPORT_v1_mvp.md).
+| Shape | Best route | Why |
+|---|---|---|
+| A — HumanEval+ (10) | **R2** (or R1) | R2 9/10 at $0.000; R1 10/10 at $0.012. Every hybrid pays 3-20× for no quality gain. |
+| B — SWE-bench Verified (10) | **R1** | R1 = R3 = R4 = 3/10 (same 3 Django tasks). Hybrid pays 1.3-3.7× for parity. R5 = 0/10. |
+| C-bcb — BigCodeBench-Hard (5) | **R1** or **R2** | R1 = R2 = 1/5. Hybrid regresses to 0/5. |
+| C-arch — custom-arch prose (5) | **R1** | R1 5/5\* at $0.30; R3 5/5\* at $0.49 (1.6×); R4 4/5\*; R5 1/5\*. |
+| D1 — small features (4) | **R2** fall-through to **R1** | R1 = R3 = 2/4; hybrid pays 3-14× per task. R2 = 0/4 — use only if R2 first try works. |
+| D2 — GitHub-issue patches (4) | **R1** | Functional scorer deferred; cost / cloud-fraction observable only. |
+| D3 — refactor prose (4) | **R1** | R1 = R3 = R4 = 4/4\*. Triple-judge audit (96 verdicts) confirms R1 wins all 8 D3+D4 pairings vs R3/R4 unanimously, zero order-flips. R5 = 0/4\*. |
+| D4 — code-review prose (4) | **R1** | R1 4/4\*; R3 / R4 2/4\*; R5 0/4\*. R1 4.7× cheaper than R3 on this shape. |
+| D5 — small one-shots (4) | **R1** (or **R2** first try) | R1 = R3 = R4 = R5 = 3/4. R5 wins `d5-log-errors-today` alone — niche evidence. |
+
+`*` = judge-scored shape, pass proxy is `composite ≥ 0.5`.
+
+**Hybrid routes reach quality parity with R1 on most categories but cost 2-5× more per task** because the actual token routing keeps 80%+ of conversation on the cloud (R4 median cloud_fraction is 87%, not the 20-40% the protocol predicted). R5 (DevMinion review-loop) burned the most tokens (1.88 M total, 5.13× R1's per-row cost) and collapsed on every D3 + 3 of 4 D4 prose tasks. The v3 sweep also reversed run 04's "R4 beats R1 on SWE-bench" headline: that Sphinx win did not replicate. Full story in [`reports/ARTICLE.md`](./reports/ARTICLE.md); v3 dataset at [`results/runs/07-v3-devstral-all-routes/raw.jsonl`](./results/runs/07-v3-devstral-all-routes/raw.jsonl); MVP report preserved at [`results/REPORT_v1_mvp.md`](./results/REPORT_v1_mvp.md).
 
 ## Repo layout
 
 ```
 hybrid-coding-eval/
 ├── README.md                      ← you are here
+├── reports/
+│   ├── ARTICLE.md                 ← 👉 the canonical v3 article
+│   ├── DECISION_TABLE.md          ← per-shape × route grid
+│   ├── TOKEN_BUDGET.md            ← token-first cost derivation
+│   ├── APPENDIX_TASKS.md          ← every (task, route, variant) row
+│   ├── APPENDIX_SCENARIOS.md      ← multi-scenario $/correct
+│   └── APPENDIX_ROUTES.md         ← R1..R5 worked examples
 ├── results/
-│   ├── REPORT.md                  ← 👉 THE one report to read
-│   ├── raw.jsonl                  ← 180 rows, merged, variant-tagged
+│   ├── raw.jsonl                  ← MVP merged dataset (180+20 = 200 rows)
+│   ├── REPORT_v1_mvp.md           ← MVP report (preserved, frozen)
 │   ├── env-manifests/             ← hardware profile per variant
 │   └── runs/
-│       ├── README.md              ← index of the four runs
-│       ├── 01-v1-qwen-original/   ← v1 sweep (superseded)
+│       ├── README.md              ← index of all runs
+│       ├── 01-v1-qwen-original/    ← v1 sweep (superseded)
 │       ├── 02-v2-qwen-fixed-synth/ ← synth-budget fix + Opus judge
 │       ├── 03-v2-devstral/         ← local-model swap
-│       └── 04-r4-minion/           ← R4 Minion on SWE-bench
+│       ├── 04-r4-minion/           ← R4 Minion on SWE-bench
+│       ├── 05-r4-catA/             ← R4 on HumanEval+
+│       ├── 06-r4-catC/             ← R4 on BigCodeBench + custom-arch
+│       ├── 07-v3-devstral-all-routes/ ← the v3 sweep (250 rows, R1..R5)
+│       ├── 10-judge-robust/        ← triple-judge audit on custom-arch (30 verdicts)
+│       └── 11-judge-robust-D/      ← triple-judge audit on D3+D4 (96 verdicts)
 ├── docs/
 │   ├── PLAN.md                    ← original multi-phase plan
 │   ├── METHODOLOGY.md             ← how the eval works, biases acknowledged
@@ -63,9 +86,9 @@ hybrid-coding-eval/
 │   ├── article-draft-v1.md        ← long-form article (v1 narrative + v2 postscript)
 │   └── history/                   ← pre-MVP archival notes
 ├── router/                        ← hybrid proxy (Node.js, zero deps, port 8787)
-├── runners/                       ← R1/R2/R3/R4 Python runners
+├── runners/                       ← R1/R2/R3/R4/R5 Python runners
 ├── scorers/                       ← pytest + SWE-bench harness + LLM-judge
-├── benchmark/                     ← 4 task adapters (HumanEval+, SWE-bench, BigCodeBench, custom)
+├── benchmark/                     ← 5 task adapters (HumanEval+, SWE-bench, BigCodeBench, custom-arch, real-dev D1-D5)
 ├── analysis/                      ← aggregate / ARQGC / decision-matrix / charts
 ├── lib/                           ← pricing tables, sandbox, metrics schema
 ├── bin/                           ← CLIs (run-experiment, rescore, rejudge, env-detect)
@@ -110,20 +133,24 @@ Full instructions in [`docs/REPRODUCING.md`](./docs/REPRODUCING.md). Wall ~5h on
 
 ## Where to read next
 
-1. **[`reports/ARTICLE.md`](./reports/ARTICLE.md)** — the canonical article. Read this first.
-2. [`reports/APPENDIX_TASKS.md`](./reports/APPENDIX_TASKS.md) — forensic record: every task × route × variant with its problem, prompt, output, score.
-3. [`reports/APPENDIX_SCENARIOS.md`](./reports/APPENDIX_SCENARIOS.md) — multi-scenario decision matrix.
-4. [`reports/APPENDIX_ROUTES.md`](./reports/APPENDIX_ROUTES.md) — worked examples per R1/R2/R3/R4.
-5. [`examples/drop-in-a-new-model.md`](./examples/drop-in-a-new-model.md) — 5-step walkthrough for benchmarking a new model.
-6. [`results/REPORT_v1_mvp.md`](./results/REPORT_v1_mvp.md) — the MVP report, preserved verbatim.
-7. [`results/runs/README.md`](./results/runs/README.md) — index of the experimental runs.
-8. [`docs/METHODOLOGY.md`](./docs/METHODOLOGY.md) — how the eval works, biases acknowledged.
-9. [`docs/REPRODUCING.md`](./docs/REPRODUCING.md) — copy-paste reproduction on a fresh machine.
-10. [`docs/ROUTING_STRATEGIES.md`](./docs/ROUTING_STRATEGIES.md) — deep-dive on each route.
-11. [`docs/PRIOR_ART.md`](./docs/PRIOR_ART.md) — research synthesis.
-12. [`docs/article-draft-v1.md`](./docs/article-draft-v1.md) — v1 narrative (superseded).
-13. [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — code layout + data flow.
-14. [`docs/PLAN.md`](./docs/PLAN.md), [`docs/FINAL_REPORT_PLAN.md`](./docs/FINAL_REPORT_PLAN.md), `docs/T-12-deferred.md`, `docs/T-13-analysis.md`, `docs/audits/T-21-publish-readiness.md` — planning artefacts.
+1. **[`reports/ARTICLE.md`](./reports/ARTICLE.md)** — the canonical v3 article. Read this first.
+2. [`reports/DECISION_TABLE.md`](./reports/DECISION_TABLE.md) — per-shape × route grid (pass / cost / cloud-fraction).
+3. [`reports/TOKEN_BUDGET.md`](./reports/TOKEN_BUDGET.md) — token-first headline; every cost is derived from tokens at read time.
+4. [`reports/APPENDIX_TASKS.md`](./reports/APPENDIX_TASKS.md) — forensic record: every task × route × variant with its problem, prompt, output, score.
+5. [`reports/APPENDIX_SCENARIOS.md`](./reports/APPENDIX_SCENARIOS.md) — multi-scenario decision matrix.
+6. [`reports/APPENDIX_ROUTES.md`](./reports/APPENDIX_ROUTES.md) — worked examples per R1/R2/R3/R4/R5.
+7. [`results/runs/07-v3-devstral-all-routes/run-notes.md`](./results/runs/07-v3-devstral-all-routes/run-notes.md) — v3 sweep, per-run findings.
+8. [`results/runs/11-judge-robust-D/run-notes.md`](./results/runs/11-judge-robust-D/run-notes.md) — triple-judge robustness audit (96 verdicts).
+9. [`examples/drop-in-a-new-model.md`](./examples/drop-in-a-new-model.md) — 5-step walkthrough for benchmarking a new model.
+10. [`results/REPORT_v1_mvp.md`](./results/REPORT_v1_mvp.md) — the MVP report, preserved verbatim.
+11. [`results/runs/README.md`](./results/runs/README.md) — index of the experimental runs.
+12. [`docs/METHODOLOGY.md`](./docs/METHODOLOGY.md) — how the eval works, biases acknowledged.
+13. [`docs/REPRODUCING.md`](./docs/REPRODUCING.md) — copy-paste reproduction on a fresh machine.
+14. [`docs/ROUTING_STRATEGIES.md`](./docs/ROUTING_STRATEGIES.md) — deep-dive on each route.
+15. [`docs/PRIOR_ART.md`](./docs/PRIOR_ART.md) — research synthesis.
+16. [`docs/article-draft-v1.md`](./docs/article-draft-v1.md) — v1 narrative (superseded).
+17. [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) — code layout + data flow.
+18. [`docs/PLAN.md`](./docs/PLAN.md), [`docs/FINAL_REPORT_PLAN.md`](./docs/FINAL_REPORT_PLAN.md), `docs/T-12-deferred.md`, `docs/T-13-analysis.md`, `docs/audits/T-21-publish-readiness.md` — planning artefacts.
 
 ## License and attribution
 

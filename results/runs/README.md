@@ -16,7 +16,9 @@ Each subdirectory here is one complete, self-contained run. They're numbered in 
 | 04 | `04-r4-minion/` | 2026-05-06 | 10 rows, SWE-bench × R4 (Stanford Minion protocol) | **R4 beats R1 on SWE-bench.** 4/10 pass, cheaper + more accurate than cloud-only. First route to Pareto-improve on R1. |
 | 05 | `05-r4-catA/` | 2026-05-07 | 10 rows, HumanEval+ × R4 | **R4 matches R2 but doesn't beat R1 on tiny tasks.** 9/10 pass — expected shape: Minion's supervisor/worker pattern doesn't help when the local model already solves the task end-to-end. |
 | 06 | `06-r4-catC/` | 2026-05-07 | 10 rows, BigCodeBench-Hard + custom_arch × R4 | **R4 under-performs on BigCodeBench** (1/5, vs R1/R3's 2/5). custom_arch rows produced prose — scored by T-14 triple-judge. |
+| 07 | `07-v3-devstral-all-routes/` | 2026-05-11 | 250 rows, 50 tasks × 5 routes, devstral local, gpt-5.5 cloud, claude-opus-4-7 judge | **The v3 sweep.** First time R5 (DevMinion review-loop) ran on the full grid + category D (real-developer tasks). Hybrid hypothesis refuted: R4 cloud_fraction is 87%, cost ratios R3/R4/R5 = 2.26×/1.91×/5.13× R1. |
 | 10 | `10-judge-robust/` | 2026-05-07 | 30 verdicts × 5 pairings × 3 judges × 2 orders | **MVP custom_arch finding holds up.** 27 ties + 3 B-wins. Two tasks fully unanimous; three had one judge flip under A/B-order reversal but majority stayed tie. |
+| 11 | `11-judge-robust-D/` | 2026-05-11 | 96 verdicts: 8 D3+D4 tasks × 2 pairings × 3 judges × 2 orders | **D3/D4 robustness audit.** 16/16 pairings unanimous; 0/16 order-flip. Confirms the v3 finding that R1 dominates on prose categories is judge-and-order-invariant. |
 
 ## What each run directory contains
 
@@ -46,7 +48,7 @@ runs/NN-*/
 
 ## How runs relate to the merged dataset
 
-`../raw.jsonl` (one level up) is the merge of runs 01–04 (the MVP 180 rows). Runs 05+ are NOT merged into that file — they live only in their own subdir's `raw.jsonl`. Analysis scripts in `src/hybrid_coding_eval/analysis/` read the MVP merged file PLUS every post-MVP run dir, without double-counting.
+`../raw.jsonl` (one level up) is the merge of runs 01–04 (the MVP 180 rows). Runs 05+ are NOT merged into that file — they live only in their own subdir's `raw.jsonl`. Each post-MVP run dir is self-contained. Analysis scripts in `src/hybrid_coding_eval/analysis/` read the MVP merged file PLUS every post-MVP run dir, without double-counting.
 
 | run | variant tag in merged dataset | rows | added to `../raw.jsonl`? |
 |---|---|---:|:-:|
@@ -56,8 +58,11 @@ runs/NN-*/
 | 04 | `r4-minion` | 10 | ✅ |
 | 05 | `r4-catA` | 10 | ❌ (in runs/05-*/ only) |
 | 06 | `r4-catC` | 10 | ❌ (in runs/06-*/ only) |
+| 07 | `v3-devstral` | 250 | ❌ (in `07-v3-devstral-all-routes/` only) |
 | 10 | `judge-robust` | 30 verdicts | ❌ (in runs/10-*/judge.jsonl; not raw.jsonl) |
-| **total graded rows** | | **200** (180 + 20) |  |
+| 11 | `judge-robust-D` | 96 verdicts | ❌ (in `11-judge-robust-D/judge.jsonl` only) |
+| **MVP merged rows** | | **200** (180 + 20) |  |
+| **v3 sweep rows** | | **250** (run `07-v3-devstral-all-routes/`, self-contained) |  |
 
 ## A note about run 01's REPORT.md
 
