@@ -11,6 +11,9 @@ node_modules/
 _run.log
 _run.pid
 .pytest_cache/
+.ruff_cache/
+.embedder/
+minion_logs/
 
 # --- results ---
 # Ignore all intermediate per-run state under results/, but explicitly keep
