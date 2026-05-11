@@ -1,16 +1,27 @@
 # archive/
 
-Historical material preserved for lineage. Nothing in here is referenced by the canonical OSS surface (`README.md`, `reports/*.md`, `docs/{ARCHITECTURE,METHODOLOGY,REPRODUCING,ROUTING_STRATEGIES,PRIOR_ART,OSS_REVIEW,RUNANYWHERE_INTEGRATION,FINAL_REPORT_PLAN}.md`, `docs/audits/T-22-v3-publish-readiness.md`). If you only care about the published v3 result, skip this directory.
+Historical material preserved for lineage. Nothing in here is referenced by the canonical OSS surface (`README.md`, the live `reports/*.md`, the live `docs/*.md`, `docs/audits/T-22-v3-publish-readiness.md`). If you only care about the published v3 result, skip this directory.
 
 If you want to audit *how* the project evolved — what was tried, what was deferred, what shaped the v3 framing — this is where to look.
 
-## archive/docs/
+## archive/reports/
 
-Planning artefacts, draft narratives, and superseded audits.
+Long-form narratives consolidated into the canonical `reports/ARTICLE.md`.
 
 | Path | What it is |
 |---|---|
-| `PLAN.md` | Original multi-phase MVP plan. Superseded by `docs/FINAL_REPORT_PLAN.md` (the 22-task plan that drove the v3 cycle). |
+| `FINAL_V3_REPORT.md` | 6,834-word technical narrative that was the companion to `reports/ARTICLE.md`. Content folded into the expanded ARTICLE.md (now 7,600+ words, covers methodology + per-shape dives + per-route worked examples + 10 surprising findings + scorecard + reproducibility). Kept verbatim here for lineage. |
+
+## archive/docs/
+
+Planning artefacts, draft narratives, superseded audits, and design specs that belong in other repos.
+
+| Path | What it is |
+|---|---|
+| `PLAN.md` | Original multi-phase MVP plan. Superseded by `archive/docs/FINAL_REPORT_PLAN.md`. |
+| `FINAL_REPORT_PLAN.md` | The 22-task plan that drove the v3 cycle (T-01 through T-22). All tasks landed; preserved as planning lineage. |
+| `OSS_REVIEW.md` | Pre-public audit from 2026-05-05. Superseded by `docs/audits/T-22-v3-publish-readiness.md` (the v3-era audit). |
+| `RUNANYWHERE_INTEGRATION.md` | Design spec for integrating the RunAnywhere SDK into opencode. Belongs in the opencode repo, not here — preserved for cross-repo reference. |
 | `article-draft-v1.md` | Long-form v1 narrative (MVP era) plus a v2 postscript. Superseded by `reports/ARTICLE.md` (v3 canonical). |
 | `T-12-deferred.md` | Honest deferral note explaining why the planned seed-threading experiment was not run. |
 | `T-13-analysis.md` | Prompt-caching analysis that was scoped as a sweep, then descoped to analysis-only. |
