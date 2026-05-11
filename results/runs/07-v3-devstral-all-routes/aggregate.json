@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-11T16:16:32.035362+00:00",
+  "generated_at": "2026-05-11T16:40:53.704813+00:00",
   "source": "results/runs/07-v3-devstral-all-routes/raw.jsonl",
   "pricing_scenarios": [
     "openai-gpt5.5",

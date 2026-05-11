@@ -1,6 +1,6 @@
 # Token budget — where the tokens went
 
-Generated from `results/runs/07-v3-devstral-all-routes/raw.jsonl` at `2026-05-11T16:16:36Z`; cost is derived from tokens at read time using `configs/pricing/pricing_tables.json`.
+Generated from `results/runs/07-v3-devstral-all-routes/raw.jsonl` at `2026-05-11T16:40:57Z`; cost is derived from tokens at read time using `configs/pricing/pricing_tables.json`.
 
 Every row below is one `(task_id, route, variant)` run from the committed dataset. `cloud_fraction` is the share of prompt+completion tokens that left the laptop; local tokens cost $0 by construction. `cost_<scenario>_usd` is re-derived from the stored tokens against the pinned pricing table, so the same dataset can be re-priced under any scenario without re-running inference.
 
