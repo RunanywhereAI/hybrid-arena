@@ -24,6 +24,16 @@ results/
 !results/**/*.png
 !results/**/*.svg
 
-# --- EXTERNAL reference clones (treated as read-only vendored deps) ---
+# --- vendored reference clones (treated as read-only vendored deps) ---
+# Pre-reorg path kept for branches still on the old layout.
 EXTERNAL/minions/
 EXTERNAL/*/.git/
+vendor/minions/
+vendor/*/.git/
+
+# --- router telemetry ---
+# decisions.jsonl grows on every request. New churn not committed; the
+# historical log is already tracked and stays as reference.
+router/logs/*.jsonl
+!router/logs/decisions.jsonl
+*.egg-info/

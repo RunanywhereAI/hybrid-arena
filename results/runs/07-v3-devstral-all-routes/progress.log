@@ -1,0 +1,255 @@
+[  1/250] A R1 humaneval-plus/HumanEval_99                      wall=6142ms tokens=568 PASS
+[  2/250] A R2 humaneval-plus/HumanEval_99                      wall=11501ms tokens=1470 PASS
+[  3/250] A R3 humaneval-plus/HumanEval_99                      wall=60308ms tokens=8700 PASS
+[  4/250] A R4 humaneval-plus/HumanEval_99                      wall=37207ms tokens=5330 PASS
+[  5/250] A R5 humaneval-plus/HumanEval_99                      wall=211753ms tokens=20476 FAIL
+[  6/250] A R1 humaneval-plus/HumanEval_123                     wall=4586ms tokens=614 PASS
+[  7/250] A R2 humaneval-plus/HumanEval_123                     wall=15070ms tokens=1826 PASS
+[  8/250] A R3 humaneval-plus/HumanEval_123                     wall=85549ms tokens=10391 PASS
+[  9/250] A R4 humaneval-plus/HumanEval_123                     wall=46497ms tokens=6101 PASS
+[ 10/250] A R5 humaneval-plus/HumanEval_123                     wall=163165ms tokens=18684 FAIL
+[ 11/250] A R1 humaneval-plus/HumanEval_103                     wall=8384ms tokens=695 PASS
+[ 12/250] A R2 humaneval-plus/HumanEval_103                     wall=11424ms tokens=1580 PASS
+[ 13/250] A R3 humaneval-plus/HumanEval_103                     wall=89663ms tokens=10642 PASS
+[ 14/250] A R4 humaneval-plus/HumanEval_103                     wall=46100ms tokens=5608 PASS
+[ 15/250] A R5 humaneval-plus/HumanEval_103                     wall=519025ms tokens=45586 PASS
+[ 16/250] A R1 humaneval-plus/HumanEval_161                     wall=2602ms tokens=314 PASS
+[ 17/250] A R2 humaneval-plus/HumanEval_161                     wall=6847ms tokens=1534 PASS
+[ 18/250] A R3 humaneval-plus/HumanEval_161                     wall=39198ms tokens=5655 PASS
+[ 19/250] A R4 humaneval-plus/HumanEval_161                     wall=37483ms tokens=5316 PASS
+[ 20/250] A R5 humaneval-plus/HumanEval_161                     wall=208357ms tokens=20308 FAIL
+[ 21/250] A R1 humaneval-plus/HumanEval_154                     wall=10231ms tokens=671 PASS
+[ 22/250] A R2 humaneval-plus/HumanEval_154                     wall=4578ms tokens=1472 PASS
+[ 23/250] A R3 humaneval-plus/HumanEval_154                     wall=55004ms tokens=8056 PASS
+[ 24/250] A R4 humaneval-plus/HumanEval_154                     wall=37664ms tokens=5146 PASS
+[ 25/250] A R5 humaneval-plus/HumanEval_154                     wall=191417ms tokens=19418 FAIL
+[ 26/250] A R1 humaneval-plus/HumanEval_15                      wall=2700ms tokens=243 PASS
+[ 27/250] A R2 humaneval-plus/HumanEval_15                      wall=3379ms tokens=1387 PASS
+[ 28/250] A R3 humaneval-plus/HumanEval_15                      wall=32529ms tokens=5330 PASS
+[ 29/250] A R4 humaneval-plus/HumanEval_15                      wall=26434ms tokens=3974 PASS
+[ 30/250] A R5 humaneval-plus/HumanEval_15                      wall=411698ms tokens=34493 PASS
+[ 31/250] A R1 humaneval-plus/HumanEval_13                      wall=2126ms tokens=219 PASS
+[ 32/250] A R2 humaneval-plus/HumanEval_13                      wall=3750ms tokens=1406 PASS
+[ 33/250] A R3 humaneval-plus/HumanEval_13                      wall=28048ms tokens=3848 PASS
+[ 34/250] A R4 humaneval-plus/HumanEval_13                      wall=33278ms tokens=4672 PASS
+[ 35/250] A R5 humaneval-plus/HumanEval_13                      wall=647792ms tokens=62052 PASS
+[ 36/250] A R1 humaneval-plus/HumanEval_121                     wall=3309ms tokens=348 PASS
+[ 37/250] A R2 humaneval-plus/HumanEval_121                     wall=5042ms tokens=1478 PASS
+[ 38/250] A R3 humaneval-plus/HumanEval_121                     wall=60661ms tokens=7858 PASS
+[ 39/250] A R4 humaneval-plus/HumanEval_121                     wall=25010ms tokens=4257 PASS
+[ 40/250] A R5 humaneval-plus/HumanEval_121                     wall=691147ms tokens=56470 PASS
+[ 41/250] A R1 humaneval-plus/HumanEval_77                      wall=6169ms tokens=513 PASS
+[ 42/250] A R2 humaneval-plus/HumanEval_77                      wall=5447ms tokens=1505 FAIL
+[ 43/250] A R3 humaneval-plus/HumanEval_77                      wall=60045ms tokens=8945 PASS
+[ 44/250] A R4 humaneval-plus/HumanEval_77                      wall=34372ms tokens=5041 PASS
+[ 45/250] A R5 humaneval-plus/HumanEval_77                      wall=223534ms tokens=22362 FAIL
+[ 46/250] A R1 humaneval-plus/HumanEval_118                     wall=6172ms tokens=526 PASS
+[ 47/250] A R2 humaneval-plus/HumanEval_118                     wall=4096ms tokens=1482 PASS
+[ 48/250] A R3 humaneval-plus/HumanEval_118                     wall=52280ms tokens=6731 PASS
+[ 49/250] A R4 humaneval-plus/HumanEval_118                     wall=39542ms tokens=5474 PASS
+[ 50/250] A R5 humaneval-plus/HumanEval_118                     wall=301857ms tokens=23637 FAIL
+[ 51/250] B R1 swebench-verified/sphinx-doc__sphinx-7889        wall=100195ms tokens=6538 FAIL
+[ 52/250] B R2 swebench-verified/sphinx-doc__sphinx-7889        wall=13124ms tokens=2034 FAIL
+[ 53/250] B R3 swebench-verified/sphinx-doc__sphinx-7889        wall=175743ms tokens=29891 FAIL
+[ 54/250] B R4 swebench-verified/sphinx-doc__sphinx-7889        wall=294946ms tokens=31820 FAIL
+[ 55/250] B R5 swebench-verified/sphinx-doc__sphinx-7889        wall=388712ms tokens=30799 FAIL
+[ 56/250] B R1 swebench-verified/django__django-13512           wall=85229ms tokens=5122 FAIL
+[ 57/250] B R2 swebench-verified/django__django-13512           wall=8126ms tokens=1650 FAIL
+[ 58/250] B R3 swebench-verified/django__django-13512           wall=196690ms tokens=28801 FAIL
+[ 59/250] B R4 swebench-verified/django__django-13512           wall=121754ms tokens=17825 FAIL
+[ 60/250] B R5 swebench-verified/django__django-13512           wall=328194ms tokens=33642 FAIL
+[ 61/250] B R1 swebench-verified/django__django-11179           wall=52441ms tokens=2870 PASS
+[ 62/250] B R2 swebench-verified/django__django-11179           wall=9515ms tokens=1658 FAIL
+[ 63/250] B R3 swebench-verified/django__django-11179           wall=145444ms tokens=20187 PASS
+[ 64/250] B R4 swebench-verified/django__django-11179           wall=130163ms tokens=16172 PASS
+[ 65/250] B R5 swebench-verified/django__django-11179           wall=588979ms tokens=38055 FAIL
+[ 66/250] B R1 swebench-verified/sphinx-doc__sphinx-9698        wall=93346ms tokens=5781 FAIL
+[ 67/250] B R2 swebench-verified/sphinx-doc__sphinx-9698        wall=59716ms tokens=3336 FAIL
+[ 68/250] B R3 swebench-verified/sphinx-doc__sphinx-9698        wall=209216ms tokens=27244 FAIL
+[ 69/250] B R4 swebench-verified/sphinx-doc__sphinx-9698        wall=153856ms tokens=20598 FAIL
+[ 70/250] B R5 swebench-verified/sphinx-doc__sphinx-9698        wall=313627ms tokens=26430 FAIL
+[ 71/250] B R1 swebench-verified/django__django-15863           wall=57601ms tokens=3136 PASS
+[ 72/250] B R2 swebench-verified/django__django-15863           wall=7265ms tokens=1727 FAIL
+[ 73/250] B R3 swebench-verified/django__django-15863           wall=150301ms tokens=24773 PASS
+[ 74/250] B R4 swebench-verified/django__django-15863           wall=137993ms tokens=16784 PASS
+[ 75/250] B R5 swebench-verified/django__django-15863           wall=373895ms tokens=33501 FAIL
+[ 76/250] B R1 swebench-verified/pydata__xarray-4356            wall=63283ms tokens=4253 FAIL
+[ 77/250] B R2 swebench-verified/pydata__xarray-4356            wall=9886ms tokens=1787 FAIL
+[ 78/250] B R3 swebench-verified/pydata__xarray-4356            wall=156464ms tokens=21693 FAIL
+[ 79/250] B R4 swebench-verified/pydata__xarray-4356            wall=92920ms tokens=8311 FAIL
+[ 80/250] B R5 swebench-verified/pydata__xarray-4356            wall=399514ms tokens=40325 FAIL
+[ 81/250] B R1 swebench-verified/sphinx-doc__sphinx-9711        wall=97202ms tokens=5405 FAIL
+[ 82/250] B R2 swebench-verified/sphinx-doc__sphinx-9711        wall=13181ms tokens=2101 FAIL
+[ 83/250] B R3 swebench-verified/sphinx-doc__sphinx-9711        wall=208253ms tokens=25455 FAIL
+[ 84/250] B R4 swebench-verified/sphinx-doc__sphinx-9711        wall=159471ms tokens=25507 FAIL
+[ 85/250] B R5 swebench-verified/sphinx-doc__sphinx-9711        wall=413517ms tokens=33118 FAIL
+[ 86/250] B R1 swebench-verified/django__django-15315           wall=59889ms tokens=3206 FAIL
+[ 87/250] B R2 swebench-verified/django__django-15315           wall=13638ms tokens=1886 FAIL
+[ 88/250] B R3 swebench-verified/django__django-15315           wall=144064ms tokens=19742 FAIL
+[ 89/250] B R4 swebench-verified/django__django-15315           wall=140173ms tokens=17636 FAIL
+[ 90/250] B R5 swebench-verified/django__django-15315           wall=307728ms tokens=28936 FAIL
+[ 91/250] B R1 swebench-verified/astropy__astropy-7166          wall=58942ms tokens=3135 FAIL
+[ 92/250] B R2 swebench-verified/astropy__astropy-7166          wall=7221ms tokens=1556 FAIL
+[ 93/250] B R3 swebench-verified/astropy__astropy-7166          wall=222944ms tokens=25558 FAIL
+[ 94/250] B R4 swebench-verified/astropy__astropy-7166          wall=147030ms tokens=17542 FAIL
+[ 95/250] B R5 swebench-verified/astropy__astropy-7166          wall=316513ms tokens=32887 FAIL
+[ 96/250] B R1 swebench-verified/django__django-11163           wall=32870ms tokens=1702 PASS
+[ 97/250] B R2 swebench-verified/django__django-11163           wall=6573ms tokens=1573 FAIL
+[ 98/250] B R3 swebench-verified/django__django-11163           wall=98717ms tokens=14243 PASS
+[ 99/250] B R4 swebench-verified/django__django-11163           wall=126464ms tokens=16054 PASS
+[100/250] B R5 swebench-verified/django__django-11163           wall=395072ms tokens=30616 FAIL
+[101/250] C R1 bigcodebench-hard/BigCodeBench/214               wall=14808ms tokens=924 FAIL
+[102/250] C R2 bigcodebench-hard/BigCodeBench/214               wall=13367ms tokens=1732 FAIL
+[103/250] C R3 bigcodebench-hard/BigCodeBench/214               wall=65946ms tokens=12109 FAIL
+[104/250] C R4 bigcodebench-hard/BigCodeBench/214               wall=48910ms tokens=5819 FAIL
+[105/250] C R5 bigcodebench-hard/BigCodeBench/214               wall=645402ms tokens=49073 FAIL
+[106/250] C R1 bigcodebench-hard/BigCodeBench/82                wall=21998ms tokens=1648 FAIL
+[107/250] C R2 bigcodebench-hard/BigCodeBench/82                wall=31371ms tokens=2378 FAIL
+[108/250] C R3 bigcodebench-hard/BigCodeBench/82                wall=174505ms tokens=22372 FAIL
+[109/250] C R4 bigcodebench-hard/BigCodeBench/82                wall=77227ms tokens=8998 FAIL
+[110/250] C R5 bigcodebench-hard/BigCodeBench/82                wall=266282ms tokens=26147 FAIL
+[111/250] C R1 bigcodebench-hard/BigCodeBench/530               wall=17783ms tokens=1185 PASS
+[112/250] C R2 bigcodebench-hard/BigCodeBench/530               wall=22159ms tokens=2107 PASS
+[113/250] C R3 bigcodebench-hard/BigCodeBench/530               wall=74819ms tokens=8794 FAIL
+[114/250] C R4 bigcodebench-hard/BigCodeBench/530               wall=54526ms tokens=7311 FAIL
+[115/250] C R5 bigcodebench-hard/BigCodeBench/530               wall=659567ms tokens=57220 FAIL
+[116/250] C R1 bigcodebench-hard/BigCodeBench/501               wall=67555ms tokens=3827 FAIL
+[117/250] C R2 bigcodebench-hard/BigCodeBench/501               wall=24080ms tokens=2006 FAIL
+[118/250] C R3 bigcodebench-hard/BigCodeBench/501               wall=163867ms tokens=14724 FAIL
+[119/250] C R4 bigcodebench-hard/BigCodeBench/501               wall=52238ms tokens=6389 FAIL
+[  1/131] C R5 bigcodebench-hard/BigCodeBench/501               wall=283715ms tokens=26403 FAIL
+[  2/131] C R1 bigcodebench-hard/BigCodeBench/458               wall=36897ms tokens=2115 FAIL
+[  3/131] C R2 bigcodebench-hard/BigCodeBench/458               wall=21996ms tokens=2038 FAIL
+[  4/131] C R3 bigcodebench-hard/BigCodeBench/458               wall=77120ms tokens=8897 FAIL
+[  5/131] C R4 bigcodebench-hard/BigCodeBench/458               wall=51476ms tokens=5849 FAIL
+[  6/131] C R5 bigcodebench-hard/BigCodeBench/458               wall=827407ms tokens=63498 FAIL
+[  7/131] C R1 custom-arch/auth-multitenant-design              wall=173866ms tokens=9342 ran
+[  8/131] C R2 custom-arch/auth-multitenant-design              wall=46790ms tokens=2889 ran
+[  9/131] C R3 custom-arch/auth-multitenant-design              wall=448543ms tokens=37156 ran
+[ 10/131] C R4 custom-arch/auth-multitenant-design              wall=112194ms tokens=10260 ran
+[ 11/131] C R5 custom-arch/auth-multitenant-design              wall=609106ms tokens=36446 ran
+[ 12/131] C R1 custom-arch/migration-planning-zero-downtime     wall=258269ms tokens=12479 ran
+[ 13/131] C R2 custom-arch/migration-planning-zero-downtime     wall=35420ms tokens=2431 ran
+[ 14/131] C R3 custom-arch/migration-planning-zero-downtime     wall=511714ms tokens=39707 ran
+[ 15/131] C R4 custom-arch/migration-planning-zero-downtime     wall=146090ms tokens=10983 ran
+[ 16/131] C R5 custom-arch/migration-planning-zero-downtime     wall=907288ms tokens=42585 ran
+[ 17/131] C R1 custom-arch/code-review-flaky-test               wall=180594ms tokens=11030 ran
+[ 18/131] C R2 custom-arch/code-review-flaky-test               wall=62713ms tokens=3489 ran
+[ 19/131] C R3 custom-arch/code-review-flaky-test               wall=612832ms tokens=45110 ran
+[ 20/131] C R4 custom-arch/code-review-flaky-test               wall=119873ms tokens=11707 ran
+[ 21/131] C R5 custom-arch/code-review-flaky-test               wall=876316ms tokens=49484 ran
+[ 22/131] C R1 custom-arch/cache-invalidation-tradeoffs         wall=127610ms tokens=5882 ran
+[ 23/131] C R2 custom-arch/cache-invalidation-tradeoffs         wall=47568ms tokens=2917 ran
+[ 24/131] C R3 custom-arch/cache-invalidation-tradeoffs         wall=541718ms tokens=42808 ran
+[ 25/131] C R4 custom-arch/cache-invalidation-tradeoffs         wall=118761ms tokens=12936 ran
+[ 26/131] C R5 custom-arch/cache-invalidation-tradeoffs         wall=774275ms tokens=43021 ran
+[ 27/131] C R1 custom-arch/production-debug-reasoning           wall=212587ms tokens=10187 ran
+[ 28/131] C R2 custom-arch/production-debug-reasoning           wall=51467ms tokens=3074 ran
+[ 29/131] C R3 custom-arch/production-debug-reasoning           wall=523641ms tokens=39675 ran
+[ 30/131] C R4 custom-arch/production-debug-reasoning           wall=149059ms tokens=16361 ran
+[ 31/131] C R5 custom-arch/production-debug-reasoning           wall=1039065ms tokens=55397 ran
+[ 32/131] D R1 real-dev/d1-rate-limit                           wall=10744ms tokens=3353 ran
+[ 33/131] D R2 real-dev/d1-rate-limit                           wall=2997ms tokens=1499 ran
+[ 34/131] D R3 real-dev/d1-rate-limit                           wall=103043ms tokens=15787 ran
+[ 35/131] D R4 real-dev/d1-rate-limit                           wall=194433ms tokens=27893 ran
+[ 36/131] D R5 real-dev/d1-rate-limit                           wall=443996ms tokens=33229 ran
+[ 37/131] D R1 real-dev/d2-click-3298                           wall=19901ms tokens=2373 ran
+[ 38/131] D R2 real-dev/d2-click-3298                           wall=8166ms tokens=2158 ran
+[ 39/131] D R3 real-dev/d2-click-3298                           wall=94341ms tokens=19768 ran
+[ 40/131] D R4 real-dev/d2-click-3298                           wall=178557ms tokens=12572 ran
+[ 41/131] D R5 real-dev/d2-click-3298                           wall=357902ms tokens=33589 ran
+[ 42/131] D R1 real-dev/d3-extract-validation-helper            wall=9783ms tokens=2512 score=0.98
+[ 43/131] D R2 real-dev/d3-extract-validation-helper            wall=3739ms tokens=1444 score=0.00
+[ 44/131] D R3 real-dev/d3-extract-validation-helper            wall=289006ms tokens=25227 score=0.74
+[ 45/131] D R4 real-dev/d3-extract-validation-helper            wall=138215ms tokens=19531 score=0.72
+[ 46/131] D R5 real-dev/d3-extract-validation-helper            wall=491402ms tokens=34227 score=0.00
+[ 47/131] D R1 real-dev/d4-review-pagination                    wall=71368ms tokens=5212 score=0.98
+[ 48/131] D R2 real-dev/d4-review-pagination                    wall=17012ms tokens=1848 score=0.12
+[ 49/131] D R3 real-dev/d4-review-pagination                    wall=256719ms tokens=24247 score=0.45
+[ 50/131] D R4 real-dev/d4-review-pagination                    wall=286855ms tokens=29863 score=0.70
+[ 51/131] D R5 real-dev/d4-review-pagination                    wall=658019ms tokens=60698 score=0.22
+[ 52/131] D R1 real-dev/d5-todo-counter                         wall=15145ms tokens=1787 ran
+[ 53/131] D R2 real-dev/d5-todo-counter                         wall=15206ms tokens=1834 ran
+[ 54/131] D R3 real-dev/d5-todo-counter                         wall=138787ms tokens=17900 ran
+[ 55/131] D R4 real-dev/d5-todo-counter                         wall=84668ms tokens=7434 ran
+[ 56/131] D R5 real-dev/d5-todo-counter                         wall=546363ms tokens=30062 ran
+[ 57/131] D R1 real-dev/d1-retry-decorator                      wall=18014ms tokens=3794 ran
+[ 58/131] D R2 real-dev/d1-retry-decorator                      wall=3084ms tokens=1536 ran
+[ 59/131] D R3 real-dev/d1-retry-decorator                      wall=134810ms tokens=19558 ran
+[ 60/131] D R4 real-dev/d1-retry-decorator                      wall=86487ms tokens=7922 ran
+[ 61/131] D R5 real-dev/d1-retry-decorator                      wall=674872ms tokens=50602 ran
+[ 62/131] D R1 real-dev/d2-jsonschema-1124                      wall=9773ms tokens=1502 ran
+[ 63/131] D R2 real-dev/d2-jsonschema-1124                      wall=7425ms tokens=2015 ran
+[ 64/131] D R3 real-dev/d2-jsonschema-1124                      wall=372592ms tokens=35260 ran
+[ 65/131] D R4 real-dev/d2-jsonschema-1124                      wall=306759ms tokens=30209 ran
+[ 66/131] D R5 real-dev/d2-jsonschema-1124                      wall=491286ms tokens=30772 ran
+[ 67/131] D R1 real-dev/d3-split-god-module                     wall=15657ms tokens=4197 score=1.00
+[ 68/131] D R2 real-dev/d3-split-god-module                     wall=1908ms tokens=1363 score=0.00
+[ 69/131] D R3 real-dev/d3-split-god-module                     wall=201753ms tokens=24863 score=0.84
+[ 70/131] D R4 real-dev/d3-split-god-module                     wall=99571ms tokens=16260 score=0.74
+[ 71/131] D R5 real-dev/d3-split-god-module                     wall=282470ms tokens=27222 score=0.00
+[ 72/131] D R1 real-dev/d4-review-cache-invalidation            wall=37885ms tokens=3724 score=1.00
+[ 73/131] D R2 real-dev/d4-review-cache-invalidation            wall=1469ms tokens=1347 score=0.02
+[ 74/131] D R3 real-dev/d4-review-cache-invalidation            wall=282118ms tokens=30536 score=0.54
+[ 75/131] D R4 real-dev/d4-review-cache-invalidation            wall=135019ms tokens=19002 score=0.48
+[ 76/131] D R5 real-dev/d4-review-cache-invalidation            wall=537402ms tokens=31227 score=0.02
+[ 77/131] D R1 real-dev/d5-csv-dedupe                           wall=12490ms tokens=1165 ran
+[ 78/131] D R2 real-dev/d5-csv-dedupe                           wall=11492ms tokens=1670 ran
+[ 79/131] D R3 real-dev/d5-csv-dedupe                           wall=84863ms tokens=10737 ran
+[ 80/131] D R4 real-dev/d5-csv-dedupe                           wall=54105ms tokens=6181 ran
+[ 81/131] D R5 real-dev/d5-csv-dedupe                           wall=723310ms tokens=55608 ran
+[ 82/131] D R1 real-dev/d1-json-schema                          wall=9068ms tokens=2679 ran
+[ 83/131] D R2 real-dev/d1-json-schema                          wall=2569ms tokens=1438 ran
+[ 84/131] D R3 real-dev/d1-json-schema                          wall=137841ms tokens=17175 ran
+[ 85/131] D R4 real-dev/d1-json-schema                          wall=68130ms tokens=7216 ran
+[ 86/131] D R5 real-dev/d1-json-schema                          wall=489199ms tokens=40125 ran
+[ 87/131] D R1 real-dev/d2-werkzeug-3127                        wall=35458ms tokens=2118 ran
+[ 88/131] D R2 real-dev/d2-werkzeug-3127                        wall=5825ms tokens=1832 ran
+[ 89/131] D R3 real-dev/d2-werkzeug-3127                        wall=142624ms tokens=25324 ran
+[ 90/131] D R4 real-dev/d2-werkzeug-3127                        wall=83430ms tokens=7414 ran
+[ 91/131] D R5 real-dev/d2-werkzeug-3127                        wall=341579ms tokens=25719 ran
+[ 92/131] D R1 real-dev/d3-replace-try-except-with-contextmanager wall=13447ms tokens=2419 score=1.00
+[ 93/131] D R2 real-dev/d3-replace-try-except-with-contextmanager wall=39411ms tokens=2557 score=0.30
+[ 94/131] D R3 real-dev/d3-replace-try-except-with-contextmanager wall=237154ms tokens=25963 score=0.84
+[ 95/131] D R4 real-dev/d3-replace-try-except-with-contextmanager wall=113552ms tokens=17230 score=0.54
+[ 96/131] D R5 real-dev/d3-replace-try-except-with-contextmanager wall=532632ms tokens=34281 score=0.00
+[ 97/131] D R1 real-dev/d4-review-sql-injection                 wall=38879ms tokens=3347 score=0.98
+[ 98/131] D R2 real-dev/d4-review-sql-injection                 wall=21961ms tokens=1974 score=0.18
+[ 99/131] D R3 real-dev/d4-review-sql-injection                 wall=274095ms tokens=28291 score=0.34
+[100/131] D R4 real-dev/d4-review-sql-injection                 wall=150125ms tokens=23132 score=0.48
+[101/131] D R5 real-dev/d4-review-sql-injection                 wall=536727ms tokens=41973 score=0.00
+[102/131] D R1 real-dev/d5-log-errors-today                     wall=10119ms tokens=1131 ran
+[103/131] D R2 real-dev/d5-log-errors-today                     wall=10170ms tokens=1658 ran
+[104/131] D R3 real-dev/d5-log-errors-today                     wall=97800ms tokens=12834 ran
+[105/131] D R4 real-dev/d5-log-errors-today                     wall=71064ms tokens=5258 ran
+[106/131] D R5 real-dev/d5-log-errors-today                     wall=777612ms tokens=49847 ran
+[107/131] D R1 real-dev/d1-auth-login                           wall=15136ms tokens=2187 ran
+[108/131] D R2 real-dev/d1-auth-login                           wall=2671ms tokens=1467 ran
+[109/131] D R3 real-dev/d1-auth-login                           wall=119274ms tokens=20291 ran
+[110/131] D R4 real-dev/d1-auth-login                           wall=119426ms tokens=15720 ran
+[111/131] D R5 real-dev/d1-auth-login                           wall=794250ms tokens=46858 ran
+[112/131] D R1 real-dev/d2-pytest-13817                         wall=31555ms tokens=2308 ran
+[113/131] D R2 real-dev/d2-pytest-13817                         wall=8176ms tokens=1950 ran
+[114/131] D R3 real-dev/d2-pytest-13817                         wall=167183ms tokens=22090 ran
+[115/131] D R4 real-dev/d2-pytest-13817                         wall=60666ms tokens=5801 ran
+[116/131] D R5 real-dev/d2-pytest-13817                         wall=438736ms tokens=29597 ran
+[117/131] D R1 real-dev/d3-constants-to-enum                    wall=13888ms tokens=2227 score=0.96
+[118/131] D R2 real-dev/d3-constants-to-enum                    wall=2333ms tokens=1413 score=0.00
+[119/131] D R3 real-dev/d3-constants-to-enum                    wall=149511ms tokens=19285 score=0.54
+[120/131] D R4 real-dev/d3-constants-to-enum                    wall=191279ms tokens=19255 score=0.54
+[121/131] D R5 real-dev/d3-constants-to-enum                    wall=431759ms tokens=30951 score=0.00
+[122/131] D R1 real-dev/d4-review-timezone-handling             wall=54234ms tokens=4750 score=0.98
+[123/131] D R2 real-dev/d4-review-timezone-handling             wall=21164ms tokens=1953 score=0.12
+[124/131] D R3 real-dev/d4-review-timezone-handling             wall=266743ms tokens=25631 score=0.78
+[125/131] D R4 real-dev/d4-review-timezone-handling             wall=167094ms tokens=20572 score=0.64
+[126/131] D R5 real-dev/d4-review-timezone-handling             wall=712783ms tokens=36433 score=0.00
+[127/131] D R1 real-dev/d5-env-var-redactor                     wall=11563ms tokens=1143 ran
+[128/131] D R2 real-dev/d5-env-var-redactor                     wall=14908ms tokens=1836 ran
+[129/131] D R3 real-dev/d5-env-var-redactor                     wall=61780ms tokens=9822 ran
+[130/131] D R4 real-dev/d5-env-var-redactor                     wall=56414ms tokens=5830 ran
+[131/131] D R5 real-dev/d5-env-var-redactor                     wall=816033ms tokens=55268 ran
+
+## summary
+- planned pairs: 131
+- out dir: /Users/sanchitmonga/development/ODLM/MONOREPOOO/CODING/hybrid-coding-eval/results/runs/07-v3-devstral-all-routes
+- raw.jsonl: /Users/sanchitmonga/development/ODLM/MONOREPOOO/CODING/hybrid-coding-eval/results/runs/07-v3-devstral-all-routes/raw.jsonl

@@ -25,10 +25,14 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from benchmark.humaneval_plus.adapter import load_tasks  # noqa: E402
-from lib.pricing import compute_cost  # noqa: E402
-from runners.r1_cloud_only import ROUTE, ROUTER_MODEL, build_prompt, run  # noqa: E402
-
+from hybrid_coding_eval.benchmarks.humaneval_plus.adapter import load_tasks  # noqa: E402
+from hybrid_coding_eval.core.pricing import compute_cost  # noqa: E402
+from hybrid_coding_eval.runners.r1_cloud_only import (  # noqa: E402
+    ROUTE,
+    ROUTER_MODEL,
+    build_prompt,
+    run,
+)
 
 PROXY_URL = "http://127.0.0.1:8787"
 

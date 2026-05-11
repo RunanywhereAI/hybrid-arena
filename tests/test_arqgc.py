@@ -19,10 +19,15 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from lib.metrics import Latency, Quality, ResultRow, Routing, TokenUsage  # noqa: E402
-
-from analysis.arqgc import arqgc_for_rows, bounded_arqgc  # noqa: E402
-from analysis.decision_matrix import build_decision_matrix  # noqa: E402
+from hybrid_coding_eval.analysis.arqgc import arqgc_for_rows, bounded_arqgc  # noqa: E402
+from hybrid_coding_eval.analysis.decision_matrix import build_decision_matrix  # noqa: E402
+from hybrid_coding_eval.core.metrics import (  # noqa: E402
+    Latency,
+    Quality,
+    ResultRow,
+    Routing,
+    TokenUsage,
+)
 
 
 def _mk_row(
@@ -148,10 +153,10 @@ def test_decision_matrix_renders_valid_markdown(tmp_path: Path):
         _mk_row(task_id="t4", category="B", route="R2", local_prompt=2000, local_completion=1000, composite=0.6),
     ]
 
-    from analysis.aggregate import aggregate_results
+    from hybrid_coding_eval.analysis.aggregate import aggregate_results
 
     raw = tmp_path / "raw.jsonl"
-    from lib.results import append_row
+    from hybrid_coding_eval.core.results import append_row
     for r in rows:
         append_row(raw, r)
 

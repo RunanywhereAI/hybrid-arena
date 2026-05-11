@@ -7,26 +7,23 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from lib.experiment import (  # noqa: E402
+from hybrid_coding_eval.core.experiment import (  # noqa: E402
     TaskPlan,
     build_task_plan,
     pair_already_done,
 )
-from lib.metrics import (  # noqa: E402
+from hybrid_coding_eval.core.metrics import (  # noqa: E402
     Latency,
     Quality,
     ResultRow,
     Routing,
     TokenUsage,
 )
-from lib.results import append_row  # noqa: E402
-
+from hybrid_coding_eval.core.results import append_row  # noqa: E402
 
 SCRIPT = _REPO_ROOT / "bin" / "run-experiment.py"
 

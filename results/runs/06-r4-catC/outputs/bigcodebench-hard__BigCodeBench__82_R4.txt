@@ -1,0 +1,82 @@
+The gathered information is sufficient to complete the task. The required implementation is a Flask application factory function, `task_func(secret_key, template_folder)`, that creates a Flask app, configures its secret key, initializes Flask-Login, defines a simple hardcoded user model, and provides `/login`, `/logout`, and `/protected` routes. The login form uses Flask-WTF with username and password validation, and authentication checks the submitted password against a generated hash for the hardcoded password `password`.
+
+```python
+from flask import Flask, render_template, redirect, url_for
+from flask_login import (
+    LoginManager,
+    UserMixin,
+    login_user,
+    login_required,
+    logout_user
+)
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, SubmitField
+from wtforms.validators import DataRequired, Length
+from werkzeug.security import generate_password_hash, check_password_hash
+
+
+class LoginForm(FlaskForm):
+    username = StringField(
+        "Username",
+        validators=[DataRequired(), Length(min=4, max=25)]
+    )
+    password = PasswordField(
+        "Password",
+        validators=[DataRequired(), Length(min=8, max=80)]
+    )
+    submit = SubmitField("Log In")
+
+
+login_manager = LoginManager()
+
+
+def task_func(secret_key, template_folder):
+    app = Flask(__name__, template_folder=template_folder)
+    app.config["SECRET_KEY"] = secret_key
+
+    login_manager.init_app(app)
+
+    class User(UserMixin):
+        def __init__(self, id, username, password_hash):
+            self.id = id
+            self.username = username
+            self.password_hash = password_hash
+
+        @staticmethod
+        def get(user_id):
+            return User(
+                1,
+                "user",
+                generate_password_hash("password")
+            )
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.get(int(user_id))
+
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        form = LoginForm()
+
+        if form.validate_on_submit():
+            user = User.get(1)
+
+            if check_password_hash(user.password_hash, form.password.data):
+                login_user(user)
+                return redirect(url_for("protected"))
+
+        return render_template("login.html", form=form)
+
+    @app.route("/logout")
+    @login_required
+    def logout():
+        logout_user()
+        return redirect(url_for("login"))
+
+    @app.route("/protected")
+    @login_required
+    def protected():
+        return "Protected page"
+
+    return app
+```

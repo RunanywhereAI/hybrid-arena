@@ -15,13 +15,12 @@ from __future__ import annotations
 
 import pytest
 
-from lib.metrics import Quality
-from scorers.functional_python import (
+from hybrid_coding_eval.core.metrics import Quality
+from hybrid_coding_eval.scorers.functional_python import (
     DEFAULT_IMAGE,
     extract_python_code,
     score,
 )
-
 
 # ---------------------------------------------------------------------------
 # Docker availability probe
@@ -119,7 +118,7 @@ def test_extract_empty():
 
 @pytest.fixture(scope="module")
 def humaneval_task():
-    from benchmark.humaneval_plus.adapter import load_tasks
+    from hybrid_coding_eval.benchmarks.humaneval_plus.adapter import load_tasks
 
     tasks = load_tasks()
     assert tasks, "no HumanEval+ tasks loaded from cache"
@@ -128,7 +127,7 @@ def humaneval_task():
 
 @pytest.fixture(scope="module")
 def bigcodebench_task():
-    from benchmark.bigcodebench_hard.adapter import load_tasks
+    from hybrid_coding_eval.benchmarks.bigcodebench_hard.adapter import load_tasks
 
     tasks = load_tasks()
     assert tasks, "no BigCodeBench-Hard tasks loaded from cache"

@@ -1,0 +1,44 @@
+From: Jordan <jordan@example.com>
+Subject: [PATCH] Add free-text `search` filter to GET /reports
+
+Adds a `search` query param to the reports endpoint. Matches against
+the `title` column. Useful for the support team browsing reports.
+
+--- a/reports/api.py
++++ b/reports/api.py
+@@ -1,14 +1,23 @@
+ from fastapi import APIRouter
+ from sqlalchemy import text
+-from .db import engine
++from .db import engine
+
+ router = APIRouter()
+
+
+ @router.get("/reports")
+-def list_reports(limit: int = 50):
+-    sql = text(f"SELECT id, title, created_at FROM reports ORDER BY created_at DESC LIMIT {limit}")
++def list_reports(limit: int = 50, search: str | None = None):
++    where = ""
++    if search:
++        # Match title; add % on both sides so we get a substring match.
++        where = f" WHERE title LIKE '%{search}%'"
++    sql = text(
++        "SELECT id, title, created_at FROM reports"
++        + where
++        + f" ORDER BY created_at DESC LIMIT {limit}"
++    )
+     with engine.connect() as conn:
+         rows = conn.execute(sql).mappings().all()
+     return [dict(r) for r in rows]
+--- a/reports/tests/test_api.py
++++ b/reports/tests/test_api.py
+@@ -5,3 +5,8 @@
+ def test_list_returns_recent_reports(client):
+     resp = client.get("/reports")
+     assert resp.status_code == 200
++
++
++def test_list_with_search_filter(client):
++    resp = client.get("/reports?search=hello")
++    assert resp.status_code == 200

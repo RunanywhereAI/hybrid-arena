@@ -1,0 +1,55 @@
+From: Sam <sam@example.com>
+Subject: [PATCH] Cache get_user_settings() in Redis (5-minute TTL)
+
+The settings page hits the database on every render — the call is
+read-heavy and doesn't change often. Cache it.
+
+--- a/app/settings_service.py
++++ b/app/settings_service.py
+@@ -1,6 +1,8 @@
+-from .db import session
++from .cache import redis_client
++from .db import session
+ from .models import UserSettings
+
++CACHE_TTL_SECONDS = 300
+
+ def get_user_settings(user_id: str, tenant_id: str) -> dict:
+-    row = session.query(UserSettings).filter_by(user_id=user_id, tenant_id=tenant_id).one_or_none()
+-    if not row:
+-        return {}
+-    return row.as_dict()
++    cache_key = f"settings:user:{user_id}"
++    cached = redis_client.get(cache_key)
++    if cached is not None:
++        return json.loads(cached)
++    row = (
++        session.query(UserSettings)
++        .filter_by(user_id=user_id, tenant_id=tenant_id)
++        .one_or_none()
++    )
++    data = row.as_dict() if row else {}
++    redis_client.setex(cache_key, CACHE_TTL_SECONDS, json.dumps(data))
++    return data
++
++
++def invalidate_user_settings(user_id: str) -> None:
++    redis_client.delete(f"settings:user:{user_id}")
+--- a/app/settings_routes.py
++++ b/app/settings_routes.py
+@@ -1,5 +1,5 @@
+-from .settings_service import get_user_settings
++from .settings_service import get_user_settings, invalidate_user_settings
+ from fastapi import APIRouter
+
+ router = APIRouter()
+@@ -8,3 +8,10 @@
+ @router.get("/settings")
+ def read_settings(user_id: str, tenant_id: str):
+     return get_user_settings(user_id, tenant_id)
++
++
++@router.post("/settings/invalidate")
++def clear_settings(user_id: str):
++    invalidate_user_settings(user_id)
++    return {"ok": True}

@@ -18,7 +18,7 @@ import { mkdirSync, appendFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { STRATEGIES, lastUserText, totalPromptTokens } from "./strategies.mjs";
-import { runArchitect, answerFromRun, userTaskFromMessages } from "./agentic/architect-core.mjs";
+import { runArchitect, answerFromRun, userTaskFromMessages } from "./pipelines/architect/core.mjs";
 import { costFor, fmtUSD } from "./pricing.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -53,7 +53,12 @@ const ctx = {
   cloudBase: CLOUD_BASE,
   cloudModel: CLOUD_MODEL,
   cloudKey: CLOUD_API_KEY,
-  corpus: { path: join(__dirname, "corpus", "examples.json"), examples: [], _loaded: false },
+  corpus: {
+    // T-05 moved router/corpus/examples.json → configs/router/corpus.json.
+    path: join(__dirname, "..", "configs", "router", "corpus.json"),
+    examples: [],
+    _loaded: false,
+  },
   log: (level, msg, extra) => {
     const ts = new Date().toISOString();
     console.log(`[${ts}] [${level}] ${msg}`, extra || "");

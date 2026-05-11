@@ -19,16 +19,19 @@ import random
 import sys
 from pathlib import Path
 
-import pytest
-
 # Make ``lib`` importable regardless of pytest invocation style.
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from lib.metrics import Latency, Quality, ResultRow, Routing, TokenUsage  # noqa: E402
-from lib.results import aggregate_by, append_row, load_results  # noqa: E402
-
+from hybrid_coding_eval.core.metrics import (  # noqa: E402
+    Latency,
+    Quality,
+    ResultRow,
+    Routing,
+    TokenUsage,
+)
+from hybrid_coding_eval.core.results import aggregate_by, append_row, load_results  # noqa: E402
 
 # --------------------------------------------------------------------------- #
 # Helpers

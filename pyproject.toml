@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hybrid-coding-eval"
-version = "0.0.1"
+version = "0.1.0"
 description = "Reproducible cost/latency/quality benchmark comparing local vs cloud vs hybrid LLM routing for coding tasks."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -18,17 +18,22 @@ dependencies = [
     "tiktoken>=0.8,<1",
     "openai>=1.50,<2",
     "anthropic>=0.40,<1",
+    "pydantic>=2.6,<3",
+    "pyyaml>=6.0,<7",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3,<9",
+    "ruff>=0.5,<1",
 ]
 
+[project.scripts]
+bench = "hybrid_coding_eval.cli.bench:main"
+
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["lib*", "tests*"]
-exclude = ["router*", "EXTERNAL*", "examples-poc*", "research*"]
+where = ["src"]
+include = ["hybrid_coding_eval*"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"
@@ -36,4 +41,19 @@ testpaths = ["tests"]
 addopts = "-ra"
 markers = [
     "slow: end-to-end tests that invoke the SWE-bench Docker harness (minutes per test).",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = ["vendor", "research"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = [
+    "E501",  # line-length handled by formatter
+    "E402",  # imports after sys.path manipulation — intentional pattern in CLIs
+    "E702",  # multi-statement lines OK in the few places we use them
+    "E741",  # single-letter vars in viz legends are matplotlib conventions
+    "F841",  # pandas chains sometimes leave "unused" locals
 ]

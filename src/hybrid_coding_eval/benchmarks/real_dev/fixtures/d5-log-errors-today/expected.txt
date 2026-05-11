@@ -1,0 +1,4 @@
+2026-05-06 08:45:22 ERROR db connection refused (localhost:5432)
+2026-05-06 09:05:11 ERROR failed to parse config: invalid yaml at line 17
+2026-05-06 14:02:41 ERROR upstream timeout on /api/users
+2026-05-06 16:44:08 ERROR unhandled exception in worker-3

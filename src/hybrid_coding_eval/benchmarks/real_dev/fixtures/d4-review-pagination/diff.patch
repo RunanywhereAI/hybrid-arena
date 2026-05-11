@@ -1,0 +1,53 @@
+From: Alex <alex@example.com>
+Subject: [PATCH] Add cursor-based pagination to /items
+
+Replaces the unbounded GET /items response with a 50-item page. The
+cursor is a base64-encoded integer index into the ordered result set.
+
+--- a/items/api.py
++++ b/items/api.py
+@@ -1,5 +1,7 @@
++import base64
+ from fastapi import APIRouter, HTTPException
+ from .store import get_all_items
++from .models import ItemsPage
+
+ router = APIRouter()
+
+@@ -7,6 +9,33 @@
+ @router.get("/items")
+ def list_items():
+     return get_all_items()
++
++
++PAGE_SIZE = 50
++
++
++def _encode_cursor(index: int) -> str:
++    return base64.urlsafe_b64encode(str(index).encode()).decode()
++
++
++def _decode_cursor(cursor: str) -> int:
++    try:
++        return int(base64.urlsafe_b64decode(cursor.encode()).decode())
++    except Exception:
++        raise HTTPException(status_code=400, detail="invalid cursor")
++
++
++@router.get("/items/page", response_model=ItemsPage)
++def list_items_page(cursor: str | None = None):
++    items = get_all_items()
++    start = _decode_cursor(cursor) + 1 if cursor else 0
++    end = start + PAGE_SIZE
++    page = items[start:end]
++    next_cursor = _encode_cursor(end) if end < len(items) else None
++    return ItemsPage(items=page, next_cursor=next_cursor)
+--- /dev/null
++++ b/items/models.py
+@@ -0,0 +1,8 @@
++from pydantic import BaseModel
++
++
++class ItemsPage(BaseModel):
++    items: list[dict]
++    next_cursor: str | None = None

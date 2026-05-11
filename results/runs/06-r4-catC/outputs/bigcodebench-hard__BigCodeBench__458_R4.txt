@@ -1,0 +1,29 @@
+The gathered information is sufficient to answer the task. The function should parse a JSON string, accept only non-empty flat dictionaries, double numeric values including numeric strings and numeric list elements, leave unsupported values such as nested dictionaries unchanged, and return an empty DataFrame for invalid JSON or unsupported/empty top-level data. Numeric outputs are converted to floats.
+
+```python
+import json
+import re
+import pandas as pd
+
+def task_func(json_str):
+    def normalize_value(value):
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return float(value) * 2
+        elif isinstance(value, str) and re.match(r'^-?\d+(\.\d+)?$', value):
+            return float(value) * 2
+        elif isinstance(value, list):
+            return [normalize_value(v) for v in value]
+        else:
+            return value
+
+    try:
+        data = json.loads(json_str)
+    except json.JSONDecodeError:
+        return pd.DataFrame()
+
+    if not isinstance(data, dict) or not data:
+        return pd.DataFrame()
+
+    normalized_data = {key: normalize_value(value) for key, value in data.items()}
+    return pd.DataFrame([normalized_data])
+```
