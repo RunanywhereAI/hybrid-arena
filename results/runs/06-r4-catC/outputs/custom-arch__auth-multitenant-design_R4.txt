@@ -1,2 +1,0 @@
-[router] strategy=always-cloud → CLOUD (gpt-5.5) | conf=1.00 | control: always-cloud
-
