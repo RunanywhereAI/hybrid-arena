@@ -11,7 +11,7 @@ set -e
 HERE="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 cd "$HERE"
 
-VARIANTS=("17-qwen3coder-all-routes" "18-qwen2.5coder-all-routes" "19-glm47flash-all-routes" "20-gemma4-26b-all-routes")
+VARIANTS=("17-qwen3coder-all-routes" "18-qwen2.5coder-all-routes" "19-glm47flash-all-routes" "20-gemma4-31b-all-routes")
 if [ $# -gt 0 ]; then
   SELECTED=()
   for arg in "$@"; do

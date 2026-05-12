@@ -29,7 +29,7 @@ if ! ollama list | grep -q "devstral:24b"; then
   exit 1
 fi
 
-REQUIRED_MODELS=("devstral:24b" "qwen3-coder:30b" "qwen2.5-coder:32b" "glm-4.7-flash" "gemma4:26b" "qwen3:0.6b" "nomic-embed-text")
+REQUIRED_MODELS=("devstral:24b" "qwen3-coder:30b" "qwen2.5-coder:32b" "glm-4.7-flash" "gemma4:31b" "qwen3:0.6b" "nomic-embed-text")
 for m in "${REQUIRED_MODELS[@]}"; do
   if ! ollama list | grep -q "^${m%:*}"; then
     echo "WARN: $m not pulled. The variants that need it will fail." >&2
@@ -53,7 +53,7 @@ done
 
 # ----- Phase 2-5: Per new-model sweeps -----
 
-for VARIANT in 17-qwen3coder-all-routes 18-qwen2.5coder-all-routes 19-glm47flash-all-routes 20-gemma4-26b-all-routes; do
+for VARIANT in 17-qwen3coder-all-routes 18-qwen2.5coder-all-routes 19-glm47flash-all-routes 20-gemma4-31b-all-routes; do
 
   log "Model sweep — $VARIANT — heuristic baseline (R2+R3+R4+R5)"
   ./bench run --config "configs/variants/${VARIANT}.yaml" \

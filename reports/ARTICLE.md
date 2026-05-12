@@ -266,7 +266,7 @@ D is the v3 sweep's new category. 20 tasks across 5 shapes:
 > - `qwen3-coder:30b` (Alibaba, code-specialized, ~18 GB Q4)
 > - `qwen2.5-coder:32b` (substitute for Llama 4 Scout; Scout's unquantized manifest is 62.8 GB and doesn't fit on 64 GB M4 Max)
 > - `glm-4.7-flash` (substitute for GLM-4.5-Air; GLM-4.5-Air not in Ollama default registry — closest available variant)
-> - `gemma4:26b` (Google, latest dense)
+> - `gemma4:31b` (Google, biggest dense variant — upgraded from initial 26b pick)
 >
 > Each is run R2 + R3 + R4 + R5 under the heuristic strategy (R1 is cloud-only, reused from run 07). Numbers below auto-update via `bin/v3.3-aggregate-models.py` as each model's variant completes. Each model takes ~10h wall to sweep end-to-end on M4 Max.
 

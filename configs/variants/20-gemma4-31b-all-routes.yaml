@@ -1,21 +1,22 @@
-# v3.3 — gemma4:26b local (Google Gemma 4, latest dense)
+# v3.3 — gemma4:31b local (Google Gemma 4, biggest dense)
 #
-# Local model: gemma4:26b (~16.8 GB Q4_K_M)
+# Local model: gemma4:31b (~18.5 GB Q4_K_M)
 # Google's Gemma 4 family ships 26b + 31b dense variants plus e2b/e4b
-# lightweights. 26b is the canonical "latest dense" pick that matches
-# the v3 devstral:24b memory class.
+# lightweights. 31b is the largest available dense variant —
+# upgraded from the initial 26b pick for the v3.3 sweep at the
+# owner's request ("31B is much better").
 #
 # Same invocation pattern as variant 17 (see that file's comments).
 
 # yaml-language-server: $schema=../schema.json
 
-variant_tag: v3.3-gemma4-26b
-out_dir: results/runs/20-gemma4-26b-all-routes
+variant_tag: v3.3-gemma4-31b
+out_dir: results/runs/20-gemma4-31b-all-routes
 
 models:
   cloud: gpt-5.5
   cloud_fallback: gpt-5
-  local: gemma4:26b
+  local: gemma4:31b
   judge: claude-opus-4-7
 
 router:
