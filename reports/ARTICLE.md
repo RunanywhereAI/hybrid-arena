@@ -162,7 +162,7 @@ The sweep tests **R3 only** because R1/R2 are control baselines by definition an
 <!-- AUTO-GENERATED-START -->
 | strategy | n_rows | A pass | B pass | C-bcb pass | C-arch pass | D1 pass | D2 pass | D3 pass | D4 pass | D5 pass | sum cost | median wall ms | cloud_frac (median) |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| heuristic | 4 | 4/4 | — | — | — | — | — | — | — | — | $0.20 | 82231 | 34% |
+| heuristic | 5 | 5/5 | — | — | — | — | — | — | — | — | $0.22 | 80417 | 32% |
 | rules | _pending_ | | | | | | | | | | | | |
 | llm-classifier | _pending_ | | | | | | | | | | | | |
 | embedding-knn | _pending_ | | | | | | | | | | | | |
@@ -258,6 +258,43 @@ D is the v3 sweep's new category. 20 tasks across 5 shapes:
 **One row where hybrid Pareto-improves on R1.** Across all 250 rows, **exactly one row** has a hybrid composite strictly greater than R1's by more than 0.01: `real-dev/d1-json-schema`, where R3 = 1.00 (functional pass) and R1 = 0.00. R1 produced a Python schema definition; the harness expected JSON output. Every other row is R1 ≥ hybrid. The hybrid routes do not Pareto-improve on R1 on this dataset.
 
 **Two D5/D1 unique R5 wins.** R5 was the only route to solve `real-dev/d1-retry-decorator` (R5 pass; R1, R2, R3, R4 all fail) and `real-dev/d5-log-errors-today` (R5 pass; all others fail). Two-task evidence is not enough to claim a niche, but it sketches the shape of where R5 might earn its slot: small functional tasks where each review round verifies a concrete behaviour. Outside that, R5 currently hurts.
+
+### §4.4 Cross-model comparison (v3.3 sweep)
+
+> **Status: data landing.** v3 swept devstral:24b only. v3.3 adds 4 more local models on the same 50-task set:
+>
+> - `qwen3-coder:30b` (Alibaba, code-specialized, ~18 GB Q4)
+> - `qwen2.5-coder:32b` (substitute for Llama 4 Scout; Scout's unquantized manifest is 62.8 GB and doesn't fit on 64 GB M4 Max)
+> - `glm-4.7-flash` (substitute for GLM-4.5-Air; GLM-4.5-Air not in Ollama default registry — closest available variant)
+> - `gemma4:26b` (Google, latest dense)
+>
+> Each is run R2 + R3 + R4 + R5 under the heuristic strategy (R1 is cloud-only, reused from run 07). Numbers below auto-update via `bin/v3.3-aggregate-models.py` as each model's variant completes. Each model takes ~10h wall to sweep end-to-end on M4 Max.
+
+**Pass rate per (model, route, shape):**
+
+<!-- AUTO-GENERATED-MODELS-START -->
+# v3.3 cross-model decision matrix (live)
+
+Per (model, route, shape) — passes / N. R2/R3/R4/R5 across all 4 new
+local models. R1 baseline reused from run 07 (cloud-only, doesn't
+depend on local model).
+
+## qwen3-coder:30b — _pending_ (no raw.jsonl yet)
+
+## qwen2.5-coder:32b — _pending_ (no raw.jsonl yet)
+
+## glm-4.7-flash — _pending_ (no raw.jsonl yet)
+
+## gemma4:26b — _pending_ (no raw.jsonl yet)
+<!-- AUTO-GENERATED-MODELS-END -->
+
+**Questions this section answers when complete:**
+
+1. **Is devstral the best local-only choice for these task shapes?** Per-model R2 column above. If any new model beats devstral on R2 alone, R2 becomes the recommended route on those shapes.
+2. **Does the hybrid cost-loss generalize across local models?** Per-model R3/R4/R5 columns above vs the R1 baseline. v3 showed hybrids cost 2-5× R1 on devstral; v3.3 tests whether that ratio is local-model-specific or universal.
+3. **Where do new models surprise?** Watch for cells where one model passes but others fail (e.g. smoke preview: `swebench/sphinx-7889` R3 — qwen2.5-coder and gemma4 passed; qwen3-coder and glm-4.7-flash failed; devstral failed in v3. Per-model SWE-bench landing zones may differ).
+
+A per-model deep-dive (one paragraph each, worked example with token traces) goes below this table once all 4 sweeps complete. See `bin/v3.3-aggregate-models.py` for the regeneration command, and `bin/v3.3-refresh-article.sh` to re-splice both auto-generated sections.
 
 ---
 
