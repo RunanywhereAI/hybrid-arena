@@ -162,7 +162,7 @@ The sweep tests **R3 only** because R1/R2 are control baselines by definition an
 <!-- AUTO-GENERATED-START -->
 | strategy | n_rows | A pass | B pass | C-bcb pass | C-arch pass | D1 pass | D2 pass | D3 pass | D4 pass | D5 pass | sum cost | median wall ms | cloud_frac (median) |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| heuristic | 5 | 5/5 | — | — | — | — | — | — | — | — | $0.22 | 80417 | 32% |
+| heuristic | 18 | 9/10 | 1/8 | — | — | — | — | — | — | — | $1.53 | 96670 | 35% |
 | rules | _pending_ | | | | | | | | | | | | |
 | llm-classifier | _pending_ | | | | | | | | | | | | |
 | embedding-knn | _pending_ | | | | | | | | | | | | |
