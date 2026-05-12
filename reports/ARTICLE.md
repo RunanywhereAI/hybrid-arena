@@ -151,6 +151,33 @@ The same 250-row token dataset re-priced under six scenarios:
 
 **R1 < R4 < R3 < R5 on cost under every scenario.** The ranking is invariant because each scenario applies a positive scalar to cloud tokens and zero to local tokens. The hybrid/R1 cost ratio widens under premium pricing (opus-4.7: R5 = 5.12× R1) and narrows under cheap pricing (gpt5-mini: R5 = 5.04× R1), but never inverts. The full table is in [`APPENDIX_SCENARIOS.md`](./APPENDIX_SCENARIOS.md) and raw data in [`token_budget.csv`](./token_budget.csv).
 
+### §3.5 Per-strategy R3 comparison (v3.2 sweep)
+
+> **Status: data landing.** v3 ran R3 only with the `heuristic` strategy on devstral:24b (the gap §8.4 calls out). v3.2 fixed the wiring so `config.router.strategy` flows to R3, and a 5-variant sweep (`configs/variants/12-16-r3-strategy-*.yaml`) now exercises all 5 active strategies on the same 50-task set. Numbers below auto-update via `bin/v3.3-aggregate-strategy.py` as variants complete.
+
+The sweep tests **R3 only** because R1/R2 are control baselines by definition and R4/R5 hardwire backends to roles (see §8.4 for why). The strategies are listed in §8.3.
+
+**Per-strategy summary** (R3 only, devstral:24b local, gpt-5.5 cloud, single seed 42, same 50 tasks as run 07):
+
+<!-- AUTO-GENERATED-START -->
+| strategy | n_rows | A | B | C-bcb | C-arch | D1 | D2 | D3 | D4 | D5 | Σ cost | cloud_frac (median) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| heuristic | _pending_ | | | | | | | | | | | |
+| rules | _pending_ | | | | | | | | | | | |
+| llm-classifier | _pending_ | | | | | | | | | | | |
+| embedding-knn | _pending_ | | | | | | | | | | | |
+| cascade | _pending_ | | | | | | | | | | | |
+<!-- AUTO-GENERATED-END -->
+
+Regenerate this table: `python3 bin/v3.3-aggregate-strategy.py`. Reference comparison: the v3 sweep's R3 row in §2 has the heuristic baseline at $8.65 total cost, 47% sum cloud_fraction, 35% median cloud_fraction.
+
+**The two questions this section answers when complete:**
+
+1. **Does any strategy beat heuristic on quality?** Per-strategy pass-rate columns above. If yes, on which shapes and by how much.
+2. **Does any strategy beat heuristic on cost?** Sum-cost column above. If yes, by what ratio. (Theoretical expectations: `rules` is cheapest because no LLM call for routing; `llm-classifier` and `cascade` should be most expensive due to the qwen3:0.6b call; `embedding-knn` is in between.)
+
+The plain-text below this table will be filled in with concrete prose once all 5 variants land — including any task-level wins/losses where one strategy diverges from another. See `bin/v3.3-aggregate-strategy.py` for the regeneration command.
+
 ---
 
 ## §4. Three category deep-dives
