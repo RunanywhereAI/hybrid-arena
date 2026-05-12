@@ -70,19 +70,19 @@ def passing(row):
 
 
 def shape_of(row):
-    src = (row.get("source") or "").lower()
-    if "humaneval" in src:
-        return "A"
-    if "swebench" in src:
-        return "B"
-    if "bigcodebench" in src:
-        return "C-bcb"
-    if "custom_arch" in src or "custom-arch" in src:
-        return "C-arch"
+    cat = row.get("category") or ""
     task = (row.get("task_id") or "").lower()
-    for s in ("d1", "d2", "d3", "d4", "d5"):
-        if f"/{s}-" in task or task.startswith(f"{s}-"):
-            return s.upper()
+    if cat == "A":
+        return "A"
+    if cat == "B":
+        return "B"
+    if cat == "C":
+        return "C-arch" if "custom" in task or "arch" in task else "C-bcb"
+    if cat == "D":
+        for s in ("d1", "d2", "d3", "d4", "d5"):
+            if f"/{s}-" in task:
+                return s.upper()
+        return "D?"
     return "?"
 
 

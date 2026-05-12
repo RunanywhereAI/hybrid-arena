@@ -160,13 +160,13 @@ The sweep tests **R3 only** because R1/R2 are control baselines by definition an
 **Per-strategy summary** (R3 only, devstral:24b local, gpt-5.5 cloud, single seed 42, same 50 tasks as run 07):
 
 <!-- AUTO-GENERATED-START -->
-| strategy | n_rows | A | B | C-bcb | C-arch | D1 | D2 | D3 | D4 | D5 | Σ cost | cloud_frac (median) |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| heuristic | _pending_ | | | | | | | | | | | |
-| rules | _pending_ | | | | | | | | | | | |
-| llm-classifier | _pending_ | | | | | | | | | | | |
-| embedding-knn | _pending_ | | | | | | | | | | | |
-| cascade | _pending_ | | | | | | | | | | | |
+| strategy | n_rows | A pass | B pass | C-bcb pass | C-arch pass | D1 pass | D2 pass | D3 pass | D4 pass | D5 pass | sum cost | median wall ms | cloud_frac (median) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| heuristic | 4 | 4/4 | — | — | — | — | — | — | — | — | $0.20 | 82231 | 34% |
+| rules | _pending_ | | | | | | | | | | | | |
+| llm-classifier | _pending_ | | | | | | | | | | | | |
+| embedding-knn | _pending_ | | | | | | | | | | | | |
+| cascade | _pending_ | | | | | | | | | | | | |
 <!-- AUTO-GENERATED-END -->
 
 Regenerate this table: `python3 bin/v3.3-aggregate-strategy.py`. Reference comparison: the v3 sweep's R3 row in §2 has the heuristic baseline at $8.65 total cost, 47% sum cloud_fraction, 35% median cloud_fraction.
