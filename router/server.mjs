@@ -29,6 +29,7 @@ const PORT = Number(process.env.PORT || 8787);
 const LOCAL_BASE = process.env.LOCAL_BASE || "http://127.0.0.1:11434/v1";
 const LOCAL_MODEL = process.env.LOCAL_MODEL || "qwen3-coder:30b";
 const ROUTER_MODEL = process.env.ROUTER_MODEL || "qwen3:0.6b";
+const CASCADE_THRESHOLD = parseInt(process.env.ROUTER_CASCADE_THRESHOLD || "15", 10);
 
 const CLOUD_BASE = process.env.CLOUD_BASE || "https://api.openai.com/v1";
 const CLOUD_MODEL = process.env.CLOUD_MODEL || "gpt-5.5";
@@ -50,6 +51,7 @@ const ctx = {
   localBase: LOCAL_BASE,
   localModel: LOCAL_MODEL,
   routerModel: ROUTER_MODEL,
+  cascadeThreshold: CASCADE_THRESHOLD,
   cloudBase: CLOUD_BASE,
   cloudModel: CLOUD_MODEL,
   cloudKey: CLOUD_API_KEY,

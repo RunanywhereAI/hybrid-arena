@@ -302,15 +302,21 @@ export async function embeddingKnn(req, ctx) {
 
 // ----- strategy 7: cascade --------------------------------------------------
 // 1) Pre-filter with heuristic. 2) If clearly simple OR clearly complex → trust it.
-// 3) If borderline (within 15 of threshold) → run LLM-classifier as tie-breaker.
+// 3) If borderline (within `ctx.cascadeThreshold` of heuristic boundary, default 15) → run LLM-classifier as tie-breaker.
 // 4) Final answer is whichever the tie-breaker (or heuristic) picked.
+//
+// The threshold is configurable via the ROUTER_CASCADE_THRESHOLD env var
+// (read in router/server.mjs, threaded through `ctx.cascadeThreshold`).
+// Lower threshold → trust heuristic more (less LLM cost, less accuracy
+// on borderline). Higher threshold → more LLM tiebreaks fire.
 export async function cascade(req, ctx) {
+  const threshold = ctx.cascadeThreshold ?? 15;
   const h = await heuristic(req);
   const distance = h.meta?.distance ?? 999;
-  if (distance > 15)
+  if (distance > threshold)
     return {
       choice: h.choice,
-      reason: `cascade[trust-heuristic dist=${distance.toFixed(1)}]: ${h.reason}`,
+      reason: `cascade[trust-heuristic dist=${distance.toFixed(1)} >${threshold}]: ${h.reason}`,
       confidence: h.confidence,
     };
 
@@ -319,12 +325,12 @@ export async function cascade(req, ctx) {
   if (c.choice === h.choice)
     return {
       choice: h.choice,
-      reason: `cascade[agree dist=${distance.toFixed(1)}, llm=${c.choice}]: ${h.reason} | ${c.reason}`,
+      reason: `cascade[agree dist=${distance.toFixed(1)} ≤${threshold}, llm=${c.choice}]: ${h.reason} | ${c.reason}`,
       confidence: Math.min(1, 0.5 + (h.confidence + c.confidence) / 4),
     };
   return {
     choice: c.choice,
-    reason: `cascade[disagree dist=${distance.toFixed(1)} → trust-llm]: heur=${h.choice}, llm=${c.choice} | ${c.reason}`,
+    reason: `cascade[disagree dist=${distance.toFixed(1)} ≤${threshold} → trust-llm]: heur=${h.choice}, llm=${c.choice} | ${c.reason}`,
     confidence: Math.max(c.confidence - 0.1, 0.5),
   };
 }
