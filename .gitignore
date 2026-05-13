@@ -40,3 +40,8 @@ vendor/*/.git/
 router/logs/*.jsonl
 !router/logs/decisions.jsonl
 *.egg-info/
+
+# v3.3 sweep + scripts logs — track INDEX.md as the canonical pointer; ignore the rest.
+logs/
+!logs/v3.3/
+!logs/v3.3/INDEX.md
