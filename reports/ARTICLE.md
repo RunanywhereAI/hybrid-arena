@@ -279,20 +279,45 @@ Per (model, route, shape) — passes / N. R2/R3/R4/R5 across all 4 new
 local models. R1 baseline reused from run 07 (cloud-only, doesn't
 depend on local model).
 
-## qwen3-coder:30b (127 rows, 1 errors, $21.98 total, 43% median cloud_frac)
+## qwen3-coder:30b (200 rows, 1 errors, $35.16 total, 44% median cloud_frac)
 
 | route |  A  |  B  | C-bcb | C-arch | D1 | D2 | D3 | D4 | D5 |
 | --- | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
-| R2 | 9/10 | 1/10 | 1/5 | None/5 | 0/1 | None/1 | — | — | — |
-| R3 | 10/10 | 4/10 | 2/5 | None/5 | 1/1 | None/1 | — | — | — |
-| R4 | 8/10 | 3/10 | 1/5 | None/5 | 1/1 | None/1 | — | — | — |
-| R5 | 2/10 | 0/10 | 0/5 | None/5 | 1/1 | — | — | — | — |
+| R2 | 9/10 | 1/10 | 1/5 | 3/5 | 0/4 | None/4 | 1/4 | 0/4 | 1/4 |
+| R3 | 10/10 | 4/10 | 2/5 | 5/5 | 2/4 | None/4 | 4/4 | 3/4 | 3/4 |
+| R4 | 8/10 | 3/10 | 1/5 | None/5 | 2/4 | None/4 | 2/4 | 1/4 | 3/4 |
+| R5 | 2/10 | 0/10 | 0/5 | None/5 | 1/4 | None/4 | 0/4 | 0/4 | 1/4 |
 
-## qwen2.5-coder:32b — _pending_ (no raw.jsonl yet)
+## qwen2.5-coder:32b (200 rows, 1 errors, $35.81 total, 45% median cloud_frac)
 
-## glm-4.7-flash — _pending_ (no raw.jsonl yet)
+| route |  A  |  B  | C-bcb | C-arch | D1 | D2 | D3 | D4 | D5 |
+| --- | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
+| R2 | 9/10 | 0/10 | 1/5 | 3/5 | 0/4 | None/4 | 0/4 | 0/4 | 0/4 |
+| R3 | 10/10 | 3/10 | 1/5 | 5/5 | 1/4 | None/4 | 4/4 | 4/4 | 1/4 |
+| R4 | 10/10 | 2/10 | 1/5 | None/5 | 1/4 | None/4 | 1/4 | 1/4 | 1/4 |
+| R5 | 3/10 | 0/10 | 0/5 | None/5 | 0/4 | None/4 | 0/4 | 0/4 | 1/4 |
 
-## gemma4:31b — _pending_ (no raw.jsonl yet)
+## glm-4.7-flash (200 rows, 0 errors, $35.57 total, 47% median cloud_frac)
+
+| route |  A  |  B  | C-bcb | C-arch | D1 | D2 | D3 | D4 | D5 |
+| --- | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
+| R2 | 0/10 | None/10 | 1/5 | 2/5 | 0/4 | None/4 | 1/4 | 0/4 | 1/4 |
+| R3 | 0/10 | None/10 | 2/5 | 5/5 | 2/4 | None/4 | 4/4 | 2/4 | 2/4 |
+| R4 | 0/10 | None/10 | 1/5 | None/5 | 1/4 | None/4 | 3/4 | 1/4 | 3/4 |
+| R5 | 0/10 | 0/10 | 0/5 | None/5 | 1/4 | None/4 | 0/4 | 0/4 | 0/4 |
+
+## gemma4:31b (200 rows, 1 errors, $35.28 total, 46% median cloud_frac)
+
+| route |  A  |  B  | C-bcb | C-arch | D1 | D2 | D3 | D4 | D5 |
+| --- | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
+| R2 | 10/10 | 1/10 | 1/5 | 3/5 | 0/4 | None/4 | 0/4 | 0/4 | 0/4 |
+| R3 | 10/10 | 2/10 | 1/5 | 5/5 | 2/4 | None/4 | 4/4 | 2/4 | 3/4 |
+| R4 | 10/10 | 2/10 | 2/5 | None/5 | 1/4 | None/4 | 3/4 | 3/4 | 3/4 |
+| R5 | 6/10 | 0/10 | 0/5 | None/5 | 2/4 | None/4 | 0/4 | 1/4 | 0/4 |
+
+## qwen3.6:27b-coding-mxfp8 — _pending_ (no raw.jsonl yet)
+
+## qwen3.6:35b — _pending_ (no raw.jsonl yet)
 <!-- AUTO-GENERATED-MODELS-END -->
 
 **Questions this section answers when complete:**
