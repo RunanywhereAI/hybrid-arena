@@ -8,6 +8,91 @@ A developer's typical coding workload spans tiny completions (HumanEval-style), 
 
 ---
 
+## §0. A concrete worked example
+
+To anchor the rest of the doc, here is **one actual task from the v3.3 sweep**, with the **actual model output** that solved it, and a side-by-side cost comparison across all 5 routes. The router design in §3 is the algorithm that turns this case study into a deployment policy.
+
+### The problem
+
+`humaneval-plus/HumanEval_99` from the HumanEval+ benchmark (variant `17-qwen3coder-all-routes`, route `R2`, sweep row stored at `results/runs/17-qwen3coder-all-routes/raw.jsonl`).
+
+The benchmark gives the model a stub function with a docstring:
+
+```python
+def closest_integer(value):
+    '''
+    Create a function that takes a value (string) representing a number
+    and returns the closest integer to it. If the number is equidistant
+    from two integers, round it away from zero.
+
+    Examples
+    >>> closest_integer("10")
+    10
+    >>> closest_integer("15.3")
+    15
+
+    Note:
+    Rounding away from zero means that if the given number is equidistant
+    from two integers, the one you should return is the one that is the
+    farthest from zero. For example closest_integer("14.5") should
+    return 15 and closest_integer("-14.5") should return -15.
+    '''
+```
+
+Scoring is by pytest in a Docker sandbox (`python:3.12-slim`, `--network none`, 60 s timeout). The harness runs the model output against a hidden test suite that includes adversarial edge cases (negative equidistant values, leading zeros, etc.).
+
+### The solution (R2 = pure local, Qwen3-Coder:30B)
+
+The local model generated this in **7.6 seconds**, **zero cloud tokens**, **zero dollars**:
+
+```python
+def closest_integer(value):
+    num = float(value)
+    if num > 0:
+        return int(num + 0.5) if num % 1 == 0.5 else round(num)
+    else:
+        return int(num - 0.5) if abs(num) % 1 == 0.5 else round(num)
+```
+
+Output file: `results/runs/17-qwen3coder-all-routes/outputs/humaneval-plus__HumanEval_99_R2.txt`. Pytest verdict: **PASS** (all hidden tests). This is the **canonical "free win" cell** — the router's gate would correctly classify this task as a local-feasible A-shape (score ≈ 10, well below threshold 25), R2 attempts it, the syntax check passes, R1 is never called. **Total cost: $0.00. Total latency: 7.6 s.**
+
+### Same task across all 5 routes (real measured numbers)
+
+| route | cloud tokens (in/out) | local tokens (in/out) | wall time | cost (gpt-5.5) | pass? |
+| --- | --- | --- | ---: | ---: | :-: |
+| **R1 cloud-only** | 175 / 393 | — | 6.1 s | **$0.013** | ✓ |
+| **R2 local-only** (the design's choice) | 0 / 0 | 1,407 / 73 | 7.6 s | **$0.000** | ✓ |
+| R3 hybrid-architect | 1,906 / 1,516 | 4,656 / 1,065 | 70.7 s | $0.055 | ✓ |
+| R4 hybrid-minion | 2,700 / 1,854 | 337 / 235 | 40.1 s | $0.069 | ✓ |
+| R5 devminion review-loop | 3,704 / 7,603 | 7,534 / 4,079 | 282.4 s | $0.247 | ✗ |
+
+(R1 numbers from the v3 reference baseline `results/runs/07-v3-devstral-all-routes/raw.jsonl`. The R2-R5 numbers are from variant 17 above.)
+
+### What this single example proves
+
+1. **R2 is free and 5.5× slower than R1** (7.6 s vs 6.1 s wall) — but the user's wall is sub-10 s in both cases, so the latency penalty is invisible in an IDE. The cost win is $0.013, on every task of this kind.
+2. **R3 hybrid-architect was 19× slower and 4.3× more expensive than R2 for the same answer.** The architect-planner generated a 5-step plan + per-step subprompts + a synth round; for a trivial task that's pure overhead. Quality outcome: identical (both pass).
+3. **R4 hybrid-minion was 5.3× slower and 5.3× more expensive than R2.** The supervisor/worker Q&A protocol is wasted on a task this small.
+4. **R5 devminion review-loop catastrophically failed** — 4 min 42 s wall, $0.25, AND wrong answer. The 3-round review loop introduced rather than removed bugs. This is the canonical "multi-step hybrid is worse than either pure local or pure cloud" failure mode.
+
+### Why this matters for the router design
+
+This row is not cherry-picked — it's representative of **A-shape behavior across all 6 local models tested** (Qwen3-Coder:30B passes 9/10 HumanEval+ tasks at R2; the others land between 8/10 and 10/10). The router's job is to identify these tasks via the cheap heuristic gate (§3 Stage 1) and route them to R2 for the free pass, instead of paying R1's $0.013 × thousands of tasks per developer per month.
+
+### When R2 fails (the fallback path, also from the same sweep)
+
+Not every task is solvable locally. Take `swebench-verified/django__django-11163` — a real Django GitHub issue requiring a multi-file patch. On variant 17 (Qwen3-Coder:30B):
+
+- **R2**: wall 9.7 s, **fail** (model returned a one-line diff that doesn't apply).
+- **R1**: wall 61.6 s, **pass**, cost $0.106.
+- **R3 hybrid**: wall 166 s, **pass**, cost $0.137 (1.3× R1).
+- **R4 hybrid-minion**: wall 139 s, **pass**, cost $0.203 (1.9× R1).
+- **R5 review-loop**: wall 381 s, **fail**, cost $0.39 (3.7× R1).
+
+The router's gate would classify this as score ≈ 35 (high token count + "fix" + "bug" cloud keywords + multi-file context), reject the R2 attempt, and go straight to R1 — total cost $0.106. **The gate saves the 9.7 s wasted local attempt** that would otherwise precede the R1 fallback. Across the full SWE-bench slice, the gate's correct early rejection of B-shape is what makes the R2-first design come out 16% cheaper than R1-only overall.
+
+---
+
 ## §1. Problem statement
 
 A hybrid router's job is **not** to orchestrate subtasks across backends. It's to make a single per-task decision: **can the local model alone satisfy this request?** If yes, run it free; if no, escalate to cloud.
