@@ -287,8 +287,16 @@ def score_row(row: ResultRow, source: str, task: Any) -> Quality | None:
     Skips scoring and returns None for:
       - rows with ``error`` set
       - category-C ``custom_arch`` tasks (judge phase handles these)
+      - rows where the runner already produced a definitive
+        ``functional_pass`` (agentic R6/R7/R8 score inside their own
+        Docker sandbox; re-overlaying the agent's output on a clean
+        fixture would lose its work). ``Quality()`` empty (everything
+        None) is treated as "not yet scored" and dispatches as usual.
     """
     if row.error:
+        return None
+
+    if row.quality is not None and row.quality.functional_pass is not None:
         return None
 
     model_output = _read_output_text(row)

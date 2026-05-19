@@ -88,51 +88,46 @@ def _copy_fixture(task: Any, dst: Path) -> Path:
     return dst
 
 
-def _score_via_pytest(scratch: Path) -> Quality:
-    """Run pytest in the scratch dir.
+def _score_in_sandbox(scratch: Path) -> Quality:
+    """Score the agent's scratch dir via the existing Docker sandbox.
 
-    pytest exit codes:
-      0 — all tests passed
-      1 — some tests failed
-      2 — interrupted
-      3 — internal error
-      4 — usage error
-      5 — no tests collected
+    Snapshots the scratch dir as a ``files`` mapping, locates the test
+    entry-point, and runs pytest inside the
+    ``hybrid-eval-python:latest`` image with ``--network none``, memory
+    caps, and a process-count cap — the same sandbox R1/R2/R3 use via
+    ``scorers.functional_python``. No host pytest.
 
-    For D1/D5 tasks scratch holds stub + test files → exit 0/1 are meaningful.
-    For D2 (issue patches), D3 (refactor prose), D4 (review prose) — no
-    pytest tests exist, so exit 5 ("no tests collected") returns Quality()
-    with functional_pass=None (not measured).
+    Returns ``Quality()`` (functional_pass=None) when no test files are
+    present in scratch — i.e. real-dev D2/D3/D4 prose tasks. In that
+    case ``experiment.score_row`` falls through to the LLM judge.
     """
-    # Detect whether any pytest tests exist before invoking.
-    has_tests = any(
-        p.name.startswith("test_") or p.name.endswith("_test.py")
-        for p in scratch.rglob("*.py")
-    )
-    if not has_tests:
-        # No functional scorer applicable.
+    test_paths = [
+        p for p in scratch.rglob("*.py")
+        if p.name.startswith("test_") or p.name.endswith("_test.py")
+    ]
+    if not test_paths:
         return Quality()
 
-    py = shutil.which("python3") or shutil.which("python") or "python3"
+    files: dict[str, str] = {}
+    for p in scratch.rglob("*"):
+        if not p.is_file():
+            continue
+        try:
+            files[str(p.relative_to(scratch))] = p.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+    if not files:
+        return Quality()
+
+    test_rel = str(test_paths[0].relative_to(scratch))
+    # Reuse the canonical Docker sandbox path used by real_dev D1/D5
+    # scorers. Keeps R8 on the same security boundary as R1-R5.
+    from hybrid_coding_eval.benchmarks.real_dev.scorers import (
+        _run_pytest_in_sandbox,
+    )
     try:
-        proc = subprocess.run(
-            [py, "-m", "pytest", "-q"],
-            cwd=scratch,
-            capture_output=True,
-            text=True,
-            timeout=180,
-            check=False,
-        )
-        if proc.returncode == 5:
-            return Quality()
-        passed = proc.returncode == 0
-        return Quality(
-            functional_pass=passed,
-            tests_passed=1 if passed else 0,
-            tests_total=1,
-            composite=1.0 if passed else 0.0,
-        )
-    except subprocess.TimeoutExpired:
+        return _run_pytest_in_sandbox(files, test_rel)
+    except Exception:  # pragma: no cover — sandbox owns its own logging
         return Quality(functional_pass=False, composite=0.0)
 
 
@@ -224,8 +219,8 @@ def run(
     wall_ms = int((time.perf_counter() - t0) * 1000)
     finished_at = datetime.now(timezone.utc)
 
-    # Score
-    quality = _score_via_pytest(scratch)
+    # Score via the existing Docker sandbox (same boundary R1-R5 use).
+    quality = _score_in_sandbox(scratch)
 
     answer_path = run_dir / "answer.txt"
     # The "output" of an agentic run is the modified scratch dir; we
