@@ -1,23 +1,28 @@
 """R8 — opencode CLI agent on real-dev D1+D5 fixtures.
 
-opencode (github.com/anomalyco/opencode) is a TypeScript+Bun coding agent
-with Read/Write/Edit/Bash/Grep/Glob tools. The user's
-``~/.config/opencode/opencode.json`` already registers a ``hybrid-router``
-provider pointed at ``http://127.0.0.1:8787/v1`` with 7 router strategies
-as model IDs, so we invoke opencode with ``--model
-hybrid-router/router/<strategy>`` and routing happens in the proxy.
+opencode is a TypeScript+Bun coding agent with Read/Write/Edit/Bash/
+Grep/Glob tools. ``./bench setup`` installs the maintainer's fork
+(default: ``RunanywhereAI/opencode-1`` @ ``feat/hybrid-routing-plugin``,
+env-overridable via ``OPENCODE_GIT_URL`` / ``OPENCODE_GIT_REF``) and
+writes a ``hybrid-router`` provider entry into
+``~/.config/opencode/opencode.json`` pointed at
+``http://127.0.0.1:8787/v1``. R8 invokes opencode with
+``--model hybrid-router/router/<strategy>/run-<id>`` so routing happens
+in the proxy AND per-call attribution back to this runner is exact.
 
 What R8 does, per task:
-  1. Copy the real-dev fixture into a per-run scratch dir.
-  2. Subprocess ``opencode run --cwd <scratch> --model
-     hybrid-router/router/<strategy> --message <prompt>``.
-  3. Score by running pytest on the (modified) fixture.
-  4. Reconstruct token attribution from ``decisions.jsonl``.
+  1. Generate a 12-hex ``bench_run_id`` and copy the fixture into a
+     per-run scratch dir.
+  2. Subprocess ``opencode run -m hybrid-router/router/<strategy>/run-<id>
+     <prompt>`` (cwd=scratch).
+  3. Score by running pytest on the (modified) fixture via the existing
+     Docker sandbox (``scorers.functional_python``; wired in Phase 1.2).
+  4. Reconstruct token attribution by filtering decisions.jsonl on
+     ``bench_run_id`` (primary) / timestamp window (fallback).
 """
 
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import subprocess
@@ -34,6 +39,11 @@ from hybrid_coding_eval.core.metrics import (
     TokenUsage,
 )
 from hybrid_coding_eval.core.paths import repo_root as _resolve_repo_root
+from hybrid_coding_eval.runners._agent_attribution import (
+    attribute_from_decisions_log,
+    generate_run_id,
+    model_string,
+)
 
 __all__ = ["run", "ROUTE"]
 
@@ -45,18 +55,6 @@ DEFAULT_TIMEOUT_S: int = 900
 
 def _task_slug(task_id: str) -> str:
     return task_id.replace("/", "__").replace(" ", "_")
-
-
-def _attribute_from_decisions_log(
-    started_at: datetime,
-    finished_at: datetime,
-    strategy: str,
-) -> tuple[TokenUsage, Routing]:
-    from hybrid_coding_eval.runners.r6_mini_swe_agent import (
-        _attribute_from_decisions_log as _attr,
-    )
-
-    return _attr(started_at, finished_at, strategy)
 
 
 _REAL_DEV_FIXTURES_ROOT: Path = (
@@ -181,7 +179,8 @@ def run(
     if not prompt:
         prompt = f"Complete the task in the README.md of {scratch.name}."
 
-    model_id = f"hybrid-router/router/{router_strategy}"
+    bench_run_id = generate_run_id()
+    model_id = model_string(router_strategy, bench_run_id, prefix="hybrid-router/router")
 
     # opencode CLI shape: `opencode run [message..]` — message is positional,
     # `--cwd` is not a flag; run with cwd=scratch.
@@ -242,8 +241,12 @@ def run(
                 continue
     answer_path.write_text("".join(snapshot_lines), encoding="utf-8")
 
-    tokens, routing = _attribute_from_decisions_log(
-        started_at, finished_at, router_strategy
+    # Token attribution (primary: bench_run_id; fallback: timestamp window).
+    tokens, routing = attribute_from_decisions_log(
+        run_id=bench_run_id,
+        strategy=router_strategy,
+        started_at=started_at,
+        finished_at=finished_at,
     )
 
     try:

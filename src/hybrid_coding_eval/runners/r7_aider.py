@@ -1,5 +1,12 @@
 """R7 — Aider in architect/editor mode on Exercism Python tasks.
 
+**EXPERIMENTAL in v1.1.** R7 is in the tree as the apples-to-apples Aider
+runner but is NOT exercised in the v1.1 canonical sweep — v1.1 focuses
+entirely on R8 (opencode). R7 rides free on shared refactors:
+correlation-id token attribution + the new agent-aware `heuristic`
+strategy. Full polish (Docker scoring for pytest, more fixtures) lands
+in v1.2.
+
 Aider is a CLI coding assistant that operates *inside a repo*: read files,
 emit diffs, run tests, iterate. The architect/editor mode splits the
 work into two model calls per turn (architect proposes, editor patches),
@@ -7,21 +14,19 @@ which is exactly the kind of routing-friendly call mix that this
 benchmark wants to measure.
 
 What R7 does, per task:
-  1. Copy the task fixture into a per-run scratch dir (so concurrent
-     and resumed runs don't stomp each other).
+  1. Generate a 12-hex ``bench_run_id`` + copy the task fixture into a
+     per-run scratch dir.
   2. Subprocess ``aider --architect`` with both architect-model and
      editor-model pointed at this repo's proxy on :8787 under
-     ``router/<strategy>``. Aider uses LiteLLM internally and respects
-     ``OPENAI_API_BASE``.
-  3. After Aider exits, run pytest on the modified files in a
-     :mod:`hybrid_coding_eval.scorers.functional_python` Docker sandbox.
-  4. Reconstruct per-call token attribution from
-     ``router/logs/decisions.jsonl`` (timestamp-window).
+     ``router/<strategy>/run-<id>``. Aider uses LiteLLM internally and
+     respects ``OPENAI_API_BASE``.
+  3. After Aider exits, run pytest on the modified files.
+  4. Reconstruct token attribution by filtering decisions.jsonl on
+     ``bench_run_id`` (primary) / timestamp window (fallback).
 """
 
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import subprocess
@@ -38,12 +43,16 @@ from hybrid_coding_eval.core.metrics import (
     TokenUsage,
 )
 from hybrid_coding_eval.core.paths import repo_root as _resolve_repo_root
+from hybrid_coding_eval.runners._agent_attribution import (
+    attribute_from_decisions_log,
+    generate_run_id,
+    model_string,
+)
 
 __all__ = ["run", "ROUTE"]
 
 ROUTE = "R7"
 _REPO_ROOT: Path = _resolve_repo_root()
-_DECISIONS_PATH: Path = _REPO_ROOT / "router" / "logs" / "decisions.jsonl"
 
 DEFAULT_TIMEOUT_S: int = 600
 
@@ -64,19 +73,6 @@ def _copy_fixture(fixture_dir: Path, dst: Path) -> tuple[Path, Path]:
     if stub is None or test is None:
         raise FileNotFoundError(f"fixture missing stub/test in {dst}")
     return stub, test
-
-
-def _attribute_from_decisions_log(
-    started_at: datetime,
-    finished_at: datetime,
-    strategy: str,
-) -> tuple[TokenUsage, Routing]:
-    """Same as R6's helper, factored for re-use."""
-    from hybrid_coding_eval.runners.r6_mini_swe_agent import (
-        _attribute_from_decisions_log as _attr,
-    )
-
-    return _attr(started_at, finished_at, strategy)
 
 
 def _run_tests_local(stub_dir: Path, test_path: Path) -> Quality:
@@ -158,8 +154,9 @@ def run(
         f"{test_path.name} pass. Edit only the stub file."
     )
 
+    bench_run_id = generate_run_id()
     api_base = proxy_url.rstrip("/") + "/v1"
-    model_id = f"openai/router/{router_strategy}"
+    model_id = model_string(router_strategy, bench_run_id, prefix="openai/router")
 
     # 3. Subprocess Aider.
     cmd = [
@@ -225,9 +222,12 @@ def run(
     else:
         answer_path.write_text("", encoding="utf-8")
 
-    # 5. Token attribution.
-    tokens, routing = _attribute_from_decisions_log(
-        started_at, finished_at, router_strategy
+    # 5. Token attribution (primary: bench_run_id; fallback: timestamp window).
+    tokens, routing = attribute_from_decisions_log(
+        run_id=bench_run_id,
+        strategy=router_strategy,
+        started_at=started_at,
+        finished_at=finished_at,
     )
 
     try:

@@ -269,7 +269,14 @@ async function handleChatCompletion(req, res) {
     ? "cloud"
     : null;
   const stripped = requestedModel.replace(/!local|!cloud/g, "");
-  const strategyName = stripped.startsWith("router/") ? stripped.slice("router/".length) : stripped;
+  // Parse "router/<strategy>" or "router/<strategy>/run-<bench_run_id>".
+  // v1.1+: agentic runners (R6/R7/R8) embed a 12-hex correlation id in the
+  // model field so attribution can join back into decisions.jsonl without
+  // timestamp races. Legacy callers (no suffix) keep working unchanged.
+  const afterPrefix = stripped.startsWith("router/") ? stripped.slice("router/".length) : stripped;
+  const runIdMatch = afterPrefix.match(/^(.+?)\/run-([a-zA-Z0-9_-]+)$/);
+  const strategyName = runIdMatch ? runIdMatch[1] : afterPrefix;
+  const benchRunId = runIdMatch ? runIdMatch[2] : null;
 
   let strategy = STRATEGIES[strategyName];
   if (!strategy) {
@@ -372,6 +379,7 @@ async function handleChatCompletion(req, res) {
       ts: new Date().toISOString(),
       id,
       strategy: strategyName,
+      bench_run_id: benchRunId,
       choice: decision.choice,
       reason: decision.reason,
       backend_model: backend.model,
@@ -394,6 +402,7 @@ async function handleChatCompletion(req, res) {
     ts: new Date().toISOString(),
     id,
     strategy: strategyName,
+    bench_run_id: benchRunId,
     choice: decision.choice,
     forced: force || null,
     reason: decision.reason,

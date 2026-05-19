@@ -179,15 +179,23 @@ def pair_already_done(
 
     The strategy axis was added in v4 (R6/R7/R8) so multiple invocations
     of the same (task, route) under different strategies coexist in one
-    raw.jsonl. When ``router_strategy`` is None, the historical
-    ``(task_id, route)`` semantics are preserved (any strategy counts).
+    raw.jsonl. Matching rules:
+
+      * Search ``router_strategy`` is ``None``       → match any row.
+      * Row's ``router_strategy`` is ``None``        → match (v3 rows
+        predate the field; treat as wildcard for back-compat).
+      * Both present                                  → exact match.
     """
     if not raw_path.exists():
         return False
     rows = load_results(raw_path)
     for r in rows:
         if r.task_id == task_id and r.route == route:
-            if router_strategy is None or r.router_strategy == router_strategy:
+            if (
+                router_strategy is None
+                or r.router_strategy is None
+                or r.router_strategy == router_strategy
+            ):
                 return True
     return False
 
