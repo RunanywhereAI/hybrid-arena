@@ -421,6 +421,76 @@ def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
     return 1 if failures else 0
 
 
+# ---------- sweep ---------------------------------------------------------
+
+
+def _cmd_sweep(args: argparse.Namespace) -> int:
+    """Loop a single YAML config across multiple strategies × seeds.
+
+    The reproducer for v1.1+ canonical sweeps. Replaces the deleted
+    bin/v4*.sh scripts. Each ``(strategy, seed)`` combination writes to
+    its own subdirectory under ``out_dir``::
+
+        <out_dir>/<strategy>/seed-<seed>/raw.jsonl
+
+    so the analysis layer (./bench analyze + bootstrap) can stratify by
+    both axes without raw.jsonl key collisions.
+    """
+    strategies = [s.strip() for s in args.strategies.split(",") if s.strip()]
+    seeds_arg = args.seeds or "42"
+    seeds = [int(s.strip()) for s in seeds_arg.split(",") if s.strip()]
+    if not strategies:
+        print("error: --strategies must list at least one strategy", file=sys.stderr)
+        return 2
+
+    # Resolve base_out once (so per-pass overrides redirect into subdirs).
+    base_config = _load_merged(args)
+    base_out = Path(args.out) if args.out else Path(base_config.out_dir)
+    base_out.mkdir(parents=True, exist_ok=True)
+
+    total = len(strategies) * len(seeds)
+    print(
+        f"# bench sweep: {len(strategies)} strategies × {len(seeds)} seeds "
+        f"= {total} runs → {base_out}"
+    )
+
+    failures: list[tuple[str, int, int]] = []
+    for i_strat, strat in enumerate(strategies, start=1):
+        for i_seed, seed in enumerate(seeds, start=1):
+            idx = (i_strat - 1) * len(seeds) + i_seed
+            sub_out = base_out / strat / f"seed-{seed}"
+            print(f"\n=== [{idx}/{total}] strategy={strat} seed={seed} → {sub_out} ===")
+            sub_args = argparse.Namespace(
+                config=args.config,
+                set=list(args.set or []) + [
+                    f"router.strategy={strat}",
+                    f"out_dir={sub_out}",
+                ],
+                variant_tag=None,
+                out=sub_out,
+                smoke=args.smoke,
+                resume=args.resume,
+                dry_run=args.dry_run,
+            )
+            try:
+                ret = _cmd_run(sub_args)
+            except Exception as exc:  # noqa: BLE001 — keep sweep alive
+                print(f"  ! pass crashed: {type(exc).__name__}: {exc}", file=sys.stderr)
+                ret = 99
+            if ret != 0:
+                failures.append((strat, seed, ret))
+
+    print("\n=== sweep summary ===")
+    print(f"  total passes : {total}")
+    print(f"  successful   : {total - len(failures)}")
+    print(f"  failed       : {len(failures)}")
+    for strat, seed, ret in failures:
+        print(f"    - [{strat}, seed={seed}]: exit {ret}")
+    print(f"  output       : {base_out}")
+    print(f"  next step    : ./bench analyze {base_out}")
+    return 1 if failures else 0
+
+
 # ---------- dispatcher ----------------------------------------------------
 
 
@@ -527,6 +597,28 @@ def main(argv: list[str] | None = None) -> int:
         help="One-shot setup: clone vendor/minions, build Docker image, pull auxiliary models.",
     )
     p_setup.set_defaults(func=_cmd_setup)
+
+    p_sweep = sub.add_parser(
+        "sweep",
+        help="Loop a YAML across multiple strategies × seeds (v1.1+ canonical reproducer).",
+    )
+    _add_config_arg(p_sweep)
+    p_sweep.add_argument(
+        "--strategies",
+        required=True,
+        help="Comma-separated strategy names. Example: always-cloud,always-local,heuristic,cascade",
+    )
+    p_sweep.add_argument(
+        "--seeds",
+        default="42",
+        help="Comma-separated seed integers (default: 42).",
+    )
+    p_sweep.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Plan each pass without running.",
+    )
+    p_sweep.set_defaults(func=_cmd_sweep)
 
     args = parser.parse_args(argv)
     return int(args.func(args) or 0)
