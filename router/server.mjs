@@ -30,6 +30,18 @@ const LOCAL_BASE = process.env.LOCAL_BASE || "http://127.0.0.1:11434/v1";
 const LOCAL_MODEL = process.env.LOCAL_MODEL || "qwen3-coder:30b";
 const ROUTER_MODEL = process.env.ROUTER_MODEL || "qwen3:0.6b";
 const CASCADE_THRESHOLD = parseInt(process.env.ROUTER_CASCADE_THRESHOLD || "15", 10);
+const AGENT_HEURISTIC_THRESHOLD = parseInt(
+  process.env.ROUTER_AGENT_HEURISTIC_THRESHOLD || "12",
+  10,
+);
+// Optional comma-separated list of extra system-prompt markers that
+// identify an agent call (in addition to the built-in mini-swe-agent /
+// aider / opencode patterns). Per-tool integration may extend this at
+// runtime — see docs/AGENTIC_ROUTES.md.
+const EXTRA_AGENT_MARKERS = (process.env.ROUTER_AGENT_SYSTEM_MARKERS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 const CLOUD_BASE = process.env.CLOUD_BASE || "https://api.openai.com/v1";
 const CLOUD_MODEL = process.env.CLOUD_MODEL || "gpt-5.5";
@@ -52,6 +64,8 @@ const ctx = {
   localModel: LOCAL_MODEL,
   routerModel: ROUTER_MODEL,
   cascadeThreshold: CASCADE_THRESHOLD,
+  agentHeuristicThreshold: AGENT_HEURISTIC_THRESHOLD,
+  extraAgentMarkers: EXTRA_AGENT_MARKERS,
   cloudBase: CLOUD_BASE,
   cloudModel: CLOUD_MODEL,
   cloudKey: CLOUD_API_KEY,

@@ -316,31 +316,72 @@ export async function embeddingKnn(req, ctx) {
 // Non-agent calls fall through to the regular heuristic so the strategy is a
 // safe drop-in replacement.
 
-const AGENT_SYSTEM_MARKERS = [
+// Default markers that identify an agent call by system-prompt content.
+// Structural signals (`tool`/`function` role + assistant.tool_calls) are
+// the PRIMARY detection path — they fire reliably for any modern agent
+// after the first turn. Markers are a SECONDARY (first-turn) signal, used
+// when there's no role/tool_calls evidence yet (the very first model call
+// of the loop has only [system, user] messages).
+//
+// Extend at runtime via env: ROUTER_AGENT_SYSTEM_MARKERS=foo,bar.
+export const DEFAULT_AGENT_SYSTEM_MARKERS = [
+  // mini-swe-agent (R6)
   "You are a helpful assistant that can interact with a computer shell",
   "mini-swe-agent",
   "submit your solution",
   "You are a software engineer interacting continuously with a computer",
-  "Aider",
-  "opencode",
   "<pr_description>",
+  // Aider (R7)
+  "Aider",
+  // opencode (R8)
+  "opencode",
+  // Generic agentic-tool markers — added for v1.2+ tool support.
+  // Educated guesses; refine when we integrate each tool.
+  "Claude Code",
+  "Cursor",
+  "Cline",
+  "Warp",
+  "Roo Code",
+  "Continue",
 ];
 
-function isAgentCall(messages) {
+/**
+ * Return true if the request is from an agent loop.
+ *
+ * Primary signals (structural, very reliable from turn 2 onward):
+ *   - any message with role === "tool" or "function"
+ *   - any assistant message with non-empty tool_calls[]
+ *
+ * Secondary signal (first-turn-only, marker-based):
+ *   - system prompt contains a known agent marker (DEFAULT + ctx.extraAgentMarkers)
+ *
+ * For non-agent calls (regular chat completions), agent-heuristic falls
+ * back to legacyHeuristic, so a false-negative here is non-fatal —
+ * routing still proceeds via the prompt-bulk heuristic.
+ */
+function isAgentCall(messages, ctx = {}) {
   if (!Array.isArray(messages) || messages.length === 0) return false;
 
+  // Primary: structural signals.
   for (const m of messages) {
-    if (m && m.role === "system" && typeof m.content === "string") {
-      if (AGENT_SYSTEM_MARKERS.some((mk) => m.content.includes(mk))) return true;
-    }
-    if (m && (m.role === "tool" || m.role === "function")) return true;
+    if (!m) continue;
+    if (m.role === "tool" || m.role === "function") return true;
     if (
-      m &&
       m.role === "assistant" &&
       Array.isArray(m.tool_calls) &&
       m.tool_calls.length > 0
-    )
+    ) {
       return true;
+    }
+  }
+
+  // Secondary: system marker (first-turn detection).
+  const extra = Array.isArray(ctx?.extraAgentMarkers) ? ctx.extraAgentMarkers : [];
+  const markers = [...DEFAULT_AGENT_SYSTEM_MARKERS, ...extra];
+  for (const m of messages) {
+    if (m && m.role === "system" && typeof m.content === "string") {
+      if (markers.some((mk) => m.content.includes(mk))) return true;
+    }
   }
   return false;
 }
@@ -383,7 +424,7 @@ function previousAssistantHadToolCall(messages) {
 }
 
 export async function agentHeuristic(req, ctx) {
-  const isAgent = isAgentCall(req.messages);
+  const isAgent = isAgentCall(req.messages, ctx);
 
   // Non-agent: fall through to regular heuristic so this strategy is a safe
   // drop-in replacement.
@@ -439,7 +480,9 @@ export async function agentHeuristic(req, ctx) {
     parts.push("firstCall(+15)");
   }
 
-  const THRESHOLD = 12;
+  // Threshold is env-overridable via ROUTER_AGENT_HEURISTIC_THRESHOLD
+  // (plumbed by server.mjs into ctx.agentHeuristicThreshold). Default 12.
+  const THRESHOLD = ctx?.agentHeuristicThreshold ?? 12;
   const choice = score >= THRESHOLD ? "cloud" : "local";
   const distance = Math.abs(score - THRESHOLD);
   const confidence = Math.min(1, 0.5 + distance / 30);
