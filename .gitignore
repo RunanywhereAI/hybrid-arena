@@ -35,11 +35,16 @@ vendor/minions/
 vendor/*/.git/
 
 # --- router telemetry ---
-# decisions.jsonl grows on every request. New churn not committed; the
-# historical log is already tracked and stays as reference.
+# decisions.jsonl + all other router logs grow on every request. Everything
+# is local-only; the historical log is preserved by the run datasets under
+# results/runs/<sweep>/router-decisions.jsonl as needed.
 router/logs/*.jsonl
-!router/logs/decisions.jsonl
 *.egg-info/
+
+# --- in-progress files (private to the working developer) ---
+.aider.chat.history.md
+.aider.input.history
+.claude/
 
 # v3.3 sweep + scripts logs — track INDEX.md as the canonical pointer; ignore the rest.
 logs/
