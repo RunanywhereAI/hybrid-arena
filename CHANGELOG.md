@@ -4,6 +4,35 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-05-19
+
+Agentic-routes release. Adds R8 (opencode) as the v1.1 primary agentic route, alongside R6 (mini-swe-agent) + R7 (Aider) as experimental. The `heuristic` strategy is now agent-aware. Production-pipeline framing — anyone can benchmark a new local model in three commands.
+
+### Added
+- **R8 opencode runner** at `src/hybrid_coding_eval/runners/r8_opencode.py`. Real ReAct loop with Read/Write/Edit/Bash/Grep/Glob tools, routed through the proxy on :8787.
+- **R6 mini-swe-agent + R7 Aider runners** (experimental; not in the v1.1 canonical sweep).
+- **Exercism Python benchmark** (`src/hybrid_coding_eval/benchmarks/exercism_python/`) — new category `X` covering single-file functional tasks vendored from Aider's polyglot benchmark (MIT).
+- **Correlation-id token attribution** (`src/hybrid_coding_eval/runners/_agent_attribution.py`). Each agentic-runner call generates a 12-hex `bench_run_id`, embeds it in the model field as `router/<strategy>/run-<id>`, the router echoes it into `decisions.jsonl`, and attribution filters on the id — eliminates the timestamp-window race that bit the v4 pilot.
+- **`./bench sweep --strategies --seeds`** subcommand. Loops a YAML across `(strategy × seed)` with per-cell subdirectories. The single reproducer for v1.1+ sweeps; replaces the deleted bin/v4*.sh pattern.
+- **`./bench setup` opencode phase**. Clones the maintainer fork (env-overridable via `OPENCODE_GIT_URL` / `OPENCODE_GIT_REF`, default `RunanywhereAI/opencode-1@feat/hybrid-routing-plugin`) into `vendor/opencode/`. Writes a minimal `~/.config/opencode/opencode.json` registering the `hybrid-router` provider if absent; backs up existing configs that don't.
+- **Bootstrap confidence intervals** in the analysis layer (`src/hybrid_coding_eval/analysis/bootstrap.py`). Per-`(category, route, strategy)` cell: pass-rate, cost-USD, cloud-fraction, wall-ms with 95% percentile CIs. Emitted as `bootstrap_cis.json`.
+- **`router/tests/agent-heuristic.test.mjs`** — 20 unit tests for the new agent-aware heuristic (zero deps; uses `node:test`).
+- **`docs/AGENTIC_ROUTES.md`** + **`docs/BENCHMARK_NEW_MODEL.md`** + **`configs/variants/_template-agentic.yaml`**.
+
+### Changed
+- **`heuristic` strategy is now agent-aware.** Detects ReAct loops (tool/function role + assistant.tool_calls + system-marker hints) and scores the latest message delta (not the full prompt) with phase signals (first-call → cloud, post-tool-call → local, tool-result echo → local). The v1.0.0 implementation is preserved internally as `legacyHeuristic`, called byte-identically for plain chat. Zero numerical drift on v3.3 numbers.
+- **Cascade strategy** also benefits — it forwards `ctx` into the inner heuristic and inherits the agent-awareness.
+- **R8 functional scoring** now runs in the existing `hybrid-eval-python:latest` Docker sandbox (via `scorers.functional_python`), restoring the v1.0.0 sandboxing-contract that the v4 pilot's host-pytest path violated.
+- **`results/runs/` is gitignored going forward.** Existing tracked v1.0.0 / v3.3 datasets stay at their commits; new v1.1+ sweeps bundle as `gh release` tarballs (`results-v1.1.K.tar.gz`).
+- **`router/server.mjs`** parses optional `/run-<id>` suffix on the model field; threads `ROUTER_AGENT_HEURISTIC_THRESHOLD` + `ROUTER_AGENT_SYSTEM_MARKERS` through ctx.
+- **`router/package.json`** test scripts split — `npm test` runs the new fast unit-test path; `npm test:integration` runs the existing end-to-end harness.
+- **`pair_already_done`** backward-compat fix — rows without `router_strategy` (v3 era) match wildcard.
+
+### Removed
+- **5 bin scripts** from the v4 pilot (`bin/overnight-sweep.sh`, `bin/v4.1-sweep.sh`, `bin/r6-multi-seed.sh`, `bin/agent-hybrid-analyze.py`, `bin/build-agent-corpus.py`). Replaced by `./bench sweep` and the existing `./bench analyze`.
+- **`agent-heuristic` strategy as a separate entry.** Folded into the canonical `heuristic` (which is now agent-aware). The `RouteStrategy` Literal in `core/config/schema.py` and the `--router-strategy` choices in `cli/run.py` are back to v1.0.0's 7 names.
+- **v4/v4.1 pilot data** (`results/runs/17-v4-agent-overnight/`, `results/runs/18-v4.1-qwen3coder-agent/`) moved to gitignored `personal/raw-runs/` — they lacked `bench-config.json` manifests because they bypassed `./bench`. Re-published as part of the v1.1.K canonical sweep under the cleaned harness.
+
 ## [1.0.0] — 2026-05-18
 
 First public OSS release. The harness, dataset, and methodology have been used internally for the v0.x → v3.x research iterations; v1.0.0 is the first version under a stable SemVer contract.
@@ -34,5 +63,6 @@ The v0.x → v3.x progression is preserved in git history. Highlights:
 - **v2 (2026-04)** — synth-budget fix, Opus-4 judge introduced, devstral local-model swap (runs 02–03).
 - **v1 (2026-03 MVP)** — 3 routes (R1/R2/R3), 90-row dataset (run 01), the original "is hybrid worth it?" experiment.
 
-[Unreleased]: https://github.com/RunanywhereAI/hybrid-coding-eval/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/RunanywhereAI/hybrid-coding-eval/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/RunanywhereAI/hybrid-coding-eval/releases/tag/v1.1.0
 [1.0.0]: https://github.com/RunanywhereAI/hybrid-coding-eval/releases/tag/v1.0.0

@@ -18,7 +18,9 @@ A **reproducible benchmark harness** that measures whether a coding task should 
 
 > The article + appendices that were previously under `reports/` have moved to the maintainer's gitignored `personal/` directory and are not part of the public OSS surface. The empirical record they're built on (the `results/runs/` datasets) stays tracked here.
 
-**Status:** v1.0.0 public OSS release (2026-05-18). The 250-row v3 publication dataset and the 33-variant v3.3 broader sweep are both preserved under `results/runs/`. See `CHANGELOG.md` for the v0.x → v3.x → v1.0.0 lineage.
+**Status:** v1.1.0 agentic-routes release (2026-05-19). Adds R8 opencode (agentic ReAct loop), the new Exercism-Python benchmark (category X), and the agent-aware `heuristic` strategy. R6 mini-swe-agent + R7 Aider are in-tree but `EXPERIMENTAL` in v1.1 — full polish in v1.2.
+
+`results/runs/` is gitignored going forward in v1.1; existing v1.0.0 / v3.3 datasets stay tracked at their original commits. v1.1+ per-tag datasets are GitHub release tarballs. See `CHANGELOG.md` for the v0.x → v3.x → v1.0.0 → v1.1.0 lineage and `docs/AGENTIC_ROUTES.md` for the R6/R7/R8 design.
 
 ## Drop in a new model in 90 seconds
 

@@ -5,7 +5,11 @@
 
 [![License: MIT](https://img.shields.io/badge/Code-MIT-blue.svg)](./LICENSE) [![Data: CC BY 4.0](https://img.shields.io/badge/Data-CC--BY--4.0-lightgrey.svg)](./LICENSE-DATA) [![Version](https://img.shields.io/badge/version-1.0.0-success.svg)](./CHANGELOG.md) [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 
-**Status (v1.0.0):** First public OSS release. 3,581 graded rows across 33 variant sweeps spanning 5 routes (R1 cloud-only, R2 local-only, R3 hybrid-architect, R4 Stanford-Minion, R5 Stanford-DevMinion), 8 task shapes (HumanEval+, SWE-bench Verified, BigCodeBench-Hard, custom-arch prose, real-developer D1–D5), 7 routing strategies, and 6 cloud-pricing scenarios. M4 Max + Ollama local + gpt-5.5 cloud + claude-opus-4-7 judge. See [`CHANGELOG.md`](./CHANGELOG.md) for the lineage.
+**Status (v1.1.0):** Agentic-routes release. Adds the **R8 opencode** route — a real ReAct loop with Read/Write/Edit/Bash/Grep/Glob tools, routed through this repo's proxy so the agent's per-turn local-vs-cloud choice is part of the experiment. The v1.0.0 R1–R5 surface is unchanged. `heuristic` strategy is now agent-aware (detects ReAct loops and scores the latest delta; falls through to the v1.0.0 logic byte-identically for plain chat).
+
+Production pipeline: a new local coding model drops → `ollama pull <model>` → `./bench setup` → `./bench sweep --config configs/variants/_template-agentic.yaml` → publishable results across SWE-bench Verified + HumanEval+ + Exercism + real-developer tasks. See [`docs/BENCHMARK_NEW_MODEL.md`](./docs/BENCHMARK_NEW_MODEL.md).
+
+See [`CHANGELOG.md`](./CHANGELOG.md) for the v0.x → v3.x → v1.0.0 → v1.1.0 lineage. Per-tag datasets bundle as GitHub release tarballs — `gh release download v<tag>`.
 
 ## Quickstart (~30 minutes)
 
@@ -31,14 +35,27 @@ The smoke sweep runs 1 task × 3 routes through the full pipeline and writes 9 g
 
 | Component | What it is |
 | --- | --- |
-| **5 routes** | R1 cloud-only · R2 local-only · R3 hybrid-architect · R4 Stanford-Minion · R5 Stanford-DevMinion |
-| **8 task shapes** | A HumanEval+ · B SWE-bench Verified · C-bcb BigCodeBench-Hard · C-arch custom-arch prose · D1–D5 real-developer tasks |
-| **7 routing strategies** | always-cloud · always-local · rules · heuristic · llm-classifier · embedding-knn · cascade |
+| **6 routes** | R1 cloud-only · R2 local-only · R3 hybrid-architect · R4 Stanford-Minion · R5 Stanford-DevMinion · **R8 opencode (agentic)** · R6 mini-swe-agent + R7 Aider (experimental in v1.1) |
+| **9 task shapes** | A HumanEval+ · B SWE-bench Verified · C-bcb BigCodeBench-Hard · C-arch custom-arch prose · D1–D5 real-developer tasks · **X Exercism Python (new in v1.1)** |
+| **7 routing strategies** | always-cloud · always-local · rules · heuristic (agent-aware in v1.1) · llm-classifier · embedding-knn · cascade |
 | **6 pricing scenarios** | gpt-5.5 · gpt-5 · gpt-5-mini · opus-4.7 · sonnet-4.6 · haiku-4.5 |
 | **6 local models tested** | devstral:24b · qwen3-coder:30b · qwen2.5-coder:32b · glm-4.7-flash · gemma4:31b · qwen3.6:27b-coding-mxfp8 · qwen3.6:35b-A3B-MoE |
 | **Functional scoring** | Sandboxed Python via Docker with `--network none`, memory caps, wall-clock timeouts |
 | **SWE-bench scoring** | Upstream Princeton harness, pinned commit |
 | **Judge** | claude-opus-4-7 (cross-vendor; pair-v2 with position-swap bias correction) |
+
+## Benchmark a new local model in 5 minutes
+
+```bash
+ollama pull <new-model>:Nb                       # e.g. ollama pull qwen3.7-coder:30b
+cp configs/variants/_template-agentic.yaml configs/variants/26-my-model.yaml
+$EDITOR configs/variants/26-my-model.yaml         # change models.local: to your tag
+./bench sweep --config configs/variants/26-my-model.yaml \
+  --strategies always-cloud,always-local,heuristic,cascade --seeds 42
+./bench analyze results/runs/26-my-model/
+```
+
+Compare your `bootstrap_cis.json` against the canonical v1.1 baseline (download `gh release download v1.1.K -p results-v1.1.K.tar.gz`). Full walkthrough: [`docs/BENCHMARK_NEW_MODEL.md`](./docs/BENCHMARK_NEW_MODEL.md).
 
 ## Headline findings (v3.3 sweep)
 

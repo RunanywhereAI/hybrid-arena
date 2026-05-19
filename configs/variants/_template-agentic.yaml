@@ -1,0 +1,68 @@
+# Template for a v1.1+ agentic-routing sweep (R8 opencode primary).
+#
+# Copy this, change models.local to whatever new model you want to
+# benchmark, then run:
+#
+#   ./bench setup                    # one-time; clones vendor/opencode + minions
+#   ./bench sweep --config configs/variants/my-variant.yaml \
+#     --strategies always-cloud,always-local,heuristic,cascade \
+#     --seeds 42,7,13
+#   ./bench analyze results/runs/my-variant/
+#
+# Per-cell subdirectories under out_dir hold one raw.jsonl each:
+#   results/runs/my-variant/<strategy>/seed-<N>/raw.jsonl
+#
+# Bootstrap CIs land in results/runs/my-variant/bootstrap_cis.json.
+#
+# See docs/BENCHMARK_NEW_MODEL.md for the full production-pipeline
+# walkthrough. See docs/AGENTIC_ROUTES.md for R6/R7/R8 design.
+
+# yaml-language-server: $schema=../schema.json
+
+# REQUIRED --------------------------------------------------------------
+variant_tag: my-agentic-variant
+out_dir: results/runs/XX-my-agentic-variant
+
+models:
+  cloud: gpt-5.5                             # Cloud baseline. Keep gpt-5.5 to match the v1.1.K canonical.
+  local: qwen3-coder:30b                     # The model under test. v1.1.K canonical uses qwen3-coder:30b.
+
+# OPTIONAL (defaults shown) ---------------------------------------------
+#   cloud_fallback: gpt-5
+#   judge: claude-opus-4-7                   # Used for prose-judged shapes (C-arch, D3, D4)
+#   router_classifier: qwen3:0.6b            # llm-classifier strategy
+#   local_base_url: http://127.0.0.1:11434/v1
+#   cloud_base_url: https://api.openai.com/v1
+
+router:
+  strategy: heuristic                        # v1.1: heuristic is agent-aware. Other valid choices:
+                                             # always-local | always-cloud | rules | llm-classifier | embedding-knn | cascade
+  port: 8787
+  banner: true
+
+# The full canonical v1.1 mix. 25 tasks across the four shapes.
+benchmark:
+  categories: [A, B, D, X]                   # A=HumanEval+, B=SWE-bench, D=real-dev, X=exercism_python
+  routes: [R8]                               # R8 opencode (canonical in v1.1)
+                                             # R6/R7 are EXPERIMENTAL — add them only after smoke validates
+                                             # your model handles their respective tool-call formats.
+  seeds: [42]                                # Override with --seeds 42,7,13 on the sweep CLI
+  smoke: false
+  tasks_per_category: {A: 5, B: 10, D: 5, X: 5}
+
+pricing:
+  primary: openai-gpt5.5
+  scenarios:
+    - openai-gpt5.5
+    - openai-gpt5
+    - openai-gpt5-mini
+    - anthropic-claude-opus-4.7
+    - anthropic-claude-sonnet-4.6
+    - anthropic-claude-haiku-4.5
+
+scoring:
+  skip: false
+  judge_temperature: 0.0
+  swebench_image: hybrid-eval-python:latest
+
+resume: false

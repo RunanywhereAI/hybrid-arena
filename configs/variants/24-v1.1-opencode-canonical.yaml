@@ -1,0 +1,54 @@
+# v1.1.K canonical — the publishable sweep. 25 tasks × 4 strategies × 3 seeds = 300 rows.
+# Bundled with v1.1.K release tarball as `results-v1.1.K.tar.gz`.
+# Wall: ~6-10 h on M4 Max. Spend: ~$10-25 OpenAI + ~$1 Anthropic judge.
+#
+# Invocation:
+#   ./bench sweep --config configs/variants/24-v1.1-opencode-canonical.yaml \
+#     --strategies always-cloud,always-local,heuristic,cascade \
+#     --seeds 42,7,13
+#
+# Each (strategy, seed) lands in its own subdirectory:
+#   results/runs/24-v1.1-opencode-canonical/<strategy>/seed-<N>/raw.jsonl
+#
+# Then:
+#   ./bench analyze results/runs/24-v1.1-opencode-canonical/
+# → aggregate.json + bootstrap_cis.json + decision_matrix.md + charts/
+
+# yaml-language-server: $schema=../schema.json
+
+variant_tag: v1.1-opencode-canonical
+out_dir: results/runs/24-v1.1-opencode-canonical
+
+models:
+  cloud: gpt-5.5
+  local: qwen3-coder:30b
+
+router:
+  strategy: heuristic                        # Overridden per-pass by `./bench sweep --strategies`
+  port: 8787
+  banner: true
+
+# 25 tasks across 4 shapes — the v1.1 canonical benchmark mix.
+benchmark:
+  categories: [A, B, D, X]                   # HumanEval+ · SWE-bench Verified · real-dev D1/D5 · exercism_python
+  routes: [R8]                               # Opencode only in v1.1 canonical; R6/R7 experimental
+  seeds: [42, 7, 13]                         # Three independent seeds for bootstrap CIs
+  smoke: false
+  tasks_per_category: {A: 5, B: 10, D: 5, X: 5}
+
+pricing:
+  primary: openai-gpt5.5
+  scenarios:
+    - openai-gpt5.5
+    - openai-gpt5
+    - openai-gpt5-mini
+    - anthropic-claude-opus-4.7
+    - anthropic-claude-sonnet-4.6
+    - anthropic-claude-haiku-4.5
+
+scoring:
+  skip: false
+  judge_temperature: 0.0
+  swebench_image: hybrid-eval-python:latest
+
+resume: false
