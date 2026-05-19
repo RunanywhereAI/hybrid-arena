@@ -47,10 +47,17 @@ CATEGORY_SOURCES: dict[str, list[str]] = {
     "B": ["swebench_verified"],
     "C": ["bigcodebench_hard", "custom_arch"],
     "D": ["real_dev"],
+    # Category X is the agent-benchmark sweep. X = ``exercism_python`` for R7
+    # (single-language polyglot subset). SWE-bench Verified for R6 is loaded
+    # via the existing "B" path; real_dev D1+D5 for R8 via "D".
+    "X": ["exercism_python"],
 }
 
-#: Valid --routes values.
-ROUTES: tuple[str, ...] = ("R1", "R2", "R3", "R4", "R5")
+#: Valid --routes values. R6/R7/R8 are *agent-loop* routes (mini-swe-agent,
+#: aider, opencode) added in v4. They differ from R1-R5 in that they wrap an
+#: external coding-agent process and let it drive multi-turn tool use; only
+#: the routing of each LLM call (per-strategy) is this repo's concern.
+ROUTES: tuple[str, ...] = ("R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8")
 
 
 # --------------------------------------------------------------------------- #
@@ -100,6 +107,12 @@ def load_category_tasks(
             pairs.extend((source, t) for t in load_tasks())
         elif source == "real_dev":
             from hybrid_coding_eval.benchmarks.real_dev.adapter import load_tasks
+
+            pairs.extend((source, t) for t in load_tasks())
+        elif source == "exercism_python":
+            from hybrid_coding_eval.benchmarks.exercism_python.adapter import (
+                load_tasks,
+            )
 
             pairs.extend((source, t) for t in load_tasks())
         else:  # pragma: no cover — guarded by CATEGORY_SOURCES
@@ -155,14 +168,27 @@ def build_task_plan(
 # --------------------------------------------------------------------------- #
 
 
-def pair_already_done(raw_path: Path, task_id: str, route: str) -> bool:
-    """True iff ``raw.jsonl`` already contains a row for (task_id, route)."""
+def pair_already_done(
+    raw_path: Path,
+    task_id: str,
+    route: str,
+    router_strategy: str | None = None,
+) -> bool:
+    """True iff ``raw.jsonl`` already contains a row for the triple
+    ``(task_id, route, router_strategy)``.
+
+    The strategy axis was added in v4 (R6/R7/R8) so multiple invocations
+    of the same (task, route) under different strategies coexist in one
+    raw.jsonl. When ``router_strategy`` is None, the historical
+    ``(task_id, route)`` semantics are preserved (any strategy counts).
+    """
     if not raw_path.exists():
         return False
     rows = load_results(raw_path)
     for r in rows:
         if r.task_id == task_id and r.route == route:
-            return True
+            if router_strategy is None or r.router_strategy == router_strategy:
+                return True
     return False
 
 
@@ -192,6 +218,18 @@ def _runner_for(route: str) -> Callable[..., ResultRow]:
         from hybrid_coding_eval.runners import r5_devminion
 
         return r5_devminion.run
+    if route == "R6":
+        from hybrid_coding_eval.runners import r6_mini_swe_agent
+
+        return r6_mini_swe_agent.run
+    if route == "R7":
+        from hybrid_coding_eval.runners import r7_aider
+
+        return r7_aider.run
+    if route == "R8":
+        from hybrid_coding_eval.runners import r8_opencode
+
+        return r8_opencode.run
     raise ValueError(f"unknown route {route!r}")
 
 
@@ -315,9 +353,14 @@ def run_pair(
         "hardware_profile_ref": hardware_profile_ref,
         "output_dir": outputs_dir,
     }
-    if plan_item.route == "R3":
+    # R3 and agent-loop routes R6/R7/R8 all consult router_strategy.
+    if plan_item.route in ("R3", "R6", "R7", "R8"):
         runner_kwargs["router_strategy"] = router_strategy
     row = runner(plan_item.task, **runner_kwargs)
+    # Stamp the strategy onto the row regardless of route, so downstream
+    # analysis can group by (route, router_strategy) cleanly.
+    if row.router_strategy is None:
+        row.router_strategy = router_strategy
 
     if not skip_scoring:
         quality = score_row(row, plan_item.source, plan_item.task)

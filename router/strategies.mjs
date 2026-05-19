@@ -300,7 +300,159 @@ export async function embeddingKnn(req, ctx) {
   };
 }
 
-// ----- strategy 7: cascade --------------------------------------------------
+// ----- strategy 7b: agent-heuristic ----------------------------------------
+//
+// `heuristic` was calibrated for human-typed prompts. It routes 100% cloud on
+// agent calls because every mini-swe-agent / aider / opencode message has a
+// long system prompt and code blocks. `agent-heuristic` fixes this by:
+//
+//   1. Detecting agent-shaped requests (system fingerprint OR tool role
+//      OR tool_calls in assistant messages).
+//   2. Scoring the DELTA (latest tool/user message) instead of any user
+//      message in history — so a short tool-result echo scores low.
+//   3. Applying phase signals (post-tool-call → bias local; first call of
+//      loop with no prior assistant → bias cloud).
+//
+// Non-agent calls fall through to the regular heuristic so the strategy is a
+// safe drop-in replacement.
+
+const AGENT_SYSTEM_MARKERS = [
+  "You are a helpful assistant that can interact with a computer shell",
+  "mini-swe-agent",
+  "submit your solution",
+  "You are a software engineer interacting continuously with a computer",
+  "Aider",
+  "opencode",
+  "<pr_description>",
+];
+
+function isAgentCall(messages) {
+  if (!Array.isArray(messages) || messages.length === 0) return false;
+
+  for (const m of messages) {
+    if (m && m.role === "system" && typeof m.content === "string") {
+      if (AGENT_SYSTEM_MARKERS.some((mk) => m.content.includes(mk))) return true;
+    }
+    if (m && (m.role === "tool" || m.role === "function")) return true;
+    if (
+      m &&
+      m.role === "assistant" &&
+      Array.isArray(m.tool_calls) &&
+      m.tool_calls.length > 0
+    )
+      return true;
+  }
+  return false;
+}
+
+function extractContent(m) {
+  if (!m) return "";
+  if (typeof m.content === "string") return m.content;
+  if (Array.isArray(m.content))
+    return m.content
+      .map((p) => (typeof p === "string" ? p : p?.text || ""))
+      .filter(Boolean)
+      .join("\n");
+  return "";
+}
+
+function lastSignificantMessage(messages) {
+  // The newest content this call needs to reason about. For agent loops the
+  // tool result is usually most recent; for fresh user turns the user message.
+  if (!Array.isArray(messages) || messages.length === 0)
+    return { text: "", role: "unknown" };
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (!m) continue;
+    if (m.role === "tool" || m.role === "function" || m.role === "user") {
+      return { text: extractContent(m), role: m.role };
+    }
+  }
+  return { text: "", role: "unknown" };
+}
+
+function previousAssistantHadToolCall(messages) {
+  if (!Array.isArray(messages)) return false;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m?.role === "assistant") {
+      return Array.isArray(m.tool_calls) && m.tool_calls.length > 0;
+    }
+  }
+  return false;
+}
+
+export async function agentHeuristic(req, ctx) {
+  const isAgent = isAgentCall(req.messages);
+
+  // Non-agent: fall through to regular heuristic so this strategy is a safe
+  // drop-in replacement.
+  if (!isAgent) {
+    const h = await heuristic(req);
+    return {
+      ...h,
+      reason: `agent-heuristic[not-agent → heuristic]: ${h.reason}`,
+    };
+  }
+
+  const { text: delta, role: deltaRole } = lastSignificantMessage(req.messages);
+  const lower = delta.toLowerCase();
+  const deltaTokens = approxTokens(delta);
+  const codeBlocks = countCodeBlocks(delta);
+
+  let score = 0;
+  const parts = [];
+
+  // Token contribution: cap so even a 4 K delta only scores 20.
+  const tokenScore = Math.min(20, deltaTokens / 60);
+  score += tokenScore;
+  parts.push(`Δtok=${deltaTokens}(+${tokenScore.toFixed(1)})`);
+
+  // Code blocks: each block is signal of new logic to reason about.
+  const codeScore = codeBlocks * 4;
+  score += codeScore;
+  if (codeBlocks > 0) parts.push(`cb=${codeBlocks}(+${codeScore})`);
+
+  // Cloud-keyword count on the delta (not the whole prompt).
+  const cloudKw = CLOUD_KEYWORDS.filter((k) => lower.includes(k));
+  const kwScore = cloudKw.length * 8;
+  score += kwScore;
+  if (cloudKw.length > 0) parts.push(`kw=${cloudKw.length}(+${kwScore})`);
+
+  // Phase signal: tool-result echoes route local (small bash output etc.).
+  if (deltaRole === "tool" || deltaRole === "function" || delta.includes("<returncode>")) {
+    score -= 12;
+    parts.push("toolResult(-12)");
+  }
+
+  // Phase signal: the previous assistant turn had a tool call → this is a
+  // consume-tool-result call. Likely simple continuation.
+  if (previousAssistantHadToolCall(req.messages)) {
+    score -= 8;
+    parts.push("postToolCall(-8)");
+  }
+
+  // First call of agent loop (no prior assistant) → planning step, bias cloud.
+  const hasAssistant = req.messages.some((m) => m?.role === "assistant");
+  if (!hasAssistant) {
+    score += 15;
+    parts.push("firstCall(+15)");
+  }
+
+  const THRESHOLD = 12;
+  const choice = score >= THRESHOLD ? "cloud" : "local";
+  const distance = Math.abs(score - THRESHOLD);
+  const confidence = Math.min(1, 0.5 + distance / 30);
+
+  return {
+    choice,
+    reason: `agent-heuristic[score=${score.toFixed(1)} >=${THRESHOLD}? → ${choice}] role=${deltaRole} ${parts.join(" ")}`,
+    confidence,
+    meta: { score, threshold: THRESHOLD, distance, deltaRole, deltaTokens },
+  };
+}
+
+// ----- strategy 8: cascade --------------------------------------------------
 // 1) Pre-filter with heuristic. 2) If clearly simple OR clearly complex → trust it.
 // 3) If borderline (within `ctx.cascadeThreshold` of heuristic boundary, default 15) → run LLM-classifier as tie-breaker.
 // 4) Final answer is whichever the tie-breaker (or heuristic) picked.
@@ -369,4 +521,5 @@ export const STRATEGIES = {
   "llm-classifier": { fn: llmClassifier, description: "Single qwen3:0.6b call returns SIMPLE or COMPLEX. ~50–150ms latency overhead." },
   "embedding-knn":  { fn: embeddingKnn,  description: "Embed query with nomic-embed-text and kNN-vote against a 50-example labelled corpus." },
   "cascade":        { fn: cascade,       description: "Heuristic first; if score is borderline, fall back to llm-classifier as tie-breaker." },
+  "agent-heuristic":{ fn: agentHeuristic, description: "Agent-aware heuristic: detects agent fingerprint, scores only the latest tool/user delta (not the full prompt), with phase signals for tool-result vs planning calls." },
 };

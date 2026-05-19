@@ -176,6 +176,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "llm-classifier",
             "embedding-knn",
             "cascade",
+            "agent-heuristic",
         ],
         help=(
             "Routing strategy R3's executor + synthesizer steps use "
@@ -319,8 +320,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.resume and raw_path.exists():
         filtered: list[TaskPlan] = []
         for item in plan:
-            if pair_already_done(raw_path, item.task_id, item.route):
-                print(f"[resume] skip {item.task_id} + {item.route}")
+            if pair_already_done(
+                raw_path, item.task_id, item.route, args.router_strategy
+            ):
+                print(
+                    f"[resume] skip {item.task_id} + {item.route} + "
+                    f"{args.router_strategy}"
+                )
                 continue
             filtered.append(item)
         plan = filtered

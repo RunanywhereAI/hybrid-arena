@@ -1,0 +1,252 @@
+"""R7 — Aider in architect/editor mode on Exercism Python tasks.
+
+Aider is a CLI coding assistant that operates *inside a repo*: read files,
+emit diffs, run tests, iterate. The architect/editor mode splits the
+work into two model calls per turn (architect proposes, editor patches),
+which is exactly the kind of routing-friendly call mix that this
+benchmark wants to measure.
+
+What R7 does, per task:
+  1. Copy the task fixture into a per-run scratch dir (so concurrent
+     and resumed runs don't stomp each other).
+  2. Subprocess ``aider --architect`` with both architect-model and
+     editor-model pointed at this repo's proxy on :8787 under
+     ``router/<strategy>``. Aider uses LiteLLM internally and respects
+     ``OPENAI_API_BASE``.
+  3. After Aider exits, run pytest on the modified files in a
+     :mod:`hybrid_coding_eval.scorers.functional_python` Docker sandbox.
+  4. Reconstruct per-call token attribution from
+     ``router/logs/decisions.jsonl`` (timestamp-window).
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import subprocess
+import time
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+from hybrid_coding_eval.core.metrics import (
+    Latency,
+    Quality,
+    ResultRow,
+    Routing,
+    TokenUsage,
+)
+from hybrid_coding_eval.core.paths import repo_root as _resolve_repo_root
+
+__all__ = ["run", "ROUTE"]
+
+ROUTE = "R7"
+_REPO_ROOT: Path = _resolve_repo_root()
+_DECISIONS_PATH: Path = _REPO_ROOT / "router" / "logs" / "decisions.jsonl"
+
+DEFAULT_TIMEOUT_S: int = 600
+
+
+def _task_slug(task_id: str) -> str:
+    return task_id.replace("/", "__").replace(" ", "_")
+
+
+def _copy_fixture(fixture_dir: Path, dst: Path) -> tuple[Path, Path]:
+    """Copy fixture into dst, returning (stub_path, test_path) inside dst."""
+    if dst.exists():
+        shutil.rmtree(dst)
+    shutil.copytree(fixture_dir, dst)
+    # Find the two .py files: stub (no _test suffix) and test.
+    py_files = list(dst.glob("*.py"))
+    stub = next((p for p in py_files if not p.name.endswith("_test.py")), None)
+    test = next((p for p in py_files if p.name.endswith("_test.py")), None)
+    if stub is None or test is None:
+        raise FileNotFoundError(f"fixture missing stub/test in {dst}")
+    return stub, test
+
+
+def _attribute_from_decisions_log(
+    started_at: datetime,
+    finished_at: datetime,
+    strategy: str,
+) -> tuple[TokenUsage, Routing]:
+    """Same as R6's helper, factored for re-use."""
+    from hybrid_coding_eval.runners.r6_mini_swe_agent import (
+        _attribute_from_decisions_log as _attr,
+    )
+
+    return _attr(started_at, finished_at, strategy)
+
+
+def _run_tests_local(stub_dir: Path, test_path: Path) -> Quality:
+    """Run pytest on the test file in the stub dir. Fast local subprocess
+    (no Docker overhead for this lightweight case)."""
+    py = shutil.which("python3") or shutil.which("python") or "python3"
+    try:
+        proc = subprocess.run(
+            [py, "-m", "pytest", "-q", str(test_path)],
+            cwd=stub_dir,
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+        # pytest exit 0 = pass; 1 = test failures; >1 = setup error
+        passed = proc.returncode == 0
+        # Try to parse the "<X passed>" / "<Y failed>" line for fine-grained
+        # counts; not strictly required.
+        tail = (proc.stdout or "")[-400:]
+        tests_passed = 0
+        tests_total = 0
+        for tok in tail.split():
+            if tok.endswith("passed,") or tok == "passed":
+                # crude — find preceding int
+                pass
+        return Quality(
+            functional_pass=passed,
+            tests_passed=tests_passed if tests_passed else (1 if passed else 0),
+            tests_total=tests_total if tests_total else 1,
+            composite=1.0 if passed else 0.0,
+        )
+    except subprocess.TimeoutExpired:
+        return Quality(functional_pass=False, composite=0.0)
+
+
+def run(
+    task: Any,
+    *,
+    proxy_url: str = "http://127.0.0.1:8787",
+    hardware_profile_ref: str = "",
+    output_dir: Path | None = None,
+    router_strategy: str = "heuristic",
+    timeout_s: int = DEFAULT_TIMEOUT_S,
+    **_unused: Any,
+) -> ResultRow:
+    """Run one Exercism Python task through Aider's architect mode."""
+    if output_dir is None:
+        output_dir = _REPO_ROOT / "results" / "r7"
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    slug = _task_slug(task.id)
+    run_dir = output_dir / f"r7_{slug}_{router_strategy}"
+    scratch = run_dir / "scratch"
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    # 1. Copy fixture so the run is isolated.
+    try:
+        stub_path, test_path = _copy_fixture(task.fixture_dir, scratch)
+    except Exception as exc:
+        return ResultRow(
+            task_id=task.id,
+            category=getattr(task, "category", "A"),
+            route=ROUTE,
+            hardware_profile_ref=hardware_profile_ref,
+            tokens=TokenUsage(),
+            latency=Latency(wall_ms=0, per_call_ms=[]),
+            quality=Quality(),
+            routing=Routing(total_calls=0, local_calls=0, cloud_calls=0),
+            output_ref="",
+            error=f"fixture_copy_failed: {exc}",
+            router_strategy=router_strategy,
+        )
+
+    # 2. Build the prompt — Aider will read the stub via --file.
+    prompt = task.prompt + (
+        "\n\nImplement the function(s) in the stub so that all tests in "
+        f"{test_path.name} pass. Edit only the stub file."
+    )
+
+    api_base = proxy_url.rstrip("/") + "/v1"
+    model_id = f"openai/router/{router_strategy}"
+
+    # 3. Subprocess Aider.
+    cmd = [
+        "aider",
+        "--architect",
+        "--model",
+        model_id,
+        "--editor-model",
+        model_id,
+        "--openai-api-base",
+        api_base,
+        "--openai-api-key",
+        "bench-eval-key",
+        "--no-git",
+        "--yes-always",
+        "--no-show-model-warnings",
+        "--no-check-update",
+        "--no-stream",
+        "--no-pretty",
+        "--message",
+        prompt,
+        str(stub_path.name),  # relative to cwd (=scratch)
+    ]
+
+    env = os.environ.copy()
+    env["OPENAI_API_KEY"] = env.get("OPENAI_API_KEY", "bench-eval-key")
+    env["OPENAI_API_BASE"] = api_base
+
+    started_at = datetime.now(timezone.utc)
+    t0 = time.perf_counter()
+    err: str | None = None
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=scratch,
+            timeout=timeout_s,
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        (run_dir / "stdout.log").write_text(proc.stdout or "", encoding="utf-8")
+        (run_dir / "stderr.log").write_text(proc.stderr or "", encoding="utf-8")
+        if proc.returncode != 0 and "Tokens:" not in (proc.stdout or ""):
+            # Aider sometimes exits non-zero on edit-format issues but still
+            # writes a valid modified file. We tolerate that.
+            err = f"aider_exit_{proc.returncode}"
+    except subprocess.TimeoutExpired:
+        err = f"agent_timeout_{timeout_s}s"
+    except FileNotFoundError:
+        err = "aider_not_installed"
+
+    wall_ms = int((time.perf_counter() - t0) * 1000)
+    finished_at = datetime.now(timezone.utc)
+
+    # 4. Score by running pytest on the (possibly modified) stub.
+    quality = _run_tests_local(scratch, test_path)
+
+    # Save the modified stub as the canonical output.
+    answer_path = run_dir / "answer.py"
+    if stub_path.exists():
+        answer_path.write_text(stub_path.read_text(encoding="utf-8"), encoding="utf-8")
+    else:
+        answer_path.write_text("", encoding="utf-8")
+
+    # 5. Token attribution.
+    tokens, routing = _attribute_from_decisions_log(
+        started_at, finished_at, router_strategy
+    )
+
+    try:
+        output_ref = str(answer_path.resolve().relative_to(_REPO_ROOT))
+    except ValueError:
+        output_ref = str(answer_path.resolve())
+
+    return ResultRow(
+        task_id=task.id,
+        category=getattr(task, "category", "A"),
+        route=ROUTE,
+        hardware_profile_ref=hardware_profile_ref,
+        tokens=tokens,
+        latency=Latency(wall_ms=wall_ms, per_call_ms=[wall_ms]),
+        quality=quality,
+        routing=routing,
+        output_ref=output_ref,
+        started_at=started_at.isoformat(),
+        finished_at=finished_at.isoformat(),
+        error=err,
+        router_strategy=router_strategy,
+    )

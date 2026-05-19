@@ -49,9 +49,10 @@ RouteStrategy = Literal[
     "llm-classifier",
     "embedding-knn",
     "cascade",
+    "agent-heuristic",
 ]
-Category = Literal["A", "B", "C", "D"]
-Route = Literal["R1", "R2", "R3", "R4", "R5"]
+Category = Literal["A", "B", "C", "D", "X"]
+Route = Literal["R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8"]
 
 
 class ModelsConfig(BaseModel):
