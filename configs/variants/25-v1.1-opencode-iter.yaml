@@ -29,11 +29,11 @@ router:
   banner: true
 
 benchmark:
-  categories: [A, B, D, X]
+  categories: [X]                                # Exercism Python: 5 tasks, all opencode-compatible
   routes: [R8]
   seeds: [42]
   smoke: false
-  tasks_per_category: {A: 1, B: 2, D: 1, X: 1}   # 5 tasks total
+  tasks_per_category: {X: 5}                     # all 5 vendored exercism tasks
 
 pricing:
   primary: openai-gpt5.5

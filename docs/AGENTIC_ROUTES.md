@@ -108,6 +108,26 @@ For non-agentic R1–R5 rows: same contract minus `bench_run_id` (those calls do
 
 ---
 
+## Known model-compatibility limitations (as of v1.1.1)
+
+The v1.1.0 code release works end-to-end. The v1.1.1 iteration sweep surfaced a real model-compatibility issue between **qwen3-coder:30b** (the v1.1 default local) and **opencode** that affects every hybrid strategy that routes a post-tool-call interpretation to local:
+
+| Direction | Issue | Fix shipped in | Status |
+| --- | --- | --- | --- |
+| local → router → opencode | qwen3-coder emits `tool_calls[].function.arguments` as a JSON object; opencode requires JSON-encoded string. | v1.1.1 — `normalizeToolCallsInChunk()` in `router/server.mjs` | ✓ fixed |
+| opencode → router → qwen3-coder | opencode's `tool`-role messages contain JSON whose braces confuse Ollama's tool-parser: `"Value looks like object, but can't find closing '}' symbol"` 400 response. | (incoming-direction normalizer) | ⚠ open — deferred to v1.2 |
+
+**Empirical effect** of the incoming-direction issue (from the v1.1.1 iteration sweep on 5 Exercism Python tasks):
+
+- `always-cloud` (gpt-5.5): solves the agent loop cleanly (typically 4-8 LLM calls; passes 1/5 to 5/5 depending on task complexity).
+- `always-local` (qwen3-coder): often terminates after 1-3 calls without making real progress; doesn't crash but doesn't solve.
+- `heuristic` (the agent-aware strategy): routes first call → cloud (correct, planning bias), but routes post-tool-call interpretation → local (correct decision), which then 400s with the format issue → agent crashes mid-loop.
+- `cascade`: same termination pattern as `heuristic`.
+
+So in v1.1, the hybrid strategies are conceptually correct but blocked by qwen3-coder's tool-message format intolerance. The publishable v1.1.1 finding is that **the agent-aware heuristic IS making the right routing decisions; the bottleneck is upstream model compatibility**, not the routing layer.
+
+v1.2 will add an incoming-direction normalizer to translate opencode's tool messages into a form Ollama's `qwen3-coder` accepts, unlocking real hybrid evaluation on this model.
+
 ## See also
 
 - `docs/ROUTING_STRATEGIES.md` — full strategy taxonomy (deep dive on heuristic's score weights, env-var knobs)

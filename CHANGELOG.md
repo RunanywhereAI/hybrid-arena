@@ -4,6 +4,24 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [1.1.1] — 2026-05-19
+
+Phase 7 first-iteration release. Documents what we learned running the v1.1.0 harness end-to-end against opencode + qwen3-coder:30b, plus the two small fixes that came out of the iteration loop.
+
+### Added
+- **Iteration-sweep results** (5 Exercism Python tasks × 4 strategies × 1 seed = 20 rows) — bundled as the v1.1.1 release-asset tarball. See `results-v1.1.1.tar.gz` on the release page.
+- **`docs/AGENTIC_ROUTES.md`** — new "Known model-compatibility limitations" section documenting the qwen3-coder + opencode tool-message format issue.
+
+### Changed
+- **R8 model field** — bench_run_id is no longer embedded in the model field for the opencode runner. Opencode 1.1.x validates incoming model ids against its `providers[].models` registry and rejects unknown ones (ProviderModelNotFoundError), so the v1.1.0 `router/<strategy>/run-<id>` shape can't pre-register. R8 falls back to timestamp-window attribution (still safe under serial `./bench sweep` invocations). R6/R7 (LiteLLM-based) keep exact-id matching.
+- **`_score_in_sandbox` (R8)** — host-pytest fallback when Docker is unreachable. The repo's `.venv/bin/python` is preferred over PATH's `python3`. Trade-off: loses the `--network none` sandboxing guarantee when fallback fires; gains the ability to iterate without Docker Desktop running. Canonical sweeps still need Docker up.
+- **Router proxy** — added `normalizeToolCallsInChunk()` to the streaming response path. Ollama-served models (qwen3-coder etc.) emit `tool_calls[].function.arguments` as a JSON object and `tool_calls[].function.index` instead of a sibling `index`; opencode rejects both with TypeValidationError. The proxy now rewrites to OpenAI-compliant shape before forwarding.
+
+### Known limitations (deferred to v1.2)
+- **opencode → qwen3-coder → opencode tool-message round-trip** still produces an Ollama 400 ("Value looks like object, but can't find closing '}' symbol") when the proxy forwards a `tool`-role message back to the local model. Effect: any hybrid strategy that routes a post-tool-call interpretation to qwen3-coder fails the agent loop on the next turn. v1.1.1 ships with documented findings rather than a fix; v1.2 will add an incoming-direction message-format normalizer.
+- **R6 / R7** runners stay `EXPERIMENTAL` — canonical-sweep coverage deferred to v1.2.
+- **Docker sandbox**: when down, R8 falls back to host pytest. Re-run with Docker up for the security guarantee.
+
 ## [1.1.0] — 2026-05-19
 
 Agentic-routes release. Adds R8 (opencode) as the v1.1 primary agentic route, alongside R6 (mini-swe-agent) + R7 (Aider) as experimental. The `heuristic` strategy is now agent-aware. Production-pipeline framing — anyone can benchmark a new local model in three commands.
@@ -63,6 +81,7 @@ The v0.x → v3.x progression is preserved in git history. Highlights:
 - **v2 (2026-04)** — synth-budget fix, Opus-4 judge introduced, devstral local-model swap (runs 02–03).
 - **v1 (2026-03 MVP)** — 3 routes (R1/R2/R3), 90-row dataset (run 01), the original "is hybrid worth it?" experiment.
 
-[Unreleased]: https://github.com/RunanywhereAI/hybrid-coding-eval/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/RunanywhereAI/hybrid-coding-eval/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/RunanywhereAI/hybrid-coding-eval/releases/tag/v1.1.1
 [1.1.0]: https://github.com/RunanywhereAI/hybrid-coding-eval/releases/tag/v1.1.0
 [1.0.0]: https://github.com/RunanywhereAI/hybrid-coding-eval/releases/tag/v1.0.0
