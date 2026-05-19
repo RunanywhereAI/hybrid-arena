@@ -45,3 +45,7 @@ router/logs/*.jsonl
 logs/
 !logs/v3.3/
 !logs/v3.3/INDEX.md
+
+# Owner's personal working material (article, appendices, charts, HTML report).
+# Not part of the OSS surface — kept here for the article publication workflow.
+personal/
