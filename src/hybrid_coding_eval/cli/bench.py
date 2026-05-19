@@ -311,7 +311,7 @@ def _ensure_minions(verbose: bool = True) -> bool:
             capture_output=not verbose,
         )
         if verbose:
-            print(f"  ✓ vendor/minions/ ready")
+            print("  ✓ vendor/minions/ ready")
         return True
     except (FileNotFoundError, subprocess.CalledProcessError) as exc:
         print(f"  ✗ git clone failed: {exc}", file=sys.stderr)
@@ -395,10 +395,10 @@ def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
     if env_path.exists():
         print(f"  ✓ .env exists at {env_path}")
     elif env_example.exists():
-        print(f"  ⚠ .env not found — copy .env.example and add your API keys:")
-        print(f"      cp .env.example .env && $EDITOR .env")
+        print("  ⚠ .env not found — copy .env.example and add your API keys:")
+        print("      cp .env.example .env && $EDITOR .env")
     else:
-        print(f"  ⚠ .env not found and no .env.example template; create .env with OPEN_AI_API_KEY")
+        print("  ⚠ .env not found and no .env.example template; create .env with OPEN_AI_API_KEY")
 
     if sys.version_info < (3, 11):
         print(f"  ⚠ Python {sys.version_info.major}.{sys.version_info.minor} — repo requires 3.11+")
