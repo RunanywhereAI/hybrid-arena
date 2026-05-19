@@ -16,16 +16,16 @@ _run.pid
 minion_logs/
 
 # --- results ---
-# Ignore all intermediate per-run state under results/, but explicitly keep
-# the shippable report artefacts (REPORT.md, DECISION_MATRIX.md, *.png)
-# per-dated-folder. If we want to ship a run publicly, the REPORT and
-# charts below are the trackable pieces.
-results/
+# v1.0.0 dataset files were force-added before v1.1 and stay tracked
+# (gitignore cannot untrack already-tracked files).
+# v1.1+: new results from ./bench sweep go into GitHub release tarballs,
+# not git. Only the README + .gitkeep keep the directory shape on clone.
+results/*
 !results/README.md
-!results/**/REPORT.md
-!results/**/DECISION_MATRIX.md
-!results/**/*.png
-!results/**/*.svg
+!results/runs/
+results/runs/*
+!results/runs/.gitkeep
+!results/runs/README.md
 
 # --- vendored reference clones (treated as read-only vendored deps) ---
 # Pre-reorg path kept for branches still on the old layout.
@@ -51,6 +51,8 @@ logs/
 !logs/v3.3/
 !logs/v3.3/INDEX.md
 
-# Owner's personal working material (article, appendices, charts, HTML report).
+# Owner's personal working material (article, appendices, charts, HTML report,
+# pre-v1.1 pilot runs under raw-runs/, scratch sweep wrappers under scripts/,
+# iteration logs + LLM-judge reviews under iterations/).
 # Not part of the OSS surface — kept here for the article publication workflow.
 personal/
