@@ -486,6 +486,42 @@ async function jsonThrough(res, upstream, record, decision, strategyName, backen
   appendDecision(record);
 }
 
+/**
+ * Rewrite a streamed OpenAI-shape chat-completion chunk so tool_calls are
+ * OpenAI-compliant. Ollama-served models (qwen3-coder etc.) sometimes
+ * emit:
+ *   - ``function.arguments`` as a JSON OBJECT instead of a JSON-encoded
+ *     STRING (the OpenAI spec requires string).
+ *   - ``function.index`` instead of the sibling ``tool_calls[i].index``.
+ * Strict clients (opencode 1.1.x) reject both with TypeValidationError.
+ * Mutates ``obj`` in place; returns nothing.
+ */
+function normalizeToolCallsInChunk(obj) {
+  if (!obj || !Array.isArray(obj.choices)) return;
+  for (const choice of obj.choices) {
+    const tc = choice?.delta?.tool_calls || choice?.message?.tool_calls;
+    if (!Array.isArray(tc)) continue;
+    for (let i = 0; i < tc.length; i++) {
+      const t = tc[i];
+      if (!t) continue;
+      if (t.function && typeof t.function.index === "number" && t.index === undefined) {
+        t.index = t.function.index;
+        delete t.function.index;
+      }
+      if (t.index === undefined) t.index = i;
+      if (t.function && t.function.arguments != null && typeof t.function.arguments !== "string") {
+        try {
+          t.function.arguments = JSON.stringify(t.function.arguments);
+        } catch {
+          t.function.arguments = String(t.function.arguments);
+        }
+      }
+      if (t.function && !t.type) t.type = "function";
+    }
+  }
+}
+
+
 async function streamThrough(res, upstream, record, decision, strategyName, backendModel, t0) {
   res.writeHead(200, {
     "Content-Type": "text/event-stream",
@@ -528,25 +564,47 @@ async function streamThrough(res, upstream, record, decision, strategyName, back
       if (done) break;
       totalChunks++;
       totalBytes += value.length;
-      // Pass through to the client unchanged.
-      res.write(value);
-      // Side-parse for usage. Buffer text, split on \n\n, look for `data: {...}`.
+      // Parse, normalize tool_calls schema (v1.1: qwen3-coder + other Ollama
+      // models emit non-OpenAI-compliant tool_calls — arguments as JSON
+      // objects instead of JSON-encoded strings; function.index instead of
+      // tool_call.index). Re-serialize before forwarding so opencode + other
+      // strict clients accept the response.
       buf += decoder.decode(value, { stream: true });
       let idx;
       while ((idx = buf.indexOf("\n\n")) >= 0) {
         const event = buf.slice(0, idx);
         buf = buf.slice(idx + 2);
-        for (const line of event.split("\n")) {
-          if (!line.startsWith("data: ")) continue;
+        let rewritten = event;
+        const lines = event.split("\n");
+        const out = [];
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) {
+            out.push(line);
+            continue;
+          }
           const json = line.slice(6).trim();
-          if (!json || json === "[DONE]") continue;
+          if (!json || json === "[DONE]") {
+            out.push(line);
+            continue;
+          }
           try {
             const obj = JSON.parse(json);
             if (obj?.model) echoedModel = obj.model;
             if (obj?.usage) usage = obj.usage;
-          } catch {}
+            normalizeToolCallsInChunk(obj);
+            out.push(`data: ${JSON.stringify(obj)}`);
+          } catch {
+            out.push(line);
+          }
         }
+        rewritten = out.join("\n") + "\n\n";
+        res.write(rewritten);
       }
+    }
+    // Any tail buffered after the loop (no trailing \n\n) — forward as-is.
+    if (buf.length > 0) {
+      res.write(buf);
+      buf = "";
     }
   } catch (err) {
     ctx.log("warn", `streaming aborted: ${err.message}`);
