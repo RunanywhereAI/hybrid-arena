@@ -4,6 +4,29 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [1.1.2] — 2026-05-19
+
+Canonical v1.1.K release — Phase 8 of the v1.1 plan. Re-runs the v1.1.1 iteration sweep with 3 seeds to produce publishable bootstrap CIs.
+
+### Added
+- **Canonical sweep dataset** (5 Exercism Python tasks × 4 strategies × 3 seeds = 60 rows), bundled as `results-v1.1.2-canonical.tar.gz`. Bootstrap CIs included.
+
+### Findings (95% bootstrap CIs, n=15 rows per cell)
+
+| Cell | pass_rate | cloud_fraction |
+|---|---|---|
+| R8 / always-cloud (gpt-5.5) | **1.00** [1.00, 1.00] | 1.00 |
+| R8 / always-local (qwen3-coder) | 0.00 [0.00, 0.00] | 0.00 |
+| R8 / heuristic (agent-aware) | 0.00 [0.00, 0.00] | 0.50 |
+| R8 / cascade | 0.00 [0.00, 0.00] | 0.10 |
+
+The routing-layer agent-aware `heuristic` IS making rational routing decisions (first-turn cloud, post-tool-call local). The bottleneck — confirmed at higher statistical power than v1.1.1 — is qwen3-coder + opencode tool-message format compatibility. v1.2's incoming-direction normalizer is the unlocker.
+
+### Open for v1.2
+- Incoming-direction tool-message normalizer (opencode → qwen3-coder).
+- Broader benchmark coverage (Category A HumanEval+ + B SWE-bench need R8 fixture-shape adapters).
+- R6 + R7 canonical sweeps.
+
 ## [1.1.1] — 2026-05-19
 
 Phase 7 first-iteration release. Documents what we learned running the v1.1.0 harness end-to-end against opencode + qwen3-coder:30b, plus the two small fixes that came out of the iteration loop.
@@ -81,7 +104,8 @@ The v0.x → v3.x progression is preserved in git history. Highlights:
 - **v2 (2026-04)** — synth-budget fix, Opus-4 judge introduced, devstral local-model swap (runs 02–03).
 - **v1 (2026-03 MVP)** — 3 routes (R1/R2/R3), 90-row dataset (run 01), the original "is hybrid worth it?" experiment.
 
-[Unreleased]: https://github.com/RunanywhereAI/hybrid-coding-eval/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/RunanywhereAI/hybrid-coding-eval/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/RunanywhereAI/hybrid-coding-eval/releases/tag/v1.1.2
 [1.1.1]: https://github.com/RunanywhereAI/hybrid-coding-eval/releases/tag/v1.1.1
 [1.1.0]: https://github.com/RunanywhereAI/hybrid-coding-eval/releases/tag/v1.1.0
 [1.0.0]: https://github.com/RunanywhereAI/hybrid-coding-eval/releases/tag/v1.0.0

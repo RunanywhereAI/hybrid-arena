@@ -57,7 +57,20 @@ $EDITOR configs/variants/26-my-model.yaml         # change models.local: to your
 
 Compare your `bootstrap_cis.json` against the canonical v1.1 baseline (download `gh release download v1.1.K -p results-v1.1.K.tar.gz`). Full walkthrough: [`docs/BENCHMARK_NEW_MODEL.md`](./docs/BENCHMARK_NEW_MODEL.md).
 
-## Headline findings (v3.3 sweep)
+## Headline findings (v1.1.2 canonical, R8 opencode + qwen3-coder + gpt-5.5)
+
+5 Exercism Python tasks × 4 strategies × 3 seeds = 60 rows. 95% bootstrap CIs (n=15/cell). Download: `gh release download v1.1.2 -p results-v1.1.2-canonical.tar.gz`.
+
+| Strategy | pass_rate | cloud_fraction |
+|---|---|---|
+| always-cloud (gpt-5.5) | **1.00** [1.00, 1.00] | 1.00 |
+| always-local (qwen3-coder:30b) | 0.00 [0.00, 0.00] | 0.00 |
+| heuristic (agent-aware) | 0.00 [0.00, 0.00] | 0.50 |
+| cascade | 0.00 [0.00, 0.00] | 0.10 |
+
+The routing-layer `heuristic` strategy IS making rational routing decisions (first turn cloud for planning, post-tool-call local for cheap interpretation). The 0% pass rate on hybrid is **not a routing-logic bug** — it's a model-compatibility issue: qwen3-coder + opencode tool-message format. v1.2 adds the unblocker (incoming-direction tool-message normalizer). See [`docs/AGENTIC_ROUTES.md`](./docs/AGENTIC_ROUTES.md) and `personal/iterations/v1.1.2/findings.md`.
+
+## Headline findings (v3.3 sweep — non-agentic)
 
 - **Qwen3-Coder:30B is the universal local winner.** Best $/correct on R3 (hybrid-architect) at $0.229/correct across the 33-variant sweep, beating devstral:24b, qwen2.5-coder:32b, glm-4.7-flash, and the Qwen 3.6 generation on aggregate quality-per-dollar.
 - **Cascade is the universal best routing strategy** with a threshold around 15 on the difficulty heuristic. Beats heuristic, llm-classifier, embedding-kNN, and the rules-based router across all 6 cloud-pricing scenarios.

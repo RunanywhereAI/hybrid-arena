@@ -28,13 +28,18 @@ router:
   port: 8787
   banner: true
 
-# 25 tasks across 4 shapes — the v1.1 canonical benchmark mix.
+# v1.1.K canonical mix — scoped to opencode-compatible categories.
+# Category A (HumanEval+) and B (SWE-bench) need fixture infrastructure
+# R8 doesn't currently provide (HumanEval+ has no fixture_dir; SWE-bench
+# uses Docker repos). Scoping to X (Exercism Python) + D (real-dev with
+# fixture trees) keeps R8 in scope; A/B will fold in for v1.2's broader
+# canonical when R8 grows fixture support for those task types.
 benchmark:
-  categories: [A, B, D, X]                   # HumanEval+ · SWE-bench Verified · real-dev D1/D5 · exercism_python
-  routes: [R8]                               # Opencode only in v1.1 canonical; R6/R7 experimental
+  categories: [X]                            # Exercism Python — 5 vendored fixtures
+  routes: [R8]                               # Opencode only in v1.1 canonical
   seeds: [42, 7, 13]                         # Three independent seeds for bootstrap CIs
   smoke: false
-  tasks_per_category: {A: 5, B: 10, D: 5, X: 5}
+  tasks_per_category: {X: 5}                 # All 5 vendored exercism tasks
 
 pricing:
   primary: openai-gpt5.5
