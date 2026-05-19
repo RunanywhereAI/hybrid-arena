@@ -241,8 +241,42 @@ def _append_error(errors_path: Path, plan_item: TaskPlan, row: Any) -> None:
         )
 
 
+_MINIONS_GIT_URL = "https://github.com/HazyResearch/minions.git"
+
+
+def _ensure_minions_if_needed(routes: list[str]) -> None:
+    """Auto-clone vendor/minions/ when R4 or R5 is requested.
+
+    R4 (Minion) and R5 (DevMinion) routes import from ``vendor/minions/``;
+    new users who haven't run ``./bench setup`` first get this clone for free
+    on first invocation. Silent no-op when not needed or already present.
+    """
+    if "R4" not in routes and "R5" not in routes:
+        return
+    target = _REPO_ROOT / "vendor" / "minions"
+    if (target / ".git").exists():
+        return
+    print(
+        f"[setup] R4/R5 routes require Stanford Minions — cloning into {target}…"
+    )
+    target.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        subprocess.run(
+            ["git", "clone", "--depth", "1", _MINIONS_GIT_URL, str(target)],
+            check=True,
+        )
+        print("[setup] vendor/minions/ ready.")
+    except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+        raise SystemExit(
+            f"R4/R5 routes need vendor/minions/ but auto-clone failed: {exc}\n"
+            f"Run manually: cd vendor && git clone {_MINIONS_GIT_URL}"
+        ) from exc
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
+
+    _ensure_minions_if_needed(args.routes)
 
     out_dir: Path = args.out or (_REPO_ROOT / "results" / timestamp_dirname())
     out_dir = out_dir.resolve()

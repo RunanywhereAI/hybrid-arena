@@ -282,6 +282,145 @@ def _cmd_schema(args: argparse.Namespace) -> int:
     return 0
 
 
+# ---------- setup ----------------------------------------------------------
+
+_MINIONS_GIT_URL = "https://github.com/HazyResearch/minions.git"
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent  # repo root
+
+
+def _ensure_minions(verbose: bool = True) -> bool:
+    """Clone vendor/minions/ if missing. Returns True on success.
+
+    Idempotent: returns True immediately if already present. Used by both
+    ``bench setup`` (explicit) and ``bench run`` (auto-clone when an R4/R5
+    route is detected in the variant config).
+    """
+    target = _REPO_ROOT / "vendor" / "minions"
+    if (target / ".git").exists():
+        if verbose:
+            print(f"  ✓ vendor/minions/ already cloned at {target}")
+        return True
+    if verbose:
+        print(f"  Cloning Stanford Minions (~9 MB) into {target}…")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    import subprocess
+    try:
+        subprocess.run(
+            ["git", "clone", "--depth", "1", _MINIONS_GIT_URL, str(target)],
+            check=True,
+            capture_output=not verbose,
+        )
+        if verbose:
+            print(f"  ✓ vendor/minions/ ready")
+        return True
+    except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+        print(f"  ✗ git clone failed: {exc}", file=sys.stderr)
+        print(
+            f"    Manually clone: cd vendor && git clone {_MINIONS_GIT_URL}",
+            file=sys.stderr,
+        )
+        return False
+
+
+def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
+    """One-shot setup: clone minions, build Docker image, pull aux models, sanity-check env.
+
+    Idempotent — safe to re-run.
+    """
+    import shutil
+    import subprocess
+
+    print("=== bench setup — preparing the benchmark harness ===\n")
+    failures = []
+
+    # 1. Stanford Minions (required for R4 + R5 routes)
+    print("[1/4] Stanford Minions (R4 + R5 routes)")
+    if not _ensure_minions(verbose=True):
+        failures.append("minions clone failed")
+
+    # 2. Docker image for functional scoring sandbox
+    print("\n[2/4] Functional-scoring Docker image (hybrid-eval-python:latest)")
+    if not shutil.which("docker"):
+        print("  ⚠ docker not on PATH — skipping image build")
+        print("    Install Docker Desktop: https://www.docker.com/products/docker-desktop/")
+    else:
+        try:
+            subprocess.run(
+                ["docker", "image", "inspect", "hybrid-eval-python:latest"],
+                check=True,
+                capture_output=True,
+            )
+            print("  ✓ hybrid-eval-python:latest already built")
+        except subprocess.CalledProcessError:
+            dockerfile = _REPO_ROOT / "src" / "hybrid_coding_eval" / "scorers" / "Dockerfile.functional_python"
+            print(f"  Building hybrid-eval-python:latest from {dockerfile}…")
+            try:
+                subprocess.run(
+                    ["docker", "build", "-f", str(dockerfile), "-t", "hybrid-eval-python:latest", str(_REPO_ROOT)],
+                    check=True,
+                )
+                print("  ✓ Docker image built")
+            except subprocess.CalledProcessError as exc:
+                print(f"  ⚠ docker build failed: {exc}")
+                failures.append("Docker image build failed")
+
+    # 3. Auxiliary Ollama models (router strategies)
+    print("\n[3/4] Auxiliary local models (router classifier + embedding)")
+    if not shutil.which("ollama"):
+        print("  ⚠ ollama not on PATH — skipping model pulls")
+        print("    Install Ollama: https://ollama.com/download")
+    else:
+        aux_models = [
+            ("qwen3:0.6b", "router llm-classifier strategy", "~520 MB"),
+            ("nomic-embed-text", "router embedding-knn strategy", "~270 MB"),
+        ]
+        for tag, purpose, size in aux_models:
+            try:
+                result = subprocess.run(
+                    ["ollama", "list"], check=True, capture_output=True, text=True
+                )
+                if tag.split(":")[0] in result.stdout:
+                    print(f"  ✓ {tag} already pulled ({purpose})")
+                    continue
+                print(f"  Pulling {tag} for {purpose} ({size})…")
+                subprocess.run(["ollama", "pull", tag], check=True)
+                print(f"  ✓ {tag} pulled")
+            except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+                print(f"  ⚠ pull failed for {tag}: {exc}")
+
+    # 4. Environment sanity (.env file, Python version)
+    print("\n[4/4] Environment sanity")
+    env_path = _REPO_ROOT / ".env"
+    env_example = _REPO_ROOT / ".env.example"
+    if env_path.exists():
+        print(f"  ✓ .env exists at {env_path}")
+    elif env_example.exists():
+        print(f"  ⚠ .env not found — copy .env.example and add your API keys:")
+        print(f"      cp .env.example .env && $EDITOR .env")
+    else:
+        print(f"  ⚠ .env not found and no .env.example template; create .env with OPEN_AI_API_KEY")
+
+    if sys.version_info < (3, 11):
+        print(f"  ⚠ Python {sys.version_info.major}.{sys.version_info.minor} — repo requires 3.11+")
+        failures.append("Python < 3.11")
+    else:
+        print(f"  ✓ Python {sys.version_info.major}.{sys.version_info.minor}")
+
+    # Summary
+    print("\n=== Setup summary ===")
+    if failures:
+        print(f"  ⚠ {len(failures)} issue(s): {', '.join(failures)}")
+        print("\nFix the items above, then re-run `./bench setup`. Once clean, try:")
+    else:
+        print("  ✓ All checks passed.")
+        print("\nNext:")
+    print("  1. Ensure .env has OPEN_AI_API_KEY (and ANTHROPIC_API_KEY for judge)")
+    print("  2. Pull a local model: `ollama pull devstral:24b` (or another from configs/variants/)")
+    print("  3. Start the router proxy: `(cd router && ./start.sh) &`")
+    print("  4. Run a smoke test: `./bench run --config configs/variants/_template.yaml --smoke`")
+    return 1 if failures else 0
+
+
 # ---------- dispatcher ----------------------------------------------------
 
 
@@ -382,6 +521,12 @@ def main(argv: list[str] | None = None) -> int:
     p_schema = sub.add_parser("schema", help="Dump JSON Schema for BenchConfig.")
     p_schema.add_argument("--out", type=Path, default=None)
     p_schema.set_defaults(func=_cmd_schema)
+
+    p_setup = sub.add_parser(
+        "setup",
+        help="One-shot setup: clone vendor/minions, build Docker image, pull auxiliary models.",
+    )
+    p_setup.set_defaults(func=_cmd_setup)
 
     args = parser.parse_args(argv)
     return int(args.func(args) or 0)

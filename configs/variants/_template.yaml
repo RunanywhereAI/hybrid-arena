@@ -3,6 +3,12 @@
 #
 #   ./bench run --config configs/variants/my-variant.yaml
 #
+# First-time setup: run `./bench setup` once before invoking `./bench run`.
+# It clones vendor/minions/ (needed by R4 + R5), builds the functional-
+# scoring Docker image, pulls auxiliary Ollama models (qwen3:0.6b,
+# nomic-embed-text), and sanity-checks the environment. Idempotent — safe
+# to re-run.
+#
 # Schema reference: configs/schema.json (auto-generated from
 # src/hybrid_coding_eval/core/config/schema.py — never hand-edit).
 # Env-var substitution: any ${ENV:VAR} is expanded at load time.

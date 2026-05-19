@@ -1,8 +1,9 @@
-# EXTERNAL/
+# vendor/
 
-Read-only reference clones of third-party projects we study but do not vendor into our own source tree. Treat everything here as reference material for methodology/prior-art, not as a build-time dependency.
+Read-only reference clones of third-party projects we study and selectively re-use.
 
-Nothing in this directory is imported at runtime. If something here needs to influence our code, the influence flows through *re-implementation* in `scorers/`, `runners/`, or `router/`, not through `import`.
+- `minions/` is **imported at runtime** by R4 (`runners/r4_minion.py`) and R5 (`runners/r5_devminion.py`). It is gitignored, but `./bench setup` (or any first `./bench run` with R4/R5 in routes) auto-clones it.
+- `lm-eval-harness-judge/` is a **reference-only** vendored snapshot — we adapt its prompts in `scorers/llm_judge.py` but do not import it.
 
 ## Contents
 
@@ -21,10 +22,11 @@ Nothing in this directory is imported at runtime. If something here needs to inf
 - **What it is**: Stanford Hazy Research's implementation of the Minions protocol — stateful Q&A between a local worker and cloud supervisor.
 - **Why we reference it**: The `DevMinion` variant (`minions/minion_code.py`) has a 5-stage runbook → execute → review → edit → synthesize loop that informs our post-MVP R4/R5 routes. Worth reading as prior art; reusable Python classes.
 - **First cloned**: ~2026-04 into `opencode/EXTERNAL/`, moved here during consolidation 2026-05-05.
-- **Tracked in git**: No — gitignored in root `.gitignore` under `EXTERNAL/minions/`. The clone is ~8.5 MB and noisy.
-- **How to refresh**:
+- **Tracked in git**: No — gitignored in root `.gitignore` under `vendor/minions/`. The clone is ~8.5 MB and noisy.
+- **Auto-install**: `./bench setup` clones this for you on first run. `./bench run` also auto-clones on demand if a variant config selects R4 or R5 and `vendor/minions/` is missing.
+- **Manual refresh** (if you ever need to re-clone explicitly):
   ```bash
-  cd EXTERNAL && git clone https://github.com/HazyResearch/minions.git
+  rm -rf vendor/minions && cd vendor && git clone https://github.com/HazyResearch/minions.git
   ```
 
 ---

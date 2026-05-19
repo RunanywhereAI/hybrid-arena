@@ -163,15 +163,24 @@ The router (`router/start.sh`) reads `../.env` automatically. Python readers use
 set -a && source .env && set +a
 ```
 
-### 3.7 Clone vendored Minions library (R4 and R5 only)
+### 3.7 One-shot setup (recommended)
 
-**R4 (Minion) and R5 (DevMinion) routes require the Stanford Minions library**, which is gitignored under `vendor/` because of its size:
+Run the bundled setup subcommand. It performs all the steps in §3.4, §3.5, and the (formerly manual) Minions clone in a single idempotent pass:
 
 ```bash
-cd vendor && git clone https://github.com/HazyResearch/minions.git && cd ..
+./bench setup
 ```
 
-If you skip this and try to run R4/R5, the sweep fails cleanly with `ModuleNotFoundError: No module named 'minions'`. If you only need R1/R2/R3, you can skip this step.
+What it does:
+
+1. Clones `vendor/minions/` if missing (required for **R4** Minion + **R5** DevMinion routes; ~9 MB)
+2. Builds the `hybrid-eval-python:latest` Docker image if missing
+3. Pulls auxiliary Ollama models: `qwen3:0.6b` (for router `llm-classifier` strategy) and `nomic-embed-text` (for `embedding-knn`)
+4. Sanity-checks: Python ≥ 3.11, Ollama on PATH, Docker on PATH, `.env` present
+
+You can re-run `./bench setup` any time — it skips already-completed steps.
+
+> If you only need R1/R2/R3, the Minions clone is still safe to do and adds <10 MB. If `vendor/minions/` is missing when you launch an R4/R5 variant, `./bench run` will auto-clone on the spot.
 
 ### 3.8 Start the router proxy
 
@@ -487,7 +496,7 @@ The R1 < hybrid cost ranking is invariant across all six scenarios.
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `ModuleNotFoundError: No module named 'minions'` | Stanford Minions is gitignored; R4/R5 need it. | `cd vendor && git clone https://github.com/HazyResearch/minions.git && cd ..` |
+| `ModuleNotFoundError: No module named 'minions'` | Stanford Minions is gitignored; R4/R5 need it. | `./bench setup` (auto-clones) — or manually: `cd vendor && git clone https://github.com/HazyResearch/minions.git && cd ..` |
 | `curl http://127.0.0.1:8787/healthz` → `Connection refused` | Router not running. | `(cd router && ./start.sh)` in a separate terminal. |
 | `healthz` says `cloud.key_present=false` | `.env` missing or wrong var name. | Confirm `.env` has `OPEN_AI_API_KEY=sk-...` (not `OPENAI_API_KEY`). Restart router after fixing. |
 | `docker: permission denied` (Linux) | User not in `docker` group. | `sudo usermod -aG docker $USER && newgrp docker` |
