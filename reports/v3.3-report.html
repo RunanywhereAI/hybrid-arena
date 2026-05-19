@@ -6,15 +6,17 @@
 <title>hybrid-coding-eval v3.3 — local vs cloud vs hybrid LLM routing</title>
 <style>
 :root {
-  --bg: #fafafa;
-  --fg: #1a1a1a;
-  --muted: #666;
-  --accent: #2e7d32;
-  --warn: #d84315;
-  --link: #1976d2;
-  --code-bg: #f0f0f0;
-  --card-bg: #ffffff;
-  --border: #e0e0e0;
+  --bg: #0d1117;
+  --fg: #e6edf3;
+  --muted: #8b949e;
+  --accent: #3fb950;
+  --warn: #f85149;
+  --link: #58a6ff;
+  --code-bg: #161b22;
+  --card-bg: #161b22;
+  --border: #30363d;
+  --header-fg: #f0f6fc;
+  --table-stripe: #1c2128;
 }
 * { box-sizing: border-box; }
 body {
@@ -31,9 +33,12 @@ body {
   padding: 40px 24px 80px;
 }
 header {
-  border-bottom: 2px solid var(--fg);
+  border-bottom: 2px solid var(--border);
   padding-bottom: 24px;
   margin-bottom: 40px;
+}
+h1, h2, h3 {
+  color: var(--header-fg);
 }
 h1 {
   font-size: 2.2rem;
@@ -132,10 +137,18 @@ th, td {
   padding: 8px 12px;
   border-bottom: 1px solid var(--border);
 }
+tbody tr:nth-child(even) {
+  background: var(--table-stripe);
+}
+tbody tr:hover {
+  background: rgba(88, 166, 255, 0.08);
+}
 th {
   background: var(--code-bg);
+  color: var(--header-fg);
   font-weight: 600;
   font-size: 0.85rem;
+  border-bottom: 2px solid var(--border);
 }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .winner { font-weight: 700; color: var(--accent); }
@@ -149,7 +162,9 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   height: auto;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: white;
+  /* charts have white matplotlib bg — wrap in a light tint so the contrast is intentional */
+  background: #ffffff;
+  padding: 8px;
 }
 .chart .caption {
   font-size: 0.85rem;
