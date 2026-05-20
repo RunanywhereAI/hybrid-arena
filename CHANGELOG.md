@@ -4,23 +4,55 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
-### Planned for [1.3.0]
+## [1.3.0] — 2026-05-20
 
-**Theme: tighter CIs + threshold tuning, no canonical-sweep kickoff yet.** Code changes ready on the `v1.3-expanded-tasks` branch; sweep runs when the maintainer says go.
+**Multi-model + threshold sweep release.** Three sweeps run overnight (6h13m wall, $32.88 cloud spend, **507 rows**) finally produce the first hybrid-equals-cloud result with statistical significance.
 
-#### Added
+### Headline canonical (gemma4:31b on real_dev D1+D5)
 
-- **`benchmark.task_ids: list[str] | None`** in `BenchmarkConfig` — an explicit task-ID whitelist that scopes the plan to a known-good subset. Threads through `build_task_plan` → `load_category_tasks` so configs can mix categories (X + D) but only run R7-compatible D1+D5 tasks. Surfaced via `./bench run --task-ids <csv>` too.
-- **`./bench sweep --cascade-thresholds 5,10,15,20,25`** — v1.3+ flag to sweep `ROUTER_CASCADE_THRESHOLD` across multiple values. Each pass spawns its own router proxy (server.mjs reads the env var at startup) and writes to `<out>/cascade-threshold-<N>/seed-<S>/`. Implies `--strategies cascade`. Requires no router on :8787 at start time.
-- **R7 multi-file fixture support** — `_copy_fixture()` now returns `(test_path, editable_files)` so real_dev D1 tasks (e.g. `d1-rate-limit` with `app.py` + `middleware.py`) work alongside Exercism single-file stubs. `_resolve_fixture_dir()` handles both `fixture_dir: Path` (Exercism) and `fixtures_dir: <slug>` (real_dev). `_find_test_path()` strips the leading slug from real_dev's `task.tests` ("`<slug>/test_x.py`" → "`test_x.py`").
-- **3 v1.3 variant configs** (kept ready, not yet swept):
-  - `configs/variants/28-v1.3-aider-r7-expanded.yaml` — 13 tasks × 4 strategies × 3 seeds = 156 rows (qwen3-coder:30b baseline; 2.6× v1.2's row count for tighter CIs).
-  - `configs/variants/29-v1.3-aider-r7-gemma4.yaml` — same matrix with `gemma4:31b` as local (generalist dense vs MoE specialist comparison).
-  - `configs/variants/30-v1.3-aider-r7-cascade-threshold.yaml` — cascade-only sweep across 5 thresholds × 3 seeds.
+| Cell | Pass-rate (point) | 95% CI |
+|---|---|---|
+| always-cloud | 1.00 | [1.00, 1.00] |
+| always-local | 0.88 | [0.71, 1.00] |
+| **heuristic** | **0.96** | **[0.88, 1.00]** ← Pareto win |
+| cascade | 0.88 | [0.71, 1.00] |
 
-#### Changed
+For real_dev D1+D5 (practical refactoring tasks), **gemma4:31b + heuristic** matches always-cloud's pass-rate within CI overlap, at 79% cloud_fraction (≈21% token spend reduction). First hybrid configuration in this benchmark to clear the "equivalent quality at lower cost" bar.
 
-- **`configs/schema.json`** regenerated to include the new `task_ids` field.
+### Added
+
+- **`benchmark.task_ids: list[str] | None`** in `BenchmarkConfig` — explicit task-ID whitelist; scopes the plan to a known-good subset without per-category cap surgery. Threads through `build_task_plan` → `load_category_tasks`. Surfaced via `./bench run --task-ids <csv>`.
+- **`./bench sweep --cascade-thresholds 5,10,15,20,25`** — sweeps `ROUTER_CASCADE_THRESHOLD` across multiple values; spawns a fresh router per threshold (server.mjs reads env at startup) and writes to `<out>/cascade-threshold-<N>/seed-<S>/`. `_spawn_router` loads `.env` so `OPEN_AI_API_KEY` is visible to spawned procs.
+- **R7 multi-file fixture support** — `_copy_fixture()` returns `(test_path, editable_files)`; `_resolve_fixture_dir()` handles both `fixture_dir: Path` (Exercism) and `fixtures_dir: <slug>` (real_dev). Enables D1+D5 real_dev tasks (multi-file edits) under R7.
+- **3 published canonical sweeps** (datasets in `personal/iterations/v1.3.0/results-v1.3.0.tar.gz`, 4.2 MB):
+  - `28-v1.3-aider-r7-expanded` — qwen3-coder:30b baseline at expanded scale (156 rows).
+  - `29-v1.3-aider-r7-gemma4` — gemma4:31b multi-model comparison (156 rows).
+  - `30-v1.3-aider-r7-cascade-threshold` — cascade × {5, 10, 15, 20, 25} threshold sweep (195 rows).
+
+### Findings — what we learned
+
+1. **Local model selection > router strategy tuning.** Going from qwen3-coder:30b to gemma4:31b raised always-local pass-rate by **+39 percentage points** (23% → 62%); raised heuristic by **+31pp** (36% → 67%). Threshold tuning on cascade only moves the needle by ≈7pp across a 5x parameter span.
+2. **Task type matters more than expected.** Both models are weak on Exercism Python puzzles (always-local ≤25%); both are strong on real_dev refactoring patterns when given gemma4. The "viability of local for coding" question has different answers by task class.
+3. **Cascade threshold has a flat curve.** Sweep across thresholds 5/10/15/20/25 produced pass-rates 21–28% with no monotonic trend. Cloud_fraction does change as designed (0.80 → 0.55), but pass-rate doesn't track. Cascade is a poor fit for agentic loops with R7's architect/editor protocol; threshold isn't the lever.
+
+### Changed
+
+- **`configs/schema.json`** regenerated to include the `task_ids` field.
+
+### Files
+
+- `personal/iterations/v1.3.0/findings.md` — full diagnostic write-up + per-cell CIs.
+- `personal/iterations/v1.3.0/orchestrator.log` — full sweep run log.
+- `personal/iterations/v1.3.0/results-v1.3.0.tar.gz` — bundled dataset (ready for GH release).
+- `personal/scripts/v1.3-sweep-orchestrator.sh` — the runner.
+- `personal/reports/v1.3.0-report.html` — publishable HTML report.
+
+### Path forward (v1.3.x or v1.4)
+
+- More local models: deepseek-coder-v3, qwen3.6:35b, codestral-medium-2. Build a local-model leaderboard for the agentic regime (analog of v3.3's non-agentic leaderboard).
+- Expand Exercism fixtures (only 5 today); the 67% always-cloud baseline on A is itself unstable at n=15.
+- Task-aware local-model routing: pick different local for puzzle vs refactor classes.
+- Persistent failure-mode analysis on Exercism — why does every strategy under-route on A?
 
 ## [1.2.0] — 2026-05-19
 
