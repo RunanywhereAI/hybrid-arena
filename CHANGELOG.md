@@ -4,6 +4,24 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Planned for [1.3.0]
+
+**Theme: tighter CIs + threshold tuning, no canonical-sweep kickoff yet.** Code changes ready on the `v1.3-expanded-tasks` branch; sweep runs when the maintainer says go.
+
+#### Added
+
+- **`benchmark.task_ids: list[str] | None`** in `BenchmarkConfig` — an explicit task-ID whitelist that scopes the plan to a known-good subset. Threads through `build_task_plan` → `load_category_tasks` so configs can mix categories (X + D) but only run R7-compatible D1+D5 tasks. Surfaced via `./bench run --task-ids <csv>` too.
+- **`./bench sweep --cascade-thresholds 5,10,15,20,25`** — v1.3+ flag to sweep `ROUTER_CASCADE_THRESHOLD` across multiple values. Each pass spawns its own router proxy (server.mjs reads the env var at startup) and writes to `<out>/cascade-threshold-<N>/seed-<S>/`. Implies `--strategies cascade`. Requires no router on :8787 at start time.
+- **R7 multi-file fixture support** — `_copy_fixture()` now returns `(test_path, editable_files)` so real_dev D1 tasks (e.g. `d1-rate-limit` with `app.py` + `middleware.py`) work alongside Exercism single-file stubs. `_resolve_fixture_dir()` handles both `fixture_dir: Path` (Exercism) and `fixtures_dir: <slug>` (real_dev). `_find_test_path()` strips the leading slug from real_dev's `task.tests` ("`<slug>/test_x.py`" → "`test_x.py`").
+- **3 v1.3 variant configs** (kept ready, not yet swept):
+  - `configs/variants/28-v1.3-aider-r7-expanded.yaml` — 13 tasks × 4 strategies × 3 seeds = 156 rows (qwen3-coder:30b baseline; 2.6× v1.2's row count for tighter CIs).
+  - `configs/variants/29-v1.3-aider-r7-gemma4.yaml` — same matrix with `gemma4:31b` as local (generalist dense vs MoE specialist comparison).
+  - `configs/variants/30-v1.3-aider-r7-cascade-threshold.yaml` — cascade-only sweep across 5 thresholds × 3 seeds.
+
+#### Changed
+
+- **`configs/schema.json`** regenerated to include the new `task_ids` field.
+
 ## [1.2.0] — 2026-05-19
 
 **Single-agent v1.2 release.** Locks in **R7 (aider) as the canonical agentic route** based on v1.1.x empirical results — aider's architect/editor protocol works end-to-end with qwen3-coder:30b on real coding tasks, where opencode's free-form tool-use protocol does not.
