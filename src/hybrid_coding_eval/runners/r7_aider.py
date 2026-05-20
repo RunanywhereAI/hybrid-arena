@@ -77,8 +77,13 @@ def _copy_fixture(fixture_dir: Path, dst: Path) -> tuple[Path, Path]:
 
 def _run_tests_local(stub_dir: Path, test_path: Path) -> Quality:
     """Run pytest on the test file in the stub dir. Fast local subprocess
-    (no Docker overhead for this lightweight case)."""
-    py = shutil.which("python3") or shutil.which("python") or "python3"
+    (no Docker overhead for this lightweight case).
+
+    Prefer the repo's .venv/bin/python (which has pytest installed) over
+    the first python3 on PATH — system pythons usually lack pytest.
+    """
+    venv_py = _REPO_ROOT / ".venv" / "bin" / "python"
+    py = str(venv_py) if venv_py.exists() else (shutil.which("python3") or shutil.which("python") or "python3")
     try:
         proc = subprocess.run(
             [py, "-m", "pytest", "-q", str(test_path)],
@@ -158,9 +163,12 @@ def run(
     api_base = proxy_url.rstrip("/") + "/v1"
     model_id = model_string(router_strategy, bench_run_id, prefix="openai/router")
 
-    # 3. Subprocess Aider.
+    # 3. Subprocess Aider. Prefer .venv/bin/aider when present (./bench
+    # setup installs aider into the repo's venv); fall back to PATH.
+    _venv_aider = _REPO_ROOT / ".venv" / "bin" / "aider"
+    aider_bin = str(_venv_aider) if _venv_aider.exists() else (shutil.which("aider") or "aider")
     cmd = [
-        "aider",
+        aider_bin,
         "--architect",
         "--model",
         model_id,

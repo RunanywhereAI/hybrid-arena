@@ -4,6 +4,40 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-05-19
+
+**Single-agent v1.2 release.** Locks in **R7 (aider) as the canonical agentic route** based on v1.1.x empirical results — aider's architect/editor protocol works end-to-end with qwen3-coder:30b on real coding tasks, where opencode's free-form tool-use protocol does not.
+
+### Headline canonical (60 rows, qwen3-coder:30b + gpt-5.5)
+
+| Strategy | Pass | $ total | $/pass | Cloud-frac |
+|---|---|---|---|---|
+| **always-cloud (gpt-5.5)** | **9/15 = 60%** | $0.91 | $0.10 | 1.00 |
+| always-local (qwen3-coder:30b) | 0/15 = 0% | $0.00 | n/a | 0.00 |
+| **heuristic** (agent-aware) | **6/15 = 40%** | **$0.74** | $0.12 | 0.48 |
+| cascade | 3/15 = 20% | $0.65 | $0.22 | 0.35 |
+
+On `grep` and `pig-latin` tasks, hybrid `heuristic` matches or beats always-cloud (3/3 vs 2/3 on grep; 3/3 vs 3/3 on pig-latin). Routing infrastructure works; agent-aware heuristic is making the right decisions; aider's protocol gets useful work out of qwen3-coder on the local-routed turns. The Pareto-frontier story is real — heuristic uses 19% less cloud spend than always-cloud, with overlapping pass-rate CIs (35-67% vs 33-80% at n=15).
+
+### Added
+- **`./bench setup` step 4: aider** — `pip install aider-chat` into `.venv`, idempotent. R7 runner prefers `.venv/bin/aider` over PATH for reliable subprocess invocation.
+- **`results/runs/26-v1.2-aider-r7-canonical/`** — published canonical dataset.
+- **Bundled as `results-v1.2.0-canonical.tar.gz`** on the GH release.
+- **`personal/iterations/v1.2.0/findings.md`** — full diagnostic write-up + reproducibility recipe.
+- **`ROUTER_LOCAL_TOOL_USE_NUDGE`** + **`ROUTER_LOCAL_POST_TOOL_REMINDER`** env vars (proxy-level prompt-engineering knobs). Tunable; default-on for local agentic requests with `tools[]`. Demonstrably moves qwen3-coder behavior in isolated probes; effect on full agent loops varies by agent protocol.
+- **`./bench analyze` non-streaming path** now applies `normalizeToolCallsInChunk` (defensive; streaming had it since v1.1.1).
+
+### Changed
+- **`configs/variants/_template-agentic.yaml`** defaults to `routes: [R7]` + `categories: [X]`. Old R8-default template is now history at v1.1.x tags.
+- **`./bench setup` step 5: opencode SKIPPED by default in v1.2.** Set `BENCH_SETUP_OPENCODE=1` to re-enable. The R8 runner stays in-tree but is `EXPERIMENTAL` — qwen3-coder + opencode's free-form tool-use protocol doesn't produce useful work in hybrid setups. v1.1.3 canonical (60 rows × R8) shows 0/15 hybrid pass; the routing layer works fine, the model-fit doesn't. Resurfaces when a stronger local model is available.
+- **R7 scoring uses `.venv/bin/python`** instead of system `python3` (which often lacks pytest). Same fix landed for R8 in v1.1.1; missed R7 until v1.2.
+
+### Path forward (deferred to v1.3)
+- Larger task set (15+ Exercism + real_dev D1/D5 with R7 fixture support).
+- Multi-model comparison: drop in `gpt-oss:20b`, `deepseek-r1:14b`, qwen3.6 variants.
+- `ROUTER_CASCADE_THRESHOLD` sweep — see if cascade Pareto-improves over heuristic at different thresholds.
+- R6/R8 re-evaluation when a 70B+ local model fits the hardware budget.
+
 ## [1.1.3] — 2026-05-19
 
 The qwen3-coder ↔ opencode tool-message format issue from v1.1.2 is **fixed**. Hybrid strategies now run the agent loop end-to-end without 400 errors — the routing layer is empirically validated. The remaining 0% hybrid pass-rate is now a **model-quality gap** (qwen3-coder doesn't generate correct code edits on opencode interpretation steps), not a routing infrastructure issue.
@@ -141,7 +175,8 @@ The v0.x → v3.x progression is preserved in git history. Highlights:
 - **v2 (2026-04)** — synth-budget fix, Opus-4 judge introduced, devstral local-model swap (runs 02–03).
 - **v1 (2026-03 MVP)** — 3 routes (R1/R2/R3), 90-row dataset (run 01), the original "is hybrid worth it?" experiment.
 
-[Unreleased]: https://github.com/RunanywhereAI/hybrid-coding-eval/compare/v1.1.3...HEAD
+[Unreleased]: https://github.com/RunanywhereAI/hybrid-coding-eval/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/RunanywhereAI/hybrid-coding-eval/releases/tag/v1.2.0
 [1.1.3]: https://github.com/RunanywhereAI/hybrid-coding-eval/releases/tag/v1.1.3
 [1.1.2]: https://github.com/RunanywhereAI/hybrid-coding-eval/releases/tag/v1.1.2
 [1.1.1]: https://github.com/RunanywhereAI/hybrid-coding-eval/releases/tag/v1.1.1

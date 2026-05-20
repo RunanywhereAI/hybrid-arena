@@ -446,12 +446,12 @@ def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
     failures = []
 
     # 1. Stanford Minions (required for R4 + R5 routes)
-    print("[1/5] Stanford Minions (R4 + R5 routes)")
+    print("[1/6] Stanford Minions (R4 + R5 routes)")
     if not _ensure_minions(verbose=True):
         failures.append("minions clone failed")
 
     # 2. Docker image for functional scoring sandbox
-    print("\n[2/5] Functional-scoring Docker image (hybrid-eval-python:latest)")
+    print("\n[2/6] Functional-scoring Docker image (hybrid-eval-python:latest)")
     if not shutil.which("docker"):
         print("  ⚠ docker not on PATH — skipping image build")
         print("    Install Docker Desktop: https://www.docker.com/products/docker-desktop/")
@@ -477,7 +477,7 @@ def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
                 failures.append("Docker image build failed")
 
     # 3. Auxiliary Ollama models (router strategies)
-    print("\n[3/5] Auxiliary local models (router classifier + embedding)")
+    print("\n[3/6] Auxiliary local models (router classifier + embedding)")
     if not shutil.which("ollama"):
         print("  ⚠ ollama not on PATH — skipping model pulls")
         print("    Install Ollama: https://ollama.com/download")
@@ -500,21 +500,52 @@ def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
             except (FileNotFoundError, subprocess.CalledProcessError) as exc:
                 print(f"  ⚠ pull failed for {tag}: {exc}")
 
-    # 4. Opencode fork (R8 route)
-    print("\n[4/5] Opencode (R8 route) — fork + plugin config")
-    if not shutil.which("opencode"):
-        print("  ⚠ opencode CLI not on PATH — R8 route won't work")
-        print("    Install via Homebrew: brew install opencode")
-        print("    Or build from source: https://github.com/anomalyco/opencode")
+    # 4. Aider (R7 route — the v1.2 canonical agent for hybrid eval).
+    # Installed into the repo's venv so subprocess can find it via the
+    # R7 runner's .venv/bin/aider fallback. Independent of system PATH.
+    print("\n[4/6] Aider (R7 route — primary agent for v1.2 hybrid sweeps)")
+    aider_bin = _REPO_ROOT / ".venv" / "bin" / "aider"
+    if aider_bin.exists():
+        print(f"  ✓ aider already installed at {aider_bin}")
     else:
-        print("  ✓ opencode CLI on PATH")
-    if not _ensure_opencode(verbose=True):
-        failures.append("opencode fork clone failed")
-    if not _ensure_opencode_config(verbose=True):
-        failures.append("opencode.json config setup failed")
+        venv_pip = _REPO_ROOT / ".venv" / "bin" / "pip"
+        if not venv_pip.exists():
+            print(f"  ⚠ no .venv/bin/pip — set up venv first: python3.12 -m venv .venv && .venv/bin/pip install -e .")
+            failures.append("aider install skipped: no venv")
+        else:
+            print(f"  Installing aider-chat into {venv_pip.parent}…")
+            try:
+                subprocess.run([str(venv_pip), "install", "-q", "aider-chat"], check=True)
+                print(f"  ✓ aider installed: {aider_bin}")
+            except subprocess.CalledProcessError as exc:
+                print(f"  ⚠ aider install failed: {exc}")
+                failures.append("aider install failed")
 
-    # 5. Environment sanity (.env file, Python version)
-    print("\n[5/5] Environment sanity")
+    # 5. Opencode fork (R8 route — EXPERIMENTAL in v1.2).
+    # Skipped by default in v1.2. Set BENCH_SETUP_OPENCODE=1 to enable.
+    # R8 stays in-tree (results at v1.1.x tags) but isn't the v1.2
+    # canonical because qwen3-coder:30b + opencode's free-form tool-use
+    # pattern doesn't produce useful work — see CHANGELOG v1.1.3 + v1.2.
+    if _os.environ.get("BENCH_SETUP_OPENCODE", "0") in ("1", "true", "yes"):
+        print("\n[5/6] Opencode (R8 route — EXPERIMENTAL; enabled via BENCH_SETUP_OPENCODE=1)")
+        if not shutil.which("opencode"):
+            print("  ⚠ opencode CLI not on PATH — R8 route won't work")
+            print("    Install via Homebrew: brew install opencode")
+        else:
+            print("  ✓ opencode CLI on PATH")
+        if not _ensure_opencode(verbose=True):
+            failures.append("opencode fork clone failed")
+        if not _ensure_opencode_config(verbose=True):
+            failures.append("opencode.json config setup failed")
+    else:
+        print("\n[5/6] Opencode (R8 route) — SKIPPED (EXPERIMENTAL in v1.2)")
+        print("  R8 is in the tree but qwen3-coder:30b + opencode's free-form tool-use")
+        print("  protocol doesn't produce useful work in hybrid setups (see CHANGELOG).")
+        print("  v1.1.x tags have the diagnostic data. To enable anyway:")
+        print("    BENCH_SETUP_OPENCODE=1 ./bench setup")
+
+    # 6. Environment sanity (.env file, Python version)
+    print("\n[6/6] Environment sanity")
     env_path = _REPO_ROOT / ".env"
     env_example = _REPO_ROOT / ".env.example"
     if env_path.exists():

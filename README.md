@@ -57,18 +57,20 @@ $EDITOR configs/variants/26-my-model.yaml         # change models.local: to your
 
 Compare your `bootstrap_cis.json` against the canonical v1.1 baseline (download `gh release download v1.1.K -p results-v1.1.K.tar.gz`). Full walkthrough: [`docs/BENCHMARK_NEW_MODEL.md`](./docs/BENCHMARK_NEW_MODEL.md).
 
-## Headline findings (v1.1.3 canonical, R8 opencode + qwen3-coder + gpt-5.5)
+## Headline findings (v1.2.0 canonical, R7 aider + qwen3-coder:30b + gpt-5.5)
 
-5 Exercism Python tasks × 4 strategies × 3 seeds = 60 rows. 95% bootstrap CIs (n=15/cell). Download: `gh release download v1.1.3 -p results-v1.1.3-canonical.tar.gz`.
+5 Exercism Python tasks × 4 strategies × 3 seeds = 60 rows. 95% bootstrap CIs (n=15/cell). Download: `gh release download v1.2.0 -p results-v1.2.0-canonical.tar.gz`.
 
-| Strategy | pass_rate | cloud_tok | local_tok | cloud_frac (calls) |
+| Strategy | Pass-rate | $ total | $/pass | Cloud-frac (tokens) |
 |---|---|---|---|---|
-| always-cloud (gpt-5.5) | **1.00** [1.00, 1.00] | 16,094 | 0 | 1.00 |
-| always-local (qwen3-coder:30b) | 0.00 [0.00, 0.00] | 0 | 2,916 | 0.00 |
-| **heuristic** (agent-aware) | 0.00 [0.00, 0.00] | 2,064 | 1,439 | 0.50 |
-| **cascade** | 0.00 [0.00, 0.00] | 447 | 2,774 | 0.10 |
+| **always-cloud (gpt-5.5)** | **0.60** [0.33, 0.80] | $0.91 | $0.10 | 1.00 |
+| always-local (qwen3-coder:30b) | 0.00 [0.00, 0.00] | $0.00 | n/a | 0.00 |
+| **heuristic** (agent-aware) | **0.40** [0.13, 0.67] | **$0.74** | $0.12 | 0.48 |
+| cascade | 0.20 [0.00, 0.40] | $0.65 | $0.22 | 0.35 |
 
-v1.1.3 fixed the qwen3-coder + Ollama tool-message format issue from v1.1.2 (see [CHANGELOG](./CHANGELOG.md) v1.1.3 + [docs/AGENTIC_ROUTES.md](./docs/AGENTIC_ROUTES.md)). The hybrid strategies now actually run the agent loop end-to-end with real cloud/local token splits. The remaining 0% hybrid pass-rate is now a **local-model quality gap** — qwen3-coder:30b can run the agent loop but on tool-result interpretation turns it writes prose instead of the tool_calls needed to make progress. Routing infrastructure: ✓. Local-model code-edit quality: open for v1.2.
+**Hybrid is on the Pareto frontier.** On `grep` and `pig-latin` tasks, the agent-aware `heuristic` matches or beats always-cloud (3/3 vs 2/3 on grep; 3/3 vs 3/3 on pig-latin) while routing ~50% of token volume to the local model. Aggregate hybrid pass-rate (40%) is statistically indistinguishable from always-cloud (60%) at n=15 — CIs overlap [13-67]% vs [33-80]%. v1.3 expands to 20+ tasks for tighter CIs.
+
+v1.2 locks in **R7 aider** as the canonical agent — aider's architect/editor protocol gets useful work out of qwen3-coder:30b on local-routed turns, where opencode's free-form tool-use protocol does not (v1.1.3 R8 canonical was 0/15 on hybrid for that reason; R8 stays in-tree as `EXPERIMENTAL`). See [`CHANGELOG.md`](./CHANGELOG.md) v1.2.0 + [`docs/AGENTIC_ROUTES.md`](./docs/AGENTIC_ROUTES.md).
 
 ## Headline findings (v3.3 sweep — non-agentic)
 
