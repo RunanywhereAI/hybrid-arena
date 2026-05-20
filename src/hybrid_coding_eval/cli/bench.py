@@ -516,7 +516,7 @@ def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
     else:
         venv_pip = _REPO_ROOT / ".venv" / "bin" / "pip"
         if not venv_pip.exists():
-            print(f"  ⚠ no .venv/bin/pip — set up venv first: python3.12 -m venv .venv && .venv/bin/pip install -e .")
+            print("  ⚠ no .venv/bin/pip — set up venv first: python3.12 -m venv .venv && .venv/bin/pip install -e .")
             failures.append("aider install skipped: no venv")
         else:
             print(f"  Installing aider-chat into {venv_pip.parent}…")
