@@ -12,21 +12,21 @@ Dispatches on ``task.shape`` to one of five implementations:
   Until a small repo-clone + reference-test harness lands, D2 returns
   ``Quality(functional_pass=None)`` so the row survives the sweep without
   being miscounted as a failure. See the long comment in :func:`_score_d2`.
-- **D3** (refactor) / **D4** (code review) — judged by
-  :func:`hybrid_coding_eval.scorers.llm_judge.judge_pairwise` against the
-  gold exemplar under ``fixtures/<slug>/_reference/``. The result is
-  mapped to a :class:`Quality` via
-  :func:`hybrid_coding_eval.scorers.llm_judge.judge_to_quality`.
+- **D3** (refactor) / **D4** (code review) — historically judged by
+  ``scorers.llm_judge.judge_pairwise`` against the gold exemplar under
+  ``fixtures/<slug>/_reference/``. ``llm_judge`` was deleted in v1.4 as
+  part of the agentic cleanup, so these branches now return an
+  unknown :class:`Quality` and are effectively deferred until a
+  replacement scoring path lands.
 - **D5** (script) — overlay the model's extracted script into the
   fixture tree under the task's expected filename (``solution.py`` or
   ``solution.sh``), then run the task's pytest file (which in turn
   invokes the model's script with the right stdin / args and diffs
   stdout against ``expected.txt``).
 
-All heavy lifting lives in the existing scorers
-(:mod:`hybrid_coding_eval.scorers.functional_python`,
-:mod:`hybrid_coding_eval.scorers.llm_judge`) and the sandbox
-(:mod:`hybrid_coding_eval.core.sandbox`). This module is a thin shape
+All heavy lifting lives in the existing scorer
+:mod:`hybrid_coding_eval.scorers.functional_python` and the sandbox
+:mod:`hybrid_coding_eval.core.sandbox`. This module is a thin shape
 dispatcher + fixture-overlay helper.
 """
 
@@ -427,27 +427,16 @@ def _read_gold_exemplar(task: Task) -> str:
 
 
 def _score_d3_d4(task: Task, model_output: str) -> Quality:
-    # Lazy import: llm_judge pulls in anthropic, which we don't want
-    # importing at module load time (tests mock it at call time).
-    from hybrid_coding_eval.scorers import llm_judge
-
-    gold = _read_gold_exemplar(task)
-    if not gold:
-        logger.warning(
-            "D3/D4 task %s: no gold exemplar under _reference/", task.id
-        )
-        return _unknown_quality()
-
-    try:
-        judgment = llm_judge.judge_pairwise(
-            task,
-            output_a=model_output,
-            output_b=gold,
-        )
-    except Exception as exc:  # noqa: BLE001 — scorer must not crash sweep
-        logger.warning("D3/D4 judge call failed for %s: %s", task.id, exc)
-        return _unknown_quality()
-    return llm_judge.judge_to_quality(judgment, side="A")
+    # v1.4: llm_judge was deleted as part of the agentic cleanup. D3/D4
+    # tasks (refactor / code-review) now degrade to an unknown Quality
+    # until a replacement scoring path lands. The legacy lazy import is
+    # preserved as a placeholder so any reintroduction reuses the same
+    # call site.
+    logger.warning(
+        "D3/D4 task %s: scoring deferred (llm_judge removed in v1.4)",
+        task.id,
+    )
+    return _unknown_quality()
 
 
 # ---------------------------------------------------------------------------

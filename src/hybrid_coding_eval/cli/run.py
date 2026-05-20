@@ -122,20 +122,24 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument(
         "--categories",
         type=_csv,
-        default=["A", "B", "C"],
-        help="Comma-separated list of category letters (default: A,B,C).",
+        default=["puzzles", "refactors", "real-prs"],
+        help=(
+            "Comma-separated list of task classes (default: "
+            "puzzles,refactors,real-prs). v1.4 replaces the legacy "
+            "A/B/C category letters with explicit task-class names."
+        ),
     )
     p.add_argument(
         "--routes",
         type=_csv,
         default=list(ROUTES),
-        help="Comma-separated list of route ids (default: R1,R2,R3).",
+        help="Comma-separated list of route ids (default: R6,R7,R8,R9,R10).",
     )
     p.add_argument(
         "--tasks",
         type=int,
         default=None,
-        help="Cap number of tasks per category (default: all).",
+        help="Cap number of tasks per class (default: all).",
     )
     p.add_argument(
         "--out",
@@ -154,7 +158,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="http://127.0.0.1:8787",
         help="Router proxy base URL (default: http://127.0.0.1:8787).",
     )
-    p.add_argument("--smoke", action="store_true", help="1 task per category.")
+    p.add_argument("--smoke", action="store_true", help="1 task per class.")
     p.add_argument(
         "--resume",
         action="store_true",
@@ -202,7 +206,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     # Validate.
     for c in args.categories:
         if c not in CATEGORY_SOURCES:
-            p.error(f"unknown category {c!r} (valid: {sorted(CATEGORY_SOURCES)})")
+            p.error(f"unknown task class {c!r} (valid: {sorted(CATEGORY_SOURCES)})")
     for r in args.routes:
         if r not in ROUTES:
             p.error(f"unknown route {r!r} (valid: {list(ROUTES)})")
@@ -249,42 +253,8 @@ def _append_error(errors_path: Path, plan_item: TaskPlan, row: Any) -> None:
         )
 
 
-_MINIONS_GIT_URL = "https://github.com/HazyResearch/minions.git"
-
-
-def _ensure_minions_if_needed(routes: list[str]) -> None:
-    """Auto-clone vendor/minions/ when R4 or R5 is requested.
-
-    R4 (Minion) and R5 (DevMinion) routes import from ``vendor/minions/``;
-    new users who haven't run ``./bench setup`` first get this clone for free
-    on first invocation. Silent no-op when not needed or already present.
-    """
-    if "R4" not in routes and "R5" not in routes:
-        return
-    target = _REPO_ROOT / "vendor" / "minions"
-    if (target / ".git").exists():
-        return
-    print(
-        f"[setup] R4/R5 routes require Stanford Minions — cloning into {target}…"
-    )
-    target.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        subprocess.run(
-            ["git", "clone", "--depth", "1", _MINIONS_GIT_URL, str(target)],
-            check=True,
-        )
-        print("[setup] vendor/minions/ ready.")
-    except (FileNotFoundError, subprocess.CalledProcessError) as exc:
-        raise SystemExit(
-            f"R4/R5 routes need vendor/minions/ but auto-clone failed: {exc}\n"
-            f"Run manually: cd vendor && git clone {_MINIONS_GIT_URL}"
-        ) from exc
-
-
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
-
-    _ensure_minions_if_needed(args.routes)
 
     out_dir: Path = args.out or (_REPO_ROOT / "results" / timestamp_dirname())
     out_dir = out_dir.resolve()

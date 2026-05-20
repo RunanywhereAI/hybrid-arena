@@ -1,9 +1,9 @@
-"""Scaffold tests for the real_dev (Category-D) benchmark adapter (P0.3).
+"""Scaffold tests for the real_dev benchmark adapter (P0.3).
 
 These tests verify plumbing only: the adapter can be imported, parses a
 well-formed JSONL row into a Task, handles an empty tasks.jsonl
-gracefully, and the orchestrator recognises category ``"D"``. Actual
-tasks land in P1.1–P1.4.
+gracefully, and the orchestrator recognises the ``"refactors"`` task
+class (v1.4 renamed it from Category D).
 """
 
 from __future__ import annotations
@@ -133,18 +133,19 @@ def test_task_prompt_inlines_fixture_files(tmp_path: Path) -> None:
     assert "assert 1 == 1" in rendered
 
 
-def test_category_d_registered_in_source_map() -> None:
-    """Orchestrator must know ``"D" → ["real_dev"]``."""
-    assert "D" in CATEGORY_SOURCES, (
-        "Category 'D' must be registered in core.experiment.CATEGORY_SOURCES"
+def test_refactors_class_registered_in_source_map() -> None:
+    """Orchestrator must know ``"refactors" → ["real_dev"]`` post-v1.4."""
+    assert "refactors" in CATEGORY_SOURCES, (
+        "Task class 'refactors' must be registered in "
+        "core.experiment.CATEGORY_SOURCES"
     )
-    assert CATEGORY_SOURCES["D"] == ["real_dev"]
+    assert CATEGORY_SOURCES["refactors"] == ["real_dev"]
 
 
-def test_category_d_dispatch_does_not_crash() -> None:
-    """``load_category_tasks('D')`` must return a list (possibly empty) without
-    raising. This is the end-to-end wiring check."""
-    pairs = load_category_tasks("D")
+def test_refactors_class_dispatch_does_not_crash() -> None:
+    """``load_category_tasks('refactors')`` must return a list (possibly empty)
+    without raising. This is the end-to-end wiring check."""
+    pairs = load_category_tasks("refactors")
     assert isinstance(pairs, list)
     # Empty today; every pair should be ("real_dev", Task) once populated.
     for source, task in pairs:
