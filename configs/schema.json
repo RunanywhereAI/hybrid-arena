@@ -2,7 +2,7 @@
   "$defs": {
     "BenchmarkConfig": {
       "additionalProperties": false,
-      "description": "Which task classes \u00d7 agents \u00d7 how many tasks.\n\nv1.4 replaces the legacy ``categories`` (A/B/C/D/X) + ``routes``\n(R1\u2013R8) surface with two friendly axes:\n\n* ``task_classes`` \u2014 high-level work shapes (``puzzles``,\n  ``refactors``, ``real-prs``). Each maps to one benchmark adapter\n  inside :data:`hybrid_coding_eval.core.experiment.CATEGORY_SOURCES`.\n* ``agents`` \u2014 which coding agents to sweep\n  (``aider``, ``opencode``, ``mini-swe-agent``, ``claude-code``,\n  ``cline``). The orchestrator translates these to internal route\n  ids (R6/R7/R8/R9/R10).",
+      "description": "Which task classes × agents × how many tasks.\n\nv1.4 replaces the legacy ``categories`` (A/B/C/D/X) + ``routes``\n(R1–R8) surface with two friendly axes:\n\n* ``task_classes`` — high-level work shapes (``puzzles``,\n  ``refactors``, ``real-prs``). Each maps to one benchmark adapter\n  inside :data:`hybrid_coding_eval.core.experiment.CATEGORY_SOURCES`.\n* ``agents`` — which coding agents to sweep\n  (``aider``, ``opencode``, ``mini-swe-agent``, ``claude-code``,\n  ``cline``). The orchestrator translates these to internal route\n  ids (R6/R7/R8/R9/R10).",
       "properties": {
         "task_classes": {
           "default": [
@@ -71,7 +71,7 @@
             }
           ],
           "default": null,
-          "description": "Optional explicit task-ID whitelist. When set, only tasks whose ``id`` field matches one of these strings are included in the plan \u2014 ``task_classes`` + ``tasks_per_class`` still apply for which sources to load FROM, but the final selection is filtered to this list.",
+          "description": "Optional explicit task-ID whitelist. When set, only tasks whose ``id`` field matches one of these strings are included in the plan — ``task_classes`` + ``tasks_per_class`` still apply for which sources to load FROM, but the final selection is filtered to this list.",
           "title": "Task Ids"
         },
         "seeds": {
@@ -197,7 +197,8 @@
             "heuristic",
             "llm-classifier",
             "embedding-knn",
-            "cascade"
+            "cascade",
+            "phase-aware"
           ],
           "title": "Strategy",
           "type": "string"
@@ -210,7 +211,7 @@
         },
         "banner": {
           "default": true,
-          "description": "Prefix a one-line ``[router] \u2026`` note on the first delta.",
+          "description": "Prefix a one-line ``[router] …`` note on the first delta.",
           "title": "Banner",
           "type": "boolean"
         },
@@ -349,7 +350,7 @@
         }
       ],
       "default": null,
-      "description": "If set, assert current git HEAD matches this SHA before running \u2014 guards against accidental replays of a dataset from a dirty working tree.",
+      "description": "If set, assert current git HEAD matches this SHA before running — guards against accidental replays of a dataset from a dirty working tree.",
       "title": "Git Sha Pin"
     }
   },

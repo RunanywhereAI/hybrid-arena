@@ -49,6 +49,7 @@ RouteStrategy = Literal[
     "llm-classifier",
     "embedding-knn",
     "cascade",
+    "phase-aware",
 ]
 # v1.4 task-class taxonomy (replaces the A/B/C/D/X category letters).
 TaskClass = Literal["puzzles", "refactors", "real-prs"]

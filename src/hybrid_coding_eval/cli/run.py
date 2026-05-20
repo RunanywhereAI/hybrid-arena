@@ -179,7 +179,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "heuristic",
             "llm-classifier",
             "embedding-knn",
-            "cascade",
+            "cascade","phase-aware",
         ],
         help=(
             "Routing strategy R3 + R6/R7/R8 use at each step. v1.1+: "
