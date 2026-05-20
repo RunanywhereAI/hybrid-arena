@@ -21,11 +21,10 @@ router:
   banner: true
 
 benchmark:
-  categories: [A]                            # smoke: just one functional category, fastest path
+  categories: [X]                            # smoke uses Exercism Python — opencode agent needs fixture_dir
   routes: [R8]
   seeds: [42]
   smoke: true                                # 1 task per category
-  # tasks_per_category: not needed when smoke=true
 
 pricing:
   primary: openai-gpt5.5
