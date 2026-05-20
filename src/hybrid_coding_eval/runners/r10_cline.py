@@ -2,24 +2,41 @@
 
 **EXPERIMENTAL in v1.4.** R10 is the third agent-loop runner alongside R7
 (aider) and R8 (opencode). Cline (https://github.com/cline/cline) is an
-open-source coding agent built on top of the Anthropic SDK. It ships:
+open-source coding agent. The 3.0.9 release ships a real ``cline`` CLI
+binary (npm-installed) that can be driven from a subprocess for headless
+benchmark runs.
 
-  * A VS Code extension (not benchmarkable headlessly), and
-  * A preview ``cline`` CLI + ``@cline/sdk`` npm package for macOS/Linux
-    that *can* be scripted from a subprocess.
+Cline 3.0.9 invocation (verified via integration smoke against the router):
 
-The CLI is LiteLLM-compatible: it accepts an OpenAI-compatible provider
-configuration so we can point it straight at this repo's router proxy
-on :8787 without any special routing plugin. Compare to R8 (opencode)
-which needs a registered ``hybrid-router`` provider entry in
-``~/.config/opencode/opencode.json``.
+    cline -P ollama -m router/<strategy>/run-<bench_run_id>            \\
+          -c <scratch_dir> --auto-approve true --json -t <timeout_s>   \\
+          "<prompt>"
+
+Notes / gotchas:
+  * The provider id is passed via ``-P``. The router presents an
+    Ollama-style endpoint (``/v1`` with OpenAI-compat schema). The
+    actual base URL for the ``ollama`` provider is stored in
+    ``~/.cline/data/settings/providers.json`` — it is NOT a CLI flag.
+    ``bench setup`` writes that file in Phase 1.5b; this runner just
+    drives the CLI.
+  * ``-m`` carries the model id verbatim through to the router; the
+    router's ``runIdMatch`` regex extracts ``run-<id>`` and writes
+    ``bench_run_id`` into ``decisions.jsonl`` for attribution.
+  * ``--json`` requests stream-json output. We capture the stream to
+    ``stdout.log`` for forensic inspection; the final task-completion
+    event isn't required for scoring (pytest on the scratch dir gives
+    the ground-truth pass/fail).
+  * Earlier code in this file used fictional flags (``run`` subcommand,
+    ``--task``, ``--provider openai-compatible``, ``--base-url``,
+    ``--non-interactive``, ``--yes``, ``--file``). None of those exist
+    in cline 3.0.9.
 
 What R10 does, per task:
   1. Generate a 12-hex ``bench_run_id`` + copy the task fixture into a
      per-run scratch dir (shared helper with R7).
-  2. Subprocess ``cline run --task <prompt> --provider openai-compatible
-     --base-url <proxy>/v1 --model openai/router/<strategy>/run-<id>``
-     with ``cwd`` set to the scratch dir so file edits happen there.
+  2. Subprocess ``cline -P ollama -m router/<strategy>/run-<id>`` with
+     ``cwd`` and ``-c`` set to the scratch dir so file edits happen
+     there.
   3. Run pytest on the (modified) fixture for a local pass/fail.
   4. Reconstruct token attribution by filtering decisions.jsonl on
      ``bench_run_id`` (primary) / timestamp window (fallback).
@@ -65,6 +82,10 @@ ROUTE = "R10"
 _REPO_ROOT: Path = _resolve_repo_root()
 
 DEFAULT_TIMEOUT_S: int = 900
+
+# Default fallback path. cline 3.0.9 ships via npm and lands here on macOS
+# Homebrew installs; ``shutil.which("cline")`` is the primary lookup.
+_CLINE_FALLBACK_PATH: str = "/opt/homebrew/bin/cline"
 
 
 def _task_slug(task_id: str) -> str:
@@ -114,61 +135,57 @@ def run(
 
     # 2. Build the prompt. Same shape as R7: single-file Exercism stub
     # gets a hint about the stub filename; multi-file real_dev tasks
-    # rely on the task's self-contained prompt.
+    # rely on the task's self-contained prompt. Cline has no ``--file``
+    # flag, so the only way to scope its working set is to (a) cwd into
+    # the scratch dir, and (b) name the target file in the prompt.
     if len(editable_files) == 1 and editable_files[0].name not in (
         "solution.py",
         "solution.sh",
     ):
         prompt = task.prompt + (
-            "\n\nImplement the function(s) in the stub so that all tests in "
-            f"{test_path.name} pass. Edit only the stub file."
+            "\n\nImplement the function(s) in "
+            f"`{editable_files[0].name}` so that all tests in "
+            f"`{test_path.name}` pass. Edit only that file."
+        )
+    elif editable_files:
+        file_list = ", ".join(f"`{p.name}`" for p in editable_files)
+        prompt = task.prompt + (
+            f"\n\nEdit the following file(s) so the tests in "
+            f"`{test_path.name}` pass: {file_list}."
         )
     else:
         prompt = task.prompt
 
     bench_run_id = generate_run_id()
-    api_base = proxy_url.rstrip("/") + "/v1"
-    # LiteLLM-style "provider/model" — Cline's openai-compatible provider
-    # expects the full model id including the bench_run_id suffix so the
-    # router proxy can echo it into decisions.jsonl for attribution.
-    model_id = model_string(router_strategy, bench_run_id, prefix="openai/router")
+    # Cline doesn't accept a base-URL flag; the per-provider base URL
+    # lives in ``~/.cline/data/settings/providers.json`` (written by
+    # ``bench setup``). The ``router/<strategy>/run-<id>`` model id is
+    # forwarded transparently through to the router proxy.
+    model_id = model_string(router_strategy, bench_run_id, prefix="router")
 
-    # 3. Subprocess Cline. Prefer .venv/bin/cline when present (./bench
-    # setup may install cline into the repo's venv via the npm wrapper);
-    # fall back to PATH. If neither exists the FileNotFoundError below
-    # converts to a ``cline_not_installed`` ResultRow.
-    _venv_cline = _REPO_ROOT / ".venv" / "bin" / "cline"
-    cline_bin = str(_venv_cline) if _venv_cline.exists() else (
-        shutil.which("cline") or "cline"
-    )
+    # 3. Subprocess Cline. Prefer ``cline`` on PATH (npm-installed
+    # globally on macOS Homebrew); fall back to the canonical Homebrew
+    # path. If neither exists the FileNotFoundError below converts to
+    # a ``cline_not_installed`` ResultRow.
+    cline_bin = shutil.which("cline") or _CLINE_FALLBACK_PATH
 
     cmd = [
         cline_bin,
-        "run",
-        "--task",
-        prompt,
-        "--provider",
-        "openai-compatible",
-        "--base-url",
-        api_base,
-        "--model",
-        model_id,
-        "--cwd",
-        str(scratch),
-        "--non-interactive",
-        "--yes",
-        # Constrain Cline's working set to the editable files; like aider's
-        # positional file args. If the flag is unsupported, Cline ignores
-        # unknown args silently (verified in --help on installed builds).
-        *(["--file", *(str(p.name) for p in editable_files)] if editable_files else []),
+        "-P", "ollama",
+        "-m", model_id,
+        "-c", str(scratch),
+        "--auto-approve", "true",
+        "--json",
+        "-t", str(timeout_s),
+        prompt,  # positional, last arg
     ]
 
+    # Keep a clean env copy. We deliberately do NOT set
+    # OPENAI_API_KEY/OPENAI_API_BASE/CLINE_API_KEY/CLINE_API_BASE — they
+    # have no effect on cline 3.0.9 (base URL is configured via
+    # providers.json, and the router accepts any key). Leaving real
+    # secrets out of subprocess env is the safer default.
     env = os.environ.copy()
-    env["OPENAI_API_KEY"] = env.get("OPENAI_API_KEY", "bench-eval-key")
-    env["OPENAI_API_BASE"] = api_base
-    # Cline's TS SDK also reads CLINE_API_BASE / CLINE_API_KEY in some builds.
-    env.setdefault("CLINE_API_BASE", api_base)
-    env.setdefault("CLINE_API_KEY", "bench-eval-key")
 
     started_at = datetime.now(timezone.utc)
     t0 = time.perf_counter()
@@ -187,8 +204,8 @@ def run(
         (run_dir / "stderr.log").write_text(proc.stderr or "", encoding="utf-8")
         if proc.returncode != 0:
             # Cline sometimes exits non-zero when the task is judged
-            # "incomplete" but it still wrote a file — let the test step
-            # decide pass/fail rather than gating on this.
+            # "incomplete" but it still wrote a file — let the pytest
+            # step decide pass/fail rather than gating on this.
             err = f"cline_exit_{proc.returncode}"
     except subprocess.TimeoutExpired:
         err = f"agent_timeout_{timeout_s}s"

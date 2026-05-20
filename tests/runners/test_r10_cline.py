@@ -10,6 +10,7 @@ to exercise the FileNotFoundError → ResultRow branch.
 from __future__ import annotations
 
 import inspect
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -100,19 +101,10 @@ def test_cline_run_no_cline_installed_returns_error_row(
     # 2. Force the "not installed" branch deterministically. shutil.which
     # returns None on a clean system, and we also intercept subprocess.run
     # to raise FileNotFoundError if cline somehow IS installed on the host
-    # running this test.
+    # running this test (the runner falls back to /opt/homebrew/bin/cline
+    # when which() returns None — that fallback string also ends in
+    # "cline" so the argv0 check below still catches it).
     monkeypatch.setattr(r10_cline.shutil, "which", lambda _name: None)
-
-    # Also nuke any .venv/bin/cline that might exist (it doesn't today,
-    # but be defensive against future bench-setup wiring).
-    real_exists = Path.exists
-
-    def _no_venv_cline(self: Path) -> bool:
-        if self.name == "cline" and ".venv" in self.parts:
-            return False
-        return real_exists(self)
-
-    monkeypatch.setattr(Path, "exists", _no_venv_cline)
 
     real_run = subprocess.run
 
@@ -153,6 +145,117 @@ def test_cline_run_no_cline_installed_returns_error_row(
     # output_ref should still point at the answer.py snapshot path so
     # the orchestrator's per-row append logic doesn't choke.
     assert row.output_ref
+
+
+def test_cline_argv_matches_real_cli_shape(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Verify the cline subprocess argv matches the real cline 3.0.9 CLI.
+
+    Locks in the verified invocation:
+        cline -P ollama -m router/<strategy>/run-<bench_run_id>
+              -c <scratch> --auto-approve true --json -t <timeout_s>
+              "<prompt>"
+
+    Previously this runner emitted fictional flags (``run`` subcommand,
+    ``--task``, ``--provider openai-compatible``, ``--base-url``,
+    ``--non-interactive``, ``--yes``, ``--file``) — none of which exist
+    in cline 3.0.9. This test exists to catch a regression.
+    """
+    from hybrid_coding_eval.runners import r10_cline
+
+    fixture_dir = tmp_path / "fixture"
+    _seed_fixture(fixture_dir)
+    task = _FakeTask(fixture_dir=fixture_dir)
+
+    # Pretend cline is installed at a predictable path so argv[0] is stable.
+    fake_cline = "/usr/local/bin/cline"
+    monkeypatch.setattr(r10_cline.shutil, "which", lambda _name: fake_cline)
+
+    captured: dict[str, Any] = {}
+    real_run = subprocess.run
+
+    class _FakeCompleted:
+        def __init__(self) -> None:
+            self.returncode = 0
+            self.stdout = ""
+            self.stderr = ""
+
+    def _intercept(cmd: Any, *args: Any, **kwargs: Any) -> Any:
+        argv0 = cmd[0] if isinstance(cmd, (list, tuple)) else cmd
+        if isinstance(argv0, str) and argv0 == fake_cline:
+            captured["cmd"] = list(cmd)
+            captured["cwd"] = kwargs.get("cwd")
+            captured["env"] = kwargs.get("env")
+            return _FakeCompleted()
+        # Let host pytest scoring run normally.
+        return real_run(cmd, *args, **kwargs)
+
+    monkeypatch.setattr(r10_cline.subprocess, "run", _intercept)
+
+    r10_cline.run(
+        task,
+        proxy_url="http://127.0.0.1:8787",
+        hardware_profile_ref="test-hw",
+        output_dir=tmp_path / "out",
+        router_strategy="heuristic",
+        timeout_s=42,
+    )
+
+    cmd = captured.get("cmd")
+    assert cmd is not None, "cline subprocess was never invoked"
+
+    # argv[0] is the cline binary.
+    assert cmd[0] == fake_cline
+
+    # Spot-check each required flag pair appears in order.
+    assert cmd[1:3] == ["-P", "ollama"], f"provider flag wrong: {cmd[1:3]}"
+
+    # -m <model> with the router/strategy/run-<id> shape.
+    assert cmd[3] == "-m"
+    model_id = cmd[4]
+    assert model_id.startswith("router/heuristic/run-"), model_id
+    # bench_run_id is 12 hex chars per generate_run_id().
+    run_suffix = model_id.rsplit("run-", 1)[-1]
+    assert len(run_suffix) == 12 and all(c in "0123456789abcdef" for c in run_suffix)
+
+    # -c <scratch>, --auto-approve true, --json, -t <timeout>.
+    assert cmd[5] == "-c"
+    assert Path(cmd[6]).name == "scratch"
+    assert cmd[7:9] == ["--auto-approve", "true"]
+    assert cmd[9] == "--json"
+    assert cmd[10:12] == ["-t", "42"]
+
+    # The prompt is the last positional arg and references the stub file.
+    prompt = cmd[12]
+    assert "leap.py" in prompt
+    assert "leap_test.py" in prompt
+    # Make sure no fictional flags slipped back in.
+    forbidden = {
+        "run",
+        "--task",
+        "--provider",
+        "openai-compatible",
+        "--base-url",
+        "--non-interactive",
+        "--yes",
+        "--file",
+        "--openai-api-base",
+        "--openai-api-key",
+    }
+    assert not (forbidden & set(cmd)), f"forbidden flags present: {forbidden & set(cmd)}"
+
+    # cwd must be the scratch dir so cline edits the right files.
+    assert captured["cwd"] and Path(captured["cwd"]).name == "scratch"
+
+    # env should NOT override the OpenAI/Cline secret vars — base URL is
+    # configured via providers.json and the leaked-secret risk isn't
+    # worth the no-op.
+    env = captured["env"] or {}
+    # If the caller's env happens to have these, we should pass them
+    # through unchanged — we just don't *set* synthetic values.
+    assert env.get("OPENAI_API_KEY") == os.environ.get("OPENAI_API_KEY")
+    assert env.get("CLINE_API_KEY") == os.environ.get("CLINE_API_KEY")
 
 
 def test_cline_run_fixture_copy_failure_returns_error_row(tmp_path: Path) -> None:
