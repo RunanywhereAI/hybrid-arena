@@ -442,6 +442,88 @@ def _ensure_opencode_config(verbose: bool = True) -> bool:
     return True
 
 
+def _ensure_cline_install(verbose: bool = True) -> bool:
+    """Ensure cline 3.0.9+ is on PATH. Install via npm if missing.
+
+    The runtime is a node binary (NOT a pip package), so it sits in
+    /opt/homebrew/bin/cline on macOS or /usr/local/bin/cline on Linux.
+    Idempotent: skips install if already present.
+    """
+    import shutil
+    import subprocess
+
+    if shutil.which("cline"):
+        if verbose:
+            print(f"  ✓ cline already installed at {shutil.which('cline')}")
+        return True
+
+    if not shutil.which("npm"):
+        print("  ✗ npm not on PATH — install Node.js first (https://nodejs.org).",
+              file=sys.stderr)
+        return False
+
+    if verbose:
+        print("  Installing cline@3.0.9 via npm (~50 MB)...")
+    try:
+        subprocess.run(
+            ["npm", "install", "-g", "cline@3.0.9"],
+            check=True,
+            capture_output=not verbose,
+        )
+        if verbose:
+            print(f"  ✓ cline installed at {shutil.which('cline')}")
+        return True
+    except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+        print(f"  ✗ cline install failed: {exc}", file=sys.stderr)
+        return False
+
+
+def _ensure_cline_config(verbose: bool = True) -> bool:
+    """Ensure ~/.cline/data/settings/providers.json has the ollama provider
+    pointed at our router proxy.
+
+    If the file already mentions 'ollama' provider, leave it alone.
+    Otherwise back up (if exists) and write a minimal config.
+    """
+    import os
+    from pathlib import Path as _P
+
+    config_dir = _P(os.path.expanduser("~/.cline/data/settings"))
+    config_path = config_dir / "providers.json"
+
+    if config_path.exists():
+        try:
+            existing_raw = config_path.read_text(encoding="utf-8")
+            existing = json.loads(existing_raw)
+        except (OSError, json.JSONDecodeError) as exc:
+            if verbose:
+                print(f"  ✗ couldn't read {config_path}: {exc}", file=sys.stderr)
+            return False
+        if "ollama" in existing.get("providers", {}):
+            if verbose:
+                print(f"  ✓ {config_path} already registers ollama provider")
+            return True
+        # Existing config without ollama — back it up
+        backup = config_path.with_suffix(".json.pre-bench-setup")
+        backup.write_text(existing_raw, encoding="utf-8")
+        if verbose:
+            print(f"  → backed up existing config to {backup}")
+
+    config_dir.mkdir(parents=True, exist_ok=True)
+    minimal = {
+        "providers": {
+            "ollama": {
+                "baseUrl": "http://127.0.0.1:8787/v1",
+                "apiKey": "bench-eval-key",
+            },
+        },
+    }
+    config_path.write_text(json.dumps(minimal, indent=2) + "\n", encoding="utf-8")
+    if verbose:
+        print(f"  ✓ wrote {config_path} with ollama provider")
+    return True
+
+
 def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
     """One-shot setup: clone minions, build Docker image, pull aux models, sanity-check env.
 
@@ -454,12 +536,12 @@ def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
     failures = []
 
     # 1. Stanford Minions (required for R4 + R5 routes)
-    print("[1/6] Stanford Minions (R4 + R5 routes)")
+    print("[1/7] Stanford Minions (R4 + R5 routes)")
     if not _ensure_minions(verbose=True):
         failures.append("minions clone failed")
 
     # 2. Docker image for functional scoring sandbox
-    print("\n[2/6] Functional-scoring Docker image (hybrid-eval-python:latest)")
+    print("\n[2/7] Functional-scoring Docker image (hybrid-eval-python:latest)")
     if not shutil.which("docker"):
         print("  ⚠ docker not on PATH — skipping image build")
         print("    Install Docker Desktop: https://www.docker.com/products/docker-desktop/")
@@ -485,7 +567,7 @@ def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
                 failures.append("Docker image build failed")
 
     # 3. Auxiliary Ollama models (router strategies)
-    print("\n[3/6] Auxiliary local models (router classifier + embedding)")
+    print("\n[3/7] Auxiliary local models (router classifier + embedding)")
     if not shutil.which("ollama"):
         print("  ⚠ ollama not on PATH — skipping model pulls")
         print("    Install Ollama: https://ollama.com/download")
@@ -511,7 +593,7 @@ def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
     # 4. Aider (R7 route — the v1.2 canonical agent for hybrid eval).
     # Installed into the repo's venv so subprocess can find it via the
     # R7 runner's .venv/bin/aider fallback. Independent of system PATH.
-    print("\n[4/6] Aider (R7 route — primary agent for v1.2 hybrid sweeps)")
+    print("\n[4/7] Aider (R7 route — primary agent for v1.2 hybrid sweeps)")
     aider_bin = _REPO_ROOT / ".venv" / "bin" / "aider"
     if aider_bin.exists():
         print(f"  ✓ aider already installed at {aider_bin}")
@@ -535,7 +617,7 @@ def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
     # canonical because qwen3-coder:30b + opencode's free-form tool-use
     # pattern doesn't produce useful work — see CHANGELOG v1.1.3 + v1.2.
     if _os.environ.get("BENCH_SETUP_OPENCODE", "0") in ("1", "true", "yes"):
-        print("\n[5/6] Opencode (R8 route — EXPERIMENTAL; enabled via BENCH_SETUP_OPENCODE=1)")
+        print("\n[5/7] Opencode (R8 route — EXPERIMENTAL; enabled via BENCH_SETUP_OPENCODE=1)")
         if not shutil.which("opencode"):
             print("  ⚠ opencode CLI not on PATH — R8 route won't work")
             print("    Install via Homebrew: brew install opencode")
@@ -546,14 +628,23 @@ def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
         if not _ensure_opencode_config(verbose=True):
             failures.append("opencode.json config setup failed")
     else:
-        print("\n[5/6] Opencode (R8 route) — SKIPPED (EXPERIMENTAL in v1.2)")
+        print("\n[5/7] Opencode (R8 route) — SKIPPED (EXPERIMENTAL in v1.2)")
         print("  R8 is in the tree but qwen3-coder:30b + opencode's free-form tool-use")
         print("  protocol doesn't produce useful work in hybrid setups (see CHANGELOG).")
         print("  v1.1.x tags have the diagnostic data. To enable anyway:")
         print("    BENCH_SETUP_OPENCODE=1 ./bench setup")
 
-    # 6. Environment sanity (.env file, Python version)
-    print("\n[6/6] Environment sanity")
+    # 6. Cline agent (R10 route — LiteLLM-compatible CLI, v1.4 canonical sweep).
+    # The npm package is installed globally so `cline` ends up on PATH; the
+    # providers.json points it at our router proxy on :8787.
+    print("\n[6/7] cline agent (LiteLLM-compatible CLI)")
+    if not _ensure_cline_install(verbose=True):
+        failures.append("cline install failed")
+    if not _ensure_cline_config(verbose=True):
+        failures.append("cline providers.json setup failed")
+
+    # 7. Environment sanity (.env file, Python version)
+    print("\n[7/7] Environment sanity")
     env_path = _REPO_ROOT / ".env"
     env_example = _REPO_ROOT / ".env.example"
     if env_path.exists():
