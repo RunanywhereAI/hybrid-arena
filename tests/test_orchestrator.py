@@ -66,8 +66,8 @@ def test_build_task_plan_smoke_shape() -> None:
     of the legacy A/B/C category letters.
     """
     plan = build_task_plan(
-        categories=["puzzles", "refactors", "real-prs"],
-        routes=["R6", "R7", "R8"],
+        task_classes=["puzzles", "refactors", "real-prs"],
+        agents=["mini-swe-agent", "aider", "opencode"],
         smoke=True,
         tasks_cap=None,
     )
@@ -76,11 +76,11 @@ def test_build_task_plan_smoke_shape() -> None:
     by_cat: dict[str, int] = {}
     for item in plan:
         assert isinstance(item, TaskPlan)
-        by_cat[item.category] = by_cat.get(item.category, 0) + 1
+        by_cat[item.task_class] = by_cat.get(item.task_class, 0) + 1
     assert by_cat == {"puzzles": 3, "refactors": 3, "real-prs": 3}
     # Routes present in the expected deterministic order per task.
-    routes_seen = [item.route for item in plan if item.category == "puzzles"]
-    assert routes_seen == ["R6", "R7", "R8"]
+    routes_seen = [item.agent for item in plan if item.task_class == "puzzles"]
+    assert routes_seen == ["mini-swe-agent", "aider", "opencode"]
 
 
 # --------------------------------------------------------------------------- #
@@ -94,10 +94,10 @@ def test_dry_run_prints_plan_and_exits_zero(tmp_path: Path) -> None:
         [
             *RUN_ARGS,
             "--smoke",
-            "--categories",
+            "--task-classes",
             "puzzles",
-            "--routes",
-            "R6",
+            "--agents",
+            "mini-swe-agent",
             "--out",
             str(out),
             "--dry-run",
@@ -136,21 +136,21 @@ def test_resume_skip_is_a_noop_when_all_pairs_done(tmp_path: Path) -> None:
 
     # Discover which task puzzles/R6 would run against.
     plan = build_task_plan(
-        categories=["puzzles"], routes=["R6"], smoke=True, tasks_cap=None
+        task_classes=["puzzles"], agents=["mini-swe-agent"], smoke=True, tasks_cap=None
     )
     assert len(plan) == 1
     seeded_task_id = plan[0].task_id
-    append_row(raw, _make_row(seeded_task_id, "R6"))
+    append_row(raw, _make_row(seeded_task_id, "mini-swe-agent"))
     assert raw.read_text().count("\n") == 1
 
     proc = subprocess.run(
         [
             *RUN_ARGS,
             "--smoke",
-            "--categories",
+            "--task-classes",
             "puzzles",
-            "--routes",
-            "R6",
+            "--agents",
+            "mini-swe-agent",
             "--out",
             str(out),
             "--hardware-manifest",
@@ -176,10 +176,10 @@ def test_dry_run_with_all_categories_routes(tmp_path: Path) -> None:
         [
             *RUN_ARGS,
             "--smoke",
-            "--categories",
+            "--task-classes",
             "puzzles,refactors,real-prs",
-            "--routes",
-            "R6,R7,R8",
+            "--agents",
+            "mini-swe-agent,aider,opencode",
             "--out",
             str(out),
             "--dry-run",

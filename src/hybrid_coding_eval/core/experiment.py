@@ -45,16 +45,16 @@ __all__ = [
 #: The benchmark directory names are unchanged in this phase; Phase 2 of
 #: the v1.4 cleanup renames them to match the task classes.
 CATEGORY_SOURCES: dict[str, list[str]] = {
-    "puzzles": ["exercism_python"],
-    "refactors": ["real_dev"],
-    "real-prs": ["swebench_verified"],
+    "puzzles": ["puzzles"],
+    "refactors": ["refactors"],
+    "real-prs": ["real_prs"],
 }
 
 #: Valid --routes values. R6/R7/R8 are *agent-loop* routes (mini-swe-agent,
 #: aider, opencode). R9/R10 (claude-code, cline) are added in parallel by
 #: Agents B/C during the v1.4 cleanup; the dispatch entries for them live in
 #: :func:`_runner_for` below.
-ROUTES: tuple[str, ...] = ("R6", "R7", "R8", "R9", "R10")
+ROUTES: tuple[str, ...] = ("mini-swe-agent", "aider", "opencode", "claude-code", "cline")
 
 
 # --------------------------------------------------------------------------- #
@@ -84,16 +84,16 @@ def load_category_tasks(
 
     pairs: list[tuple[str, Any]] = []
     for source in CATEGORY_SOURCES[category]:
-        if source == "swebench_verified":
-            from hybrid_coding_eval.benchmarks.swebench_verified.adapter import load_tasks
+        if source == "real_prs":
+            from hybrid_coding_eval.tasks.real_prs.adapter import load_tasks
 
             pairs.extend((source, t) for t in load_tasks(n=10))
-        elif source == "real_dev":
-            from hybrid_coding_eval.benchmarks.real_dev.adapter import load_tasks
+        elif source == "refactors":
+            from hybrid_coding_eval.tasks.refactors.adapter import load_tasks
 
             pairs.extend((source, t) for t in load_tasks())
-        elif source == "exercism_python":
-            from hybrid_coding_eval.benchmarks.exercism_python.adapter import (
+        elif source == "puzzles":
+            from hybrid_coding_eval.tasks.puzzles.adapter import (
                 load_tasks,
             )
 
@@ -110,12 +110,12 @@ def load_category_tasks(
 
 @dataclass
 class TaskPlan:
-    """One item in the planned sweep: which task, from which source, under which route."""
+    """One item in the planned sweep: which task, from which source, under which agent."""
 
-    category: str
+    task_class: str
     source: str
-    task: Any  # a benchmark-adapter Task dataclass (duck-typed)
-    route: str
+    task: Any  # a task-adapter Task dataclass (duck-typed)
+    agent: str
 
     @property
     def task_id(self) -> str:
@@ -123,8 +123,8 @@ class TaskPlan:
 
 
 def build_task_plan(
-    categories: Iterable[str],
-    routes: Iterable[str],
+    task_classes: Iterable[str],
+    agents: Iterable[str],
     smoke: bool,
     tasks_cap: int | None,
     task_ids: Iterable[str] | None = None,
@@ -138,23 +138,23 @@ def build_task_plan(
     whitelist are dropped after loading. Useful for scoping a sweep to a
     specific set of agent-compatible tasks.
     """
-    cats = list(categories)
-    rts = list(routes)
+    cats = list(task_classes)
+    agnt = list(agents)
     id_filter = set(task_ids) if task_ids else None
     plan: list[TaskPlan] = []
-    for cat in cats:
+    for cls in cats:
         # When task_ids is set, bypass tasks_cap at load time — the cap is
         # uniform-per-class and would slice off tasks before the whitelist
         # filter ran. Load all, then filter, then trust the whitelist as
         # the cap.
         cap_for_load = None if id_filter is not None else tasks_cap
-        pairs = load_category_tasks(cat, smoke=smoke, tasks_cap=cap_for_load)
+        pairs = load_category_tasks(cls, smoke=smoke, tasks_cap=cap_for_load)
         for source, task in pairs:
             if id_filter is not None and getattr(task, "id", None) not in id_filter:
                 continue
-            for route in rts:
+            for agent in agnt:
                 plan.append(
-                    TaskPlan(category=cat, source=source, task=task, route=route)
+                    TaskPlan(task_class=cls, source=source, task=task, agent=agent)
                 )
     return plan
 
@@ -201,33 +201,29 @@ def pair_already_done(
 # --------------------------------------------------------------------------- #
 
 
-def _runner_for(route: str) -> Callable[..., ResultRow]:
-    # v1.4: R1–R5 (cloud-only / local-only / hybrid-architect / minion /
-    # devminion) were removed in the agentic cleanup. Only agent-loop
-    # routes remain.
-    # Note: R9 (claude-code) and R10 (cline) are added by Agents B/C in
-    # parallel; their dispatch entries are kept as-is here.
-    if route == "R6":
-        from hybrid_coding_eval.runners import r6_mini_swe_agent
+def _runner_for(agent: str) -> Callable[..., ResultRow]:
+    """Dispatch an agent name to its runner. v1.4: only agent-loop routes remain."""
+    if agent == "mini-swe-agent":
+        from hybrid_coding_eval.agents import mini_swe
 
-        return r6_mini_swe_agent.run
-    if route == "R7":
-        from hybrid_coding_eval.runners import r7_aider
+        return mini_swe.run
+    if agent == "aider":
+        from hybrid_coding_eval.agents import aider
 
-        return r7_aider.run
-    if route == "R8":
-        from hybrid_coding_eval.runners import r8_opencode
+        return aider.run
+    if agent == "opencode":
+        from hybrid_coding_eval.agents import opencode
 
-        return r8_opencode.run
-    if route in ("R9", "claude-code"):
-        from hybrid_coding_eval.runners import r9_claude_code
+        return opencode.run
+    if agent == "claude-code":
+        from hybrid_coding_eval.agents import claude_code
 
-        return r9_claude_code.run
-    if route in ("R10", "cline"):
-        from hybrid_coding_eval.runners import r10_cline
+        return claude_code.run
+    if agent == "cline":
+        from hybrid_coding_eval.agents import cline
 
-        return r10_cline.run
-    raise ValueError(f"unknown route {route!r}")
+        return cline.run
+    raise ValueError(f"unknown agent {agent!r}")
 
 
 def _read_output_text(row: ResultRow) -> str:
@@ -279,7 +275,7 @@ def score_row(row: ResultRow, source: str, task: Any) -> Quality | None:
 
     model_output = _read_output_text(row)
 
-    if source == "swebench_verified":
+    if source == "real_prs":
         from hybrid_coding_eval.scorers import swebench as swebench_scorer
 
         try:
@@ -289,7 +285,7 @@ def score_row(row: ResultRow, source: str, task: Any) -> Quality | None:
             return None
 
     if source == "real_dev":
-        from hybrid_coding_eval.benchmarks.real_dev import scorers as real_dev_scorers
+        from hybrid_coding_eval.tasks.refactors import scorers as real_dev_scorers
 
         try:
             return real_dev_scorers.score(task, model_output, context={})
@@ -324,14 +320,14 @@ def run_pair(
 
     Returns the ResultRow so the caller can format a progress line.
     """
-    runner = _runner_for(plan_item.route)
+    runner = _runner_for(plan_item.agent)
     runner_kwargs: dict[str, Any] = {
         "proxy_url": proxy_url,
         "hardware_profile_ref": hardware_profile_ref,
         "output_dir": outputs_dir,
     }
     # Agent-loop routes all consult router_strategy.
-    if plan_item.route in ("R6", "R7", "R8", "R9", "R10"):
+    if plan_item.agent in ("mini-swe-agent", "aider", "opencode", "claude-code", "cline"):
         runner_kwargs["router_strategy"] = router_strategy
     row = runner(plan_item.task, **runner_kwargs)
     # Stamp the strategy onto the row regardless of route, so downstream

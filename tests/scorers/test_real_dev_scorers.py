@@ -1,4 +1,4 @@
-"""Tests for ``hybrid_coding_eval.benchmarks.real_dev.scorers`` (P2.1).
+"""Tests for ``hybrid_coding_eval.tasks.refactors.scorers`` (P2.1).
 
 Covers:
 
@@ -30,14 +30,14 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from hybrid_coding_eval.benchmarks.real_dev.adapter import Task, load_tasks  # noqa: E402
-from hybrid_coding_eval.benchmarks.real_dev.scorers import (  # noqa: E402
+from hybrid_coding_eval.core.metrics import Quality  # noqa: E402
+from hybrid_coding_eval.tasks.refactors.adapter import Task, load_tasks  # noqa: E402
+from hybrid_coding_eval.tasks.refactors.scorers import (  # noqa: E402
     _FIXTURES_ROOT,
     _extract_files_for_targets,
     _list_reference_targets,
     score,
 )
-from hybrid_coding_eval.core.metrics import Quality  # noqa: E402
 
 # --------------------------------------------------------------------------- #
 # Docker availability guards (copied pattern from test_functional_python.py)

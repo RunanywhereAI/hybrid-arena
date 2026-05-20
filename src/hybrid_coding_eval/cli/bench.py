@@ -76,10 +76,10 @@ def _cmd_run(args: argparse.Namespace) -> int:
     argv: list[str] = [
         "--out",
         str(config.out_dir),
-        "--categories",
-        ",".join(config.benchmark.categories),
-        "--routes",
-        ",".join(config.benchmark.routes),
+        "--task-classes",
+        ",".join(config.benchmark.task_classes),
+        "--agents",
+        ",".join(config.benchmark.agents),
         "--proxy-url",
         f"http://127.0.0.1:{config.router.port}",
         "--router-strategy",
@@ -97,18 +97,18 @@ def _cmd_run(args: argparse.Namespace) -> int:
     # can only forward a per-category cap when every listed category has
     # the *same* cap. The single-category case (e.g. the real_dev smoke)
     # falls out for free.
-    tpc = config.benchmark.tasks_per_category
+    tpc = config.benchmark.tasks_per_class
     if tpc:
-        caps = [tpc[c] for c in config.benchmark.categories if c in tpc]
+        caps = [tpc[c] for c in config.benchmark.task_classes if c in tpc]
         if caps and len(set(caps)) == 1:
             argv += ["--tasks", str(caps[0])]
         elif caps:
             logger.warning(
-                "tasks_per_category has heterogeneous caps %r for categories %r; "
+                "tasks_per_class has heterogeneous caps %r for task_classes %r; "
                 "--tasks only supports a single uniform cap — skipping forward. "
                 "Use a dedicated variant per category for now.",
                 tpc,
-                config.benchmark.categories,
+                config.benchmark.task_classes,
             )
 
     # Explicit task-ID whitelist (v1.3+) — scopes a sweep to a known-good
@@ -146,8 +146,8 @@ def _print_plan(config: BenchConfig) -> None:
     print(f"local_model      {config.models.local}")
     print(f"judge_model      {config.models.judge}")
     print(f"router           strategy={config.router.strategy} port={config.router.port}")
-    print(f"categories       {config.benchmark.categories}")
-    print(f"routes           {config.benchmark.routes}")
+    print(f"task_classes     {config.benchmark.task_classes}")
+    print(f"agents           {config.benchmark.agents}")
     print(f"seeds            {config.benchmark.seeds}")
     print(f"primary pricing  {config.pricing.primary}")
     print(f"scenarios        {config.pricing.scenarios}")
@@ -516,7 +516,7 @@ def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
     print("=== bench setup — preparing the benchmark harness ===\n")
     failures = []
 
-    # 1. Stanford Minions (required for R4 + R5 routes)
+    # 1. (deleted in v1.4 cleanup — Stanford Minions no longer used)
     print("[1/7] Stanford Minions (R4 + R5 routes)")
     if not _ensure_minions(verbose=True):
         failures.append("minions clone failed")
