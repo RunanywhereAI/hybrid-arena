@@ -148,6 +148,16 @@ def run_in_sandbox(
     """
     client = _get_client()
 
+    # On POSIX hosts, run the container under the host user's uid:gid so
+    # any files the container writes into the bind-mounted tempdir (e.g.
+    # ``__pycache__``) stay owned by us and ``TemporaryDirectory.cleanup``
+    # can chmod them. Without this, root-owned ``__pycache__`` dirs leak
+    # back and crash the cleanup with PermissionError on CI runners.
+    import os as _os
+    container_user: Optional[str] = None
+    if hasattr(_os, "getuid"):
+        container_user = f"{_os.getuid()}:{_os.getgid()}"
+
     with tempfile.TemporaryDirectory(prefix="sandbox-") as td:
         tempdir = Path(td)
         _write_files(tempdir, files)
@@ -162,7 +172,7 @@ def run_in_sandbox(
 
         try:
             try:
-                container = client.containers.run(
+                run_kwargs: dict = dict(
                     image=image,
                     command=test_cmd,
                     working_dir=workdir,
@@ -176,6 +186,9 @@ def run_in_sandbox(
                     # We'll remove manually so we can grab logs after exit/kill.
                     auto_remove=False,
                 )
+                if container_user is not None:
+                    run_kwargs["user"] = container_user
+                container = client.containers.run(**run_kwargs)
             except DockerException as exc:
                 # Covers image-pull errors, invalid args, etc.
                 raise RuntimeError(f"Docker not available: {exc!s}") from exc
