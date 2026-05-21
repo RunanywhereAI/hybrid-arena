@@ -2,17 +2,31 @@
 
 Subcommands:
 
-- ``bench run --config configs/variants/foo.yaml`` → runs the sweep.
-- ``bench show-config configs/variants/foo.yaml`` → prints merged config.
+- ``bench run --config configs/foo.yaml`` → runs one bench-run from a YAML.
+- ``bench sweep --config configs/foo.yaml --strategies ... --seeds ...``
+  → loops strategies × seeds in the foreground (canonical reproducer).
+- ``bench show-config configs/foo.yaml`` → prints merged config JSON.
 - ``bench env-detect [--out PATH]`` → writes an env-manifest.json.
-- ``bench rescore RESULTS_DIR`` → post-sweep SWE-bench rescoring.
-- ``bench rejudge RESULTS_DIR`` → post-sweep Opus re-judge.
 - ``bench analyze RESULTS_DIR`` → aggregate → ARQGC → charts.
+- ``bench rescore RESULTS_DIR`` → post-sweep SWE-bench rescore.
+- ``bench rejudge RESULTS_DIR`` → post-sweep Opus re-judge.
 - ``bench schema [--out configs/schema.json]`` → dump JSON Schema.
+- ``bench setup`` → one-shot install (aider + opencode + cline + …).
 
-Every subcommand delegates to an existing module. The dispatcher only
-owns argparse-style dispatch and the ``run`` subcommand's YAML→sweep
-wiring (because that is new functionality).
+v1.4+ sweep lifecycle (background, pausable, resumable):
+
+- ``bench start --config ... --strategies ... --seeds ...``
+  → spawns a sweep in the background. Auto-starts Ollama if needed.
+- ``bench pause`` → kills orchestrator + agents + router; Ollama stays.
+- ``bench resume`` → relaunches the paused sweep with --resume so it
+  skips rows already in raw.jsonl. Picks up from where it left off.
+- ``bench stop`` → like pause, but also kills Ollama (frees ~19 GB).
+  Sweep state is retained for a future ``bench resume``.
+- ``bench status`` → show the active sweep's PID, config, log, row count.
+
+Every subcommand delegates to an existing module. The dispatcher owns
+argparse-style dispatch, the ``run``/``sweep`` YAML→argv wiring, and
+the lifecycle commands' state file (``/tmp/hcev-sweep.json``).
 """
 
 from __future__ import annotations
@@ -682,6 +696,414 @@ def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
     return 1 if failures else 0
 
 
+# ---------- sweep lifecycle (start / pause / resume / stop / status) -------
+#
+# v1.4 lifecycle commands wrap `./bench sweep` so a long sweep can be
+# detached, paused (to free the laptop), and resumed without losing
+# already-completed rows.
+#
+# State lives in two files under ``/tmp/`` (single-host single-sweep):
+#
+#   /tmp/hcev-sweep.json         {pid, config, strategies, seeds, started_at}
+#                                — present while a sweep is running
+#   /tmp/hcev-sweep.paused.json  — same payload, renamed when paused
+#
+# Cleanup helpers handle the heavy resources (router proxy + ollama
+# runners). Ollama.app itself is left alone for fast resume by default;
+# ``./bench stop`` kills it.
+
+_SWEEP_STATE = Path("/tmp/hcev-sweep.json")
+_SWEEP_STATE_PAUSED = Path("/tmp/hcev-sweep.paused.json")
+
+
+def _proc_alive(pid: int) -> bool:
+    """Return True if process ``pid`` is alive."""
+    try:
+        import os as _os
+        _os.kill(pid, 0)
+        return True
+    except (OSError, ProcessLookupError):
+        return False
+
+
+def _kill_pid_tree(pid: int, verbose: bool = False) -> None:
+    """SIGTERM the process and any descendants. SIGKILL after 5s if still alive."""
+    import os as _os
+    import signal as _sig
+    import time as _t
+    # Collect descendants via pgrep -P (recursive)
+    def descendants(root: int) -> list[int]:
+        try:
+            out = subprocess.check_output(
+                ["pgrep", "-P", str(root)], text=True
+            ).split()
+            kids = [int(p) for p in out]
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return []
+        all_kids = list(kids)
+        for k in kids:
+            all_kids.extend(descendants(k))
+        return all_kids
+
+    tree = [pid] + descendants(pid)
+    for p in reversed(tree):
+        try:
+            _os.kill(p, _sig.SIGTERM)
+            if verbose:
+                print(f"  SIGTERM pid={p}")
+        except (OSError, ProcessLookupError):
+            pass
+    # Wait briefly, then force-kill stragglers.
+    _t.sleep(2)
+    for p in reversed(tree):
+        if _proc_alive(p):
+            try:
+                _os.kill(p, _sig.SIGKILL)
+                if verbose:
+                    print(f"  SIGKILL pid={p}")
+            except (OSError, ProcessLookupError):
+                pass
+
+
+def _kill_agent_subprocs(verbose: bool = False) -> None:
+    """Kill in-flight agent subprocesses (aider/opencode/cline/mini-extra).
+
+    Independent of the sweep PID-tree because these are spawned via the
+    benchmark runner and may outlive a faulty kill of the parent.
+    """
+    patterns = [
+        "aider --architect",
+        "opencode run -m",
+        "cline -P ollama",
+        "mini-extra swebench-single",
+        "claude -p",
+    ]
+    for pat in patterns:
+        try:
+            subprocess.run(
+                ["pkill", "-f", pat],
+                check=False, capture_output=True
+            )
+            if verbose:
+                print(f"  pkill -f {pat!r}")
+        except FileNotFoundError:
+            pass
+
+
+def _kill_router_on_port(port: int = 8787, verbose: bool = False) -> None:
+    """Kill any process listening on the router port."""
+    try:
+        out = subprocess.check_output(
+            ["lsof", "-t", f"-i:{port}"], text=True
+        ).split()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return
+    for p in out:
+        try:
+            import os as _os
+            import signal as _sig
+            _os.kill(int(p), _sig.SIGTERM)
+            if verbose:
+                print(f"  router pid={p} → SIGTERM")
+        except (OSError, ValueError):
+            pass
+
+
+def _ollama_running() -> bool:
+    """Return True iff Ollama is reachable on its default port."""
+    try:
+        import urllib.request as _ur
+        with _ur.urlopen("http://127.0.0.1:11434/api/tags", timeout=1.5):
+            return True
+    except Exception:
+        return False
+
+
+def _ensure_ollama_running(verbose: bool = True) -> bool:
+    """Start Ollama.app if not already up. macOS-specific (uses `open -a`)."""
+    if _ollama_running():
+        if verbose:
+            print("  ✓ ollama already running")
+        return True
+    if verbose:
+        print("  ollama not running — starting Ollama.app…")
+    try:
+        subprocess.run(["open", "-a", "Ollama"], check=True)
+    except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+        print(f"  ✗ couldn't auto-start Ollama: {exc}", file=sys.stderr)
+        print("    Start it manually then retry: `ollama serve` or open Ollama.app",
+              file=sys.stderr)
+        return False
+    # Poll for it to be up.
+    import time as _t
+    for _ in range(20):
+        if _ollama_running():
+            if verbose:
+                print("  ✓ ollama up")
+            return True
+        _t.sleep(1)
+    print("  ✗ ollama never came up after 20s", file=sys.stderr)
+    return False
+
+
+def _kill_ollama_runners(verbose: bool = False) -> None:
+    """Kill Ollama's model runner subprocesses (the heavy memory hogs).
+
+    The Ollama.app + serve are kept; only the per-model runner processes
+    that hold the 19GB-class models in RAM are terminated. This frees
+    most of the memory but lets the user / scripts re-pull models fast.
+    """
+    try:
+        subprocess.run(
+            ["pkill", "-f", "ollama runner"],
+            check=False, capture_output=True
+        )
+        if verbose:
+            print("  pkilled ollama runner processes")
+    except FileNotFoundError:
+        pass
+
+
+def _kill_ollama_fully(verbose: bool = False) -> None:
+    """Kill Ollama runners + .app + serve. Fully releases ~19 GB RAM."""
+    _kill_ollama_runners(verbose=verbose)
+    try:
+        subprocess.run(["pkill", "-f", "ollama serve"], check=False, capture_output=True)
+        subprocess.run(["pkill", "-x", "Ollama"], check=False, capture_output=True)
+        if verbose:
+            print("  pkilled Ollama.app + serve")
+    except FileNotFoundError:
+        pass
+
+
+def _read_sweep_state() -> tuple[Path, dict] | tuple[None, None]:
+    """Return (state_file, payload) for whichever state file exists."""
+    for path in (_SWEEP_STATE, _SWEEP_STATE_PAUSED):
+        if path.exists():
+            try:
+                return path, json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                pass
+    return None, None
+
+
+def _write_sweep_state(path: Path, payload: dict) -> None:
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+
+def _cmd_start(args: argparse.Namespace) -> int:
+    """Start a sweep in the background.
+
+    Wraps `./bench sweep` in a detached process. Auto-starts Ollama if
+    it's not running. Writes /tmp/hcev-sweep.json with the active PID +
+    sweep parameters so `./bench pause/resume/stop/status` can find it.
+    """
+    import datetime as _dt
+    # Refuse to start a new sweep if one is already active.
+    state_file, state = _read_sweep_state()
+    if state_file == _SWEEP_STATE and state and _proc_alive(state.get("pid", -1)):
+        print(
+            f"a sweep is already running (pid={state['pid']}, config={state.get('config')}).",
+            file=sys.stderr,
+        )
+        print("  pause it first:  ./bench pause", file=sys.stderr)
+        return 1
+    # Stale state file → clean up.
+    if state_file == _SWEEP_STATE:
+        state_file.unlink()
+
+    # Ensure Ollama is up.
+    if not _ensure_ollama_running():
+        return 1
+
+    # Build the sweep argv.
+    cmd = [
+        sys.executable, "-m", "hybrid_coding_eval.cli.bench", "sweep",
+        "--config", str(args.config),
+        "--strategies", args.strategies,
+        "--seeds", args.seeds,
+    ]
+    if args.cascade_thresholds:
+        cmd.extend(["--cascade-thresholds", args.cascade_thresholds])
+    if args.external_router:
+        cmd.append("--external-router")
+    if args.resume:
+        # Plumb `resume=true` via --set so the per-pass `bench run` picks it up.
+        cmd.extend(["--set", "resume=true"])
+
+    # Resolve out_dir for log placement.
+    config = _load_merged(args)
+    out_dir = Path(config.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    log_file = out_dir / "sweep.log"
+
+    # Spawn detached. The child writes both stdout and stderr to log_file.
+    print(f"starting sweep: {args.config}")
+    print(f"  strategies: {args.strategies}")
+    print(f"  seeds:      {args.seeds}")
+    if args.resume:
+        print("  resume:     true (skipping rows already in raw.jsonl)")
+    print(f"  log:        {log_file}")
+    logf = open(log_file, "ab")
+    proc = subprocess.Popen(
+        cmd, stdout=logf, stderr=logf, start_new_session=True,
+    )
+
+    payload = {
+        "pid": proc.pid,
+        "config": str(args.config),
+        "strategies": args.strategies,
+        "seeds": args.seeds,
+        "cascade_thresholds": args.cascade_thresholds,
+        "external_router": bool(args.external_router),
+        "resume": bool(args.resume),
+        "out_dir": str(out_dir),
+        "log": str(log_file),
+        "started_at": _dt.datetime.now().astimezone().isoformat(timespec="seconds"),
+    }
+    _write_sweep_state(_SWEEP_STATE, payload)
+    print(f"  ✓ sweep started pid={proc.pid}")
+    print(f"  state:      {_SWEEP_STATE}")
+    print("  status:     ./bench status")
+    print("  pause:      ./bench pause")
+    return 0
+
+
+def _cmd_pause(args: argparse.Namespace) -> int:  # noqa: ARG001
+    """Pause the active sweep: kill orchestrator + agents + router; keep Ollama."""
+    state_file, state = _read_sweep_state()
+    if state_file is None:
+        print("no sweep state found; nothing to pause")
+        return 0
+    if state_file == _SWEEP_STATE_PAUSED:
+        print("sweep already paused; resume with: ./bench resume")
+        return 0
+
+    pid = state.get("pid", -1)
+    if not _proc_alive(pid):
+        print(f"sweep pid={pid} is not running (state may be stale)")
+        # Treat as a graceful pause: move state to paused.
+        _SWEEP_STATE.rename(_SWEEP_STATE_PAUSED)
+        return 0
+
+    print(f"pausing sweep pid={pid}…")
+    # 1. Kill agent subprocesses (heavy)
+    _kill_agent_subprocs(verbose=True)
+    # 2. Kill orchestrator + bench-sweep python (whole tree)
+    _kill_pid_tree(pid, verbose=True)
+    # 3. Kill router on default port
+    port = 8787
+    _kill_router_on_port(port=port, verbose=True)
+    # Mark paused.
+    _SWEEP_STATE.rename(_SWEEP_STATE_PAUSED)
+    print("  ✓ paused. Ollama still running for fast resume.")
+    print("  resume:    ./bench resume")
+    print("  stop+free: ./bench stop")
+    return 0
+
+
+def _cmd_resume(args: argparse.Namespace) -> int:
+    """Resume a paused sweep. Reads state from /tmp/hcev-sweep.paused.json."""
+    state_file, state = _read_sweep_state()
+    if state_file is None:
+        print("no paused sweep found; start fresh with: ./bench start --config <yaml> --strategies ... --seeds ...",
+              file=sys.stderr)
+        return 1
+    if state_file == _SWEEP_STATE and _proc_alive(state.get("pid", -1)):
+        print("a sweep is already running; ./bench pause first or ./bench status to see", file=sys.stderr)
+        return 1
+
+    # Reconstruct args from state + override with --resume.
+    print(f"resuming sweep from state: {state_file}")
+    print(f"  config:     {state.get('config')}")
+    print(f"  strategies: {state.get('strategies')}")
+    print(f"  seeds:      {state.get('seeds')}")
+    resume_args = argparse.Namespace(
+        config=Path(state["config"]),
+        set=[],
+        variant_tag=None,
+        out=None,
+        smoke=False,
+        resume=True,
+        strategies=state["strategies"],
+        seeds=state["seeds"],
+        cascade_thresholds=state.get("cascade_thresholds"),
+        external_router=bool(state.get("external_router", False)),
+        dry_run=False,
+    )
+    # Clean up paused-state file; _cmd_start will write a fresh active state.
+    state_file.unlink()
+    return _cmd_start(resume_args)
+
+
+def _cmd_stop(args: argparse.Namespace) -> int:
+    """Stop the active sweep AND release Ollama memory.
+
+    Like ``./bench pause`` but also kills Ollama runners + .app to free
+    ~19 GB of RAM the local models are holding. Use when you're done
+    with the sweep for the day and want the laptop back fully.
+    """
+    rc = _cmd_pause(args)
+    print()
+    print("killing Ollama (releases ~19 GB)…")
+    if getattr(args, "keep_ollama_app", False):
+        _kill_ollama_runners(verbose=True)
+        print("  Ollama.app kept; only runners killed")
+    else:
+        _kill_ollama_fully(verbose=True)
+    # Clear paused state too — stop is more terminal than pause.
+    if _SWEEP_STATE_PAUSED.exists():
+        # Keep a copy at the resume-friendly location so the user can still
+        # resume later. Caller passing --clear deletes it.
+        if getattr(args, "clear_state", False):
+            _SWEEP_STATE_PAUSED.unlink()
+            print("  sweep state cleared (won't be resumable without re-passing args)")
+        else:
+            print(f"  sweep state retained at {_SWEEP_STATE_PAUSED}")
+            print("  resume later with: ./bench resume")
+    return rc
+
+
+def _cmd_status(args: argparse.Namespace) -> int:  # noqa: ARG001
+    """Show whether a sweep is running, paused, or absent."""
+    state_file, state = _read_sweep_state()
+    if state_file is None:
+        print("status: NO SWEEP")
+        print("  start one with: ./bench start --config <yaml> --strategies ... --seeds ...")
+        return 0
+
+    is_paused = (state_file == _SWEEP_STATE_PAUSED)
+    pid = state.get("pid", -1)
+    alive = _proc_alive(pid)
+
+    if is_paused:
+        print("status: PAUSED")
+    elif alive:
+        print("status: RUNNING")
+    else:
+        print("status: STALE (state present but pid not alive)")
+    print(f"  pid:        {pid}{' (alive)' if alive else ' (dead)'}")
+    print(f"  config:     {state.get('config')}")
+    print(f"  strategies: {state.get('strategies')}")
+    print(f"  seeds:      {state.get('seeds')}")
+    if state.get("cascade_thresholds"):
+        print(f"  thresholds: {state.get('cascade_thresholds')}")
+    print(f"  out_dir:    {state.get('out_dir')}")
+    print(f"  log:        {state.get('log')}")
+    print(f"  started:    {state.get('started_at')}")
+    # Row count for visibility
+    out_dir = state.get("out_dir")
+    if out_dir and Path(out_dir).exists():
+        n = 0
+        for f in Path(out_dir).rglob("raw.jsonl"):
+            try:
+                n += sum(1 for _ in f.open())
+            except OSError:
+                pass
+        print(f"  rows so far: {n}")
+    return 0
+
+
 # ---------- sweep ---------------------------------------------------------
 
 
@@ -1169,6 +1591,55 @@ def main(argv: list[str] | None = None) -> int:
         help="Plan each pass without running.",
     )
     p_sweep.set_defaults(func=_cmd_sweep)
+
+    # ---- v1.4 sweep lifecycle: start / pause / resume / stop / status -----
+
+    def _add_start_args(p: argparse.ArgumentParser) -> None:
+        # _add_config_arg() already provides --resume; don't double-register.
+        _add_config_arg(p)
+        p.add_argument("--strategies", required=True,
+                       help="Comma-separated strategy names. Example: always-cloud,always-local,heuristic,cascade")
+        p.add_argument("--seeds", default="42",
+                       help="Comma-separated seed integers (default: 42).")
+        p.add_argument("--cascade-thresholds", default=None,
+                       help="Comma-separated integers to sweep ROUTER_CASCADE_THRESHOLD.")
+        p.add_argument("--external-router", action="store_true",
+                       help="Don't auto-spawn router; manage it yourself.")
+
+    p_start = sub.add_parser(
+        "start",
+        help="Start a sweep in the background. Auto-starts Ollama + writes /tmp/hcev-sweep.json.",
+    )
+    _add_start_args(p_start)
+    p_start.set_defaults(func=_cmd_start)
+
+    p_pause = sub.add_parser(
+        "pause",
+        help="Pause the active sweep (kill orchestrator + agents + router). Ollama stays up for fast resume.",
+    )
+    p_pause.set_defaults(func=_cmd_pause)
+
+    p_resume = sub.add_parser(
+        "resume",
+        help="Resume the paused sweep using its saved state. Adds --resume to skip already-completed rows.",
+    )
+    p_resume.set_defaults(func=_cmd_resume)
+
+    p_stop = sub.add_parser(
+        "stop",
+        help="Stop the sweep AND release Ollama (~19 GB RAM). Sweep state retained for later ./bench resume.",
+    )
+    p_stop.add_argument("--keep-ollama-app", action="store_true",
+                        help="Keep Ollama.app running (only kill the model runners). Defaults: kill everything.")
+    p_stop.add_argument("--clear-state", action="store_true",
+                        help="Also remove the paused state file (not resumable without re-passing args).")
+    p_stop.set_defaults(func=_cmd_stop)
+
+    p_status = sub.add_parser(
+        "status",
+        help="Show whether a sweep is running, paused, or absent. Includes row count + log path.",
+    )
+    p_status.set_defaults(func=_cmd_status)
 
     args = parser.parse_args(argv)
     return int(args.func(args) or 0)
