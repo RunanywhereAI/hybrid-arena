@@ -82,7 +82,7 @@ def _task_slug(task_id: str) -> str:
 
 
 _REAL_DEV_FIXTURES_ROOT: Path = (
-    _REPO_ROOT / "src" / "hybrid_coding_eval" / "benchmarks" / "real_dev" / "fixtures"
+    _REPO_ROOT / "src" / "hybrid_coding_eval" / "tasks" / "refactors" / "fixtures"
 )
 
 

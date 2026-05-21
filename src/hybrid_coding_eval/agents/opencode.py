@@ -58,7 +58,7 @@ def _task_slug(task_id: str) -> str:
 
 
 _REAL_DEV_FIXTURES_ROOT: Path = (
-    _REPO_ROOT / "src" / "hybrid_coding_eval" / "benchmarks" / "real_dev" / "fixtures"
+    _REPO_ROOT / "src" / "hybrid_coding_eval" / "tasks" / "refactors" / "fixtures"
 )
 
 
@@ -67,7 +67,7 @@ def _copy_fixture(task: Any, dst: Path) -> Path:
 
     Real-dev tasks expose ``fixtures_dir`` as a *relative* slug; the actual
     fixture lives at
-    ``src/hybrid_coding_eval/benchmarks/real_dev/fixtures/<slug>/``. We
+    ``src/hybrid_coding_eval/tasks/refactors/fixtures/<slug>/``. We
     mirror it under ``dst`` so the agent edits in isolation.
     """
     slug = getattr(task, "fixtures_dir", None) or getattr(task, "fixture_dir", None)
