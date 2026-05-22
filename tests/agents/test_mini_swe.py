@@ -18,6 +18,11 @@ from typing import Any
 import pytest
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+
+# Skip the entire module if mini-swe-agent isn't installed (CI typically
+# omits it because it pulls heavy deps via vendor/minions/mini-swe-agent.
+# The agents=optional-deps install adds it; ./bench setup also adds it.
+pytest.importorskip("minisweagent")
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 

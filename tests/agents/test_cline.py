@@ -170,7 +170,11 @@ def test_cline_argv_matches_real_cli_shape(
 
     # Pretend cline is installed at a predictable path so argv[0] is stable.
     fake_cline = "/usr/local/bin/cline"
-    monkeypatch.setattr(r10_cline.shutil, "which", lambda _name: fake_cline)
+    _orig_which = r10_cline.shutil.which
+    monkeypatch.setattr(
+        r10_cline.shutil, "which",
+        lambda name: fake_cline if name == "cline" else _orig_which(name),
+    )
 
     captured: dict[str, Any] = {}
     real_run = subprocess.run
