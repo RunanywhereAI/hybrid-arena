@@ -2,13 +2,20 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) starting with v1.0.0.
 
-## [Unreleased] / [1.4.0]
+## [Unreleased]
 
-**Cleanup + production-pipeline release.** v1.4 deletes the legacy non-agentic R1/R2/R3 routes and the experimental Stanford-Minion R4/R5 wrappers — the harness is now agent-only (R6 mini-swe-agent · R7 aider · R8 opencode · R9 claude-code · R10 cline). `bench sweep` auto-spawns the router proxy from `models.local`, so the canonical reproducer is now four copy-paste commands.
+## [1.4.0] — 2026-05-22
 
-### Headline canonical (v1.4-canonical, gemma4:31b)
+**Cleanup + production-pipeline release.** v1.4 deletes the legacy non-agentic R1–R5 routes and the experimental Stanford-Minion / Devminion wrappers — the harness is now **agent-only** (aider · opencode · mini-swe-agent · claude-code · cline). Drops the `Rn` prefix; renames `runners/` → `agents/` and `benchmarks/` → `tasks/`. Adds 5 production lifecycle commands (`./bench start|pause|resume|stop|status`). `bench sweep` auto-spawns the router proxy from `models.local`, so the canonical reproducer is now four copy-paste commands.
 
-> Numbers TBD after the v1.4.0 sweep lands. v1.3.0's gemma4:31b carry-over preview: on real-developer D-tasks (n=24/cell), heuristic at **0.96 [0.88, 1.00]** vs always-cloud 1.00 [1.00, 1.00] at 79% cloud_fraction. v1.4 stress-tests this across the full 5-agent × 8-strategy surface. See [`docs/release-notes/v1.4.0.md`](./docs/release-notes/v1.4.0.md) when the canonical sweep completes.
+### Headline canonical (708 rows, ~20h wall, $90.48 cloud spend on M4 Max 64GB)
+
+> Sweeps complete: 468 v1.4-canonical-gemma4 + 48 v1.4-opencode-fairness + 192 v1.4-strategy-sweep. qwen3-coder + qwen3.6 canonical sweeps queued for v1.4.1.
+
+- **Marquee Pareto win: aider + heuristic on refactors** → **23/24 = 96% [88, 100]** at **48% cloud-fraction** (~52% token spend reduction vs always-cloud 24/24 = 100%). Replicates v1.3.0's headline with refreshed code.
+- **NEW: cline + always-local on puzzles** → **15/15 = 100%** with **zero cloud** — first 30B local-only result that nails Exercism Python puzzles (vs aider always-local 3/15, opencode 0/15).
+- **NEW: opencode RESURRECTED with gemma4** → **17/24 = 71%** heuristic on refactors (vs v1.1.x's 0/15 with qwen3-coder). The fork-audit's "model + NUDGE" hypothesis verified. Puzzles still 0/15 — runLoop hard-exit ceiling.
+- **NEW: cascade is dead in agentic regime** — heuristic ≥ cascade in every (agent, task-class) cell. Strategy-tuning is not the lever; agent + task-class selection is.
 
 ### Added
 
