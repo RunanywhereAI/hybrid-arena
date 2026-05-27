@@ -1,4 +1,4 @@
-"""Smoke tests for :mod:`hybrid_coding_eval.agents.mini_swe` (R6).
+"""Smoke tests for :mod:`hybrid_coding_eval.agents.mini_swe`.
 
 These tests verify that the module loads cleanly and exposes the
 expected interface — no live ``mini-extra`` CLI invocation is
@@ -29,15 +29,15 @@ if str(_REPO_ROOT) not in sys.path:
 
 
 def test_mini_swe_agent_module_imports() -> None:
-    """The R6 module loads cleanly and exposes ``run`` + ``ROUTE``."""
-    from hybrid_coding_eval.agents import mini_swe as r6_mini_swe_agent
+    """The module loads cleanly and exposes ``run`` + ``ROUTE``."""
+    from hybrid_coding_eval.agents import mini_swe
 
-    assert r6_mini_swe_agent.ROUTE == "mini-swe-agent"
-    assert callable(r6_mini_swe_agent.run)
+    assert mini_swe.ROUTE == "mini-swe-agent"
+    assert callable(mini_swe.run)
 
     # run() must accept the same kw surface as the other runners so the
     # orchestrator in core.experiment._runner_for can call it uniformly.
-    sig = inspect.signature(r6_mini_swe_agent.run)
+    sig = inspect.signature(mini_swe.run)
     for kw in (
         "proxy_url",
         "hardware_profile_ref",
@@ -48,12 +48,12 @@ def test_mini_swe_agent_module_imports() -> None:
         assert kw in sig.parameters, f"run() missing kw-only arg {kw!r}"
 
 
-def test_runner_dispatch_registers_r6() -> None:
-    """The core experiment dispatch resolves 'R6' to our run()."""
-    from hybrid_coding_eval.agents import mini_swe as r6_mini_swe_agent
+def test_runner_dispatch_registers_mini_swe_agent() -> None:
+    """The core experiment dispatch resolves 'mini-swe-agent' to our run()."""
+    from hybrid_coding_eval.agents import mini_swe
     from hybrid_coding_eval.core.experiment import _runner_for
 
-    assert _runner_for("mini-swe-agent") is r6_mini_swe_agent.run
+    assert _runner_for("mini-swe-agent") is mini_swe.run
 
 
 def test_default_swebench_yaml_resolves() -> None:
@@ -135,15 +135,15 @@ def test_run_missing_mini_extra_returns_error_row(
 
     Instead it returns a :class:`ResultRow` with
     ``error="mini_swe_agent_not_installed"`` so the orchestrator can
-    log the row and move on. This mirrors the graceful-fallback
-    pattern in R10 (cline).
+    log the row and move on. Mirrors the graceful-fallback pattern in
+    the cline runner.
     """
-    from hybrid_coding_eval.agents import mini_swe as r6_mini_swe_agent
+    from hybrid_coding_eval.agents import mini_swe
 
     class _FakeTask:
         id = "swebench-verified/django__django-11163"
         instance_id = "django__django-11163"
-        category = "B"
+        category = "real-prs"
 
     real_run = subprocess.run
 
@@ -153,17 +153,17 @@ def test_run_missing_mini_extra_returns_error_row(
             raise FileNotFoundError(2, "No such file or directory: 'mini-extra'")
         return real_run(cmd, *args, **kwargs)
 
-    monkeypatch.setattr(r6_mini_swe_agent.subprocess, "run", _maybe_raise)
+    monkeypatch.setattr(mini_swe.subprocess, "run", _maybe_raise)
     # Force the .venv/bin/mini-extra fallback to also be invisible so we
     # hit the FileNotFoundError branch deterministically.
-    monkeypatch.setattr(r6_mini_swe_agent.shutil, "which", lambda _name: None)
+    monkeypatch.setattr(mini_swe.shutil, "which", lambda _name: None)
     monkeypatch.setattr(
-        r6_mini_swe_agent,
+        mini_swe,
         "_REPO_ROOT",
         tmp_path,  # no .venv/bin/mini-extra under tmp_path
     )
 
-    row = r6_mini_swe_agent.run(
+    row = mini_swe.run(
         _FakeTask(),
         output_dir=tmp_path / "out",
         router_strategy="heuristic",

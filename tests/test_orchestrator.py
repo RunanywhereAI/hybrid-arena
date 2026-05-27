@@ -28,10 +28,12 @@ from hybrid_coding_eval.core.results import append_row  # noqa: E402
 RUN_ARGS = [sys.executable, "-m", "hybrid_coding_eval.cli.run"]
 
 
-def _make_row(task_id: str, route: str) -> ResultRow:
+def _make_row(
+    task_id: str, route: str, router_strategy: str | None = None
+) -> ResultRow:
     return ResultRow(
         task_id=task_id,
-        category="A",
+        category="puzzles",
         route=route,
         hardware_profile_ref="test-hw",
         tokens=TokenUsage(prompt=10, completion=20, cloud_prompt=10, cloud_completion=20),
@@ -39,6 +41,7 @@ def _make_row(task_id: str, route: str) -> ResultRow:
         quality=Quality(functional_pass=True, tests_passed=1, tests_total=1, composite=1.0),
         routing=Routing(total_calls=1, local_calls=0, cloud_calls=1, per_call_backends=["gpt-5.5"]),
         output_ref="outputs/fake.txt",
+        router_strategy=router_strategy,
     )
 
 
@@ -49,22 +52,18 @@ def _make_row(task_id: str, route: str) -> ResultRow:
 
 def test_pair_already_done_detects_prior_rows(tmp_path: Path) -> None:
     raw = tmp_path / "raw.jsonl"
-    assert not pair_already_done(raw, "foo/bar", "R1")
+    assert not pair_already_done(raw, "foo/bar", "aider")
 
-    append_row(raw, _make_row("foo/bar", "R1"))
-    assert pair_already_done(raw, "foo/bar", "R1")
+    append_row(raw, _make_row("foo/bar", "aider"))
+    assert pair_already_done(raw, "foo/bar", "aider")
     # Different route → not done yet.
-    assert not pair_already_done(raw, "foo/bar", "R2")
+    assert not pair_already_done(raw, "foo/bar", "opencode")
     # Different task → not done yet.
-    assert not pair_already_done(raw, "other/task", "R1")
+    assert not pair_already_done(raw, "other/task", "aider")
 
 
 def test_build_task_plan_smoke_shape() -> None:
-    """Smoke build: 1 task per class × 3 routes = 3 × 3 = 9 items.
-
-    v1.4 uses the puzzles/refactors/real-prs task-class taxonomy in place
-    of the legacy A/B/C category letters.
-    """
+    """Smoke build: 1 task per class × 3 agents = 3 × 3 = 9 items."""
     plan = build_task_plan(
         task_classes=["puzzles", "refactors", "real-prs"],
         agents=["mini-swe-agent", "aider", "opencode"],
@@ -134,13 +133,17 @@ def test_resume_skip_is_a_noop_when_all_pairs_done(tmp_path: Path) -> None:
     manifest_path = tmp_path / "manifest.json"
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
 
-    # Discover which task puzzles/R6 would run against.
+    # Discover which task puzzles + mini-swe-agent would run against.
     plan = build_task_plan(
         task_classes=["puzzles"], agents=["mini-swe-agent"], smoke=True, tasks_cap=None
     )
     assert len(plan) == 1
     seeded_task_id = plan[0].task_id
-    append_row(raw, _make_row(seeded_task_id, "mini-swe-agent"))
+    # router_strategy defaults to "heuristic" on the CLI; seed the row with
+    # the same value so pair_already_done matches and the runner is skipped.
+    append_row(
+        raw, _make_row(seeded_task_id, "mini-swe-agent", router_strategy="heuristic")
+    )
     assert raw.read_text().count("\n") == 1
 
     proc = subprocess.run(

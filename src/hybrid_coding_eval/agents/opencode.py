@@ -1,4 +1,4 @@
-"""R8 — opencode CLI agent on real-dev D1+D5 fixtures.
+"""opencode CLI agent runner — real-dev D1+D5 fixtures.
 
 opencode is a TypeScript+Bun coding agent with Read/Write/Edit/Bash/
 Grep/Glob tools. ``./bench setup`` installs the maintainer's fork
@@ -6,17 +6,17 @@ Grep/Glob tools. ``./bench setup`` installs the maintainer's fork
 env-overridable via ``OPENCODE_GIT_URL`` / ``OPENCODE_GIT_REF``) and
 writes a ``hybrid-router`` provider entry into
 ``~/.config/opencode/opencode.json`` pointed at
-``http://127.0.0.1:8787/v1``. R8 invokes opencode with
+``http://127.0.0.1:8787/v1``. This runner invokes opencode with
 ``--model hybrid-router/router/<strategy>/run-<id>`` so routing happens
 in the proxy AND per-call attribution back to this runner is exact.
 
-What R8 does, per task:
+What this runner does, per task:
   1. Generate a 12-hex ``bench_run_id`` and copy the fixture into a
      per-run scratch dir.
   2. Subprocess ``opencode run -m hybrid-router/router/<strategy>/run-<id>
      <prompt>`` (cwd=scratch).
   3. Score by running pytest on the (modified) fixture via the existing
-     Docker sandbox (``scorers.functional_python``; wired in Phase 1.2).
+     Docker sandbox (``scorers.functional_python``).
   4. Reconstruct token attribution by filtering decisions.jsonl on
      ``bench_run_id`` (primary) / timestamp window (fallback).
 """
@@ -199,7 +199,7 @@ def run(
     except Exception as exc:
         return ResultRow(
             task_id=task.id,
-            category=getattr(task, "category", "D"),
+            category=getattr(task, "category", "refactors"),
             route=ROUTE,
             hardware_profile_ref=hardware_profile_ref,
             tokens=TokenUsage(),
@@ -218,10 +218,10 @@ def run(
     # NB: opencode validates the model field against its registered model
     # list in ~/.config/opencode/opencode.json and rejects unknown ids
     # (ProviderModelNotFoundError). We can't dynamically add `router/.../run-<id>`
-    # entries, so for R8 the bench_run_id is NOT embedded in the model.
-    # Attribution falls back to the timestamp window for R8 — fine for
-    # sequential sweeps (./bench sweep runs strategies serially). R6/R7
-    # still use the exact-id path via LiteLLM.
+    # entries, so for opencode the bench_run_id is NOT embedded in the model.
+    # Attribution falls back to the timestamp window — fine for sequential
+    # sweeps (./bench sweep runs strategies serially). aider / mini-swe-agent
+    # / cline still use the exact-id path via LiteLLM.
     bench_run_id = generate_run_id()
     model_id = model_string(router_strategy, run_id=None, prefix="hybrid-router/router")
 
@@ -299,7 +299,7 @@ def run(
 
     return ResultRow(
         task_id=task.id,
-        category=getattr(task, "category", "D"),
+        category=getattr(task, "category", "refactors"),
         route=ROUTE,
         hardware_profile_ref=hardware_profile_ref,
         tokens=tokens,

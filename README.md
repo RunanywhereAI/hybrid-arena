@@ -5,7 +5,7 @@
 
 [![License: MIT](https://img.shields.io/badge/Code-MIT-blue.svg)](./LICENSE)
 [![Data: CC BY 4.0](https://img.shields.io/badge/Data-CC--BY--4.0-lightgrey.svg)](./LICENSE-DATA)
-[![Version](https://img.shields.io/badge/version-1.4.2-success.svg)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.4.3-success.svg)](./CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 [![CI](https://github.com/RunanywhereAI/hybrid-coding-eval/actions/workflows/ci.yml/badge.svg)](https://github.com/RunanywhereAI/hybrid-coding-eval/actions/workflows/ci.yml)
 
@@ -27,20 +27,47 @@ in `results/runs/<sweep>/raw.jsonl` priced by a versioned pricing table.
 | `opencode + gemma4 + heuristic + refactors`         | 17/24 = 71%       | 46.3%                   | Gemma4-specific; doesn't transfer      |
 
 Full numbers + CIs + per-cell cost breakdown:
-[`docs/release-notes/v1.4.1.md`](./docs/release-notes/v1.4.1.md) ·
-[`personal/audits/v1.4-cost-token-analysis.md`](#) (data-backed cost table).
+[`docs/release-notes/v1.4.1.md`](./docs/release-notes/v1.4.1.md).
 
-## Quickstart (~15 minutes)
+## Prerequisites
+
+This is a benchmark harness — to run it you need the tools the benchmark
+actually drives. None of these are bundled. Install them once, then
+`scripts/reproduce.sh` handles everything else.
+
+| Tool                    | Why                                                | Install (macOS)               | Install (Linux)                                  |
+| ----------------------- | -------------------------------------------------- | ----------------------------- | ------------------------------------------------ |
+| **Python 3.11 or 3.12** | Harness + agent runners (aider, cline, mini-swe)   | `brew install python@3.12`    | `sudo apt install python3.12 python3.12-venv`    |
+| **Docker**              | Sandbox for the functional Python scorer           | [Docker Desktop](https://www.docker.com/products/docker-desktop) | `sudo apt install docker.io` + add user to `docker` group |
+| **Node ≥ 18**           | Router proxy (`router/server.mjs`)                 | `brew install node`           | `sudo apt install nodejs npm`                    |
+| **Ollama**              | Serves the local model (gemma4, qwen3, …) on `:11434` | [`ollama.com/download`](https://ollama.com/download) | `curl -fsSL https://ollama.com/install.sh \| sh` |
+| **jq**                  | Slicing JSON output in the quickstart commands     | `brew install jq`             | `sudo apt install jq`                            |
+| **An `OPEN_AI_API_KEY`**| The cloud half of every hybrid call (gpt-5.5)      | <https://platform.openai.com/api-keys> | same |
+
+Then:
 
 ```bash
 git clone https://github.com/RunanywhereAI/hybrid-coding-eval
 cd hybrid-coding-eval
 
-# One-command bootstrap — checks prereqs, installs deps, builds the
-# sandbox image, pulls the aux models, runs the smoke sweep.
+cp .env.example .env                    # then edit .env and fill OPEN_AI_API_KEY
+ollama serve &                          # if not already running as a service
+ollama pull gemma4:31b                  # ~18 GB; this is the v1.4 canonical local model
+```
+
+`scripts/reproduce.sh` checks every prerequisite and prints a precise
+install hint if anything is missing, so you don't have to remember this
+table.
+
+## Quickstart (~15 minutes)
+
+```bash
+# One-command bootstrap — verifies prereqs, installs Python deps,
+# builds the Docker sandbox, installs the aider/opencode/cline agents,
+# pulls the aux models, runs the 4-pair smoke sweep.
 ./scripts/reproduce.sh --smoke
 
-# Inspect the result of the smoke sweep:
+# Inspect the smoke result:
 ./bench analyze results/runs/v1.4-smoke
 jq '.cells' results/runs/v1.4-smoke/bootstrap_cis.json
 ```
@@ -124,13 +151,13 @@ ollama pull <new-model>
 Then look at the headline cell:
 
 ```bash
-jq '.cells["D::cline::heuristic"].pass_rate' \
+jq '.cells["refactors::cline::heuristic"].pass_rate' \
    results/runs/v1.4-<new-model>/bootstrap_cis.json
 ```
 
-`D::cline::heuristic` is the canonical "is this model good at hybrid
-refactor work?" cell. Compare your point estimate against the existing
-v1.4.1 results (96% qwen3.6 / 92% qwen3-coder / 96% gemma4).
+`refactors::cline::heuristic` is the canonical "is this model good at
+hybrid refactor work?" cell. Compare your point estimate against the
+existing v1.4.1 results (96 % qwen3.6 / 92 % qwen3-coder / 96 % gemma4).
 
 The full add-a-model walkthrough lives in
 [`docs/HYBRID_ROUTING_DESIGN.md §9`](./docs/HYBRID_ROUTING_DESIGN.md#9-add-a-new-local-model).
@@ -214,7 +241,7 @@ The Node router and the Python harness both read the same
                   coding tasks},
   year         = {2026},
   howpublished = {\url{https://github.com/RunanywhereAI/hybrid-coding-eval}},
-  note         = {Version 1.4.2}
+  note         = {Version 1.4.3}
 }
 ```
 

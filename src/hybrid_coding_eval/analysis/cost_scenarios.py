@@ -65,8 +65,7 @@ def compute_row_cost(row: ResultRow, scenario: str) -> float:
       * ``local_*`` tokens are priced at ``__local__`` (always $0).
       * ``cloud_*`` tokens are priced at the scenario model.
       * If neither ``local_*`` nor ``cloud_*`` are set, fall back to
-        treating ``prompt`` / ``completion`` as cloud. This matches R1
-        cloud-only rows that don't bother with the split.
+        treating ``prompt`` / ``completion`` as cloud (defensive default).
       * Cached tokens are subtracted from the cloud-prompt side and
         re-charged at ``cache_read``.
     """

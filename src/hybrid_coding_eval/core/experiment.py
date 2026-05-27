@@ -173,26 +173,20 @@ def pair_already_done(
     """True iff ``raw.jsonl`` already contains a row for the triple
     ``(task_id, route, router_strategy)``.
 
-    The strategy axis was added in v4 (R6/R7/R8) so multiple invocations
-    of the same (task, route) under different strategies coexist in one
-    raw.jsonl. Matching rules:
+    Matching rules:
 
-      * Search ``router_strategy`` is ``None``       → match any row.
-      * Row's ``router_strategy`` is ``None``        → match (v3 rows
-        predate the field; treat as wildcard for back-compat).
-      * Both present                                  → exact match.
+      * Search ``router_strategy`` is ``None``  → match any row for the
+        ``(task, route)`` pair.
+      * Both present                            → exact triple match.
     """
     if not raw_path.exists():
         return False
     rows = load_results(raw_path)
     for r in rows:
-        if r.task_id == task_id and r.route == route:
-            if (
-                router_strategy is None
-                or r.router_strategy is None
-                or r.router_strategy == router_strategy
-            ):
-                return True
+        if r.task_id != task_id or r.route != route:
+            continue
+        if router_strategy is None or r.router_strategy == router_strategy:
+            return True
     return False
 
 
@@ -225,9 +219,8 @@ def _runner_for(agent: str) -> Callable[..., ResultRow]:
 def _read_output_text(row: ResultRow) -> str:
     """Read the model output text that ``row.output_ref`` points at.
 
-    Agent-loop routes (R6/R7/R8 and R9/R10) write a plain ``.txt`` with
-    the cleaned final-turn content; that's the only shape we need to
-    handle post-v1.4 cleanup.
+    All agent runners write a plain ``.txt`` with the cleaned final-turn
+    content — that's the only shape we need to handle.
     """
     ref = row.output_ref
     if not ref:

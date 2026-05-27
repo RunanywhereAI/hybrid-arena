@@ -28,7 +28,6 @@ vary by shape.
     // --- D1 (feature add) ---
     {
       "id":             "real-dev/d1-rate-limit",
-      "category":       "D",                       // optional; defaults to "D"
       "shape":          "D1",                      // D1 | D2 | D3 | D4 | D5
       "prompt":         "Add a sliding-window rate-limit decorator...",
       "fixtures_dir":   "d1-rate-limit",           // relative to fixtures/
@@ -94,7 +93,7 @@ class Task:
     id
         Slug of the form ``real-dev/<shape-slug>`` — unique across the set.
     category
-        Always ``"D"`` for this adapter.
+        Always ``"refactors"`` for this adapter.
     shape
         One of ``D1`` | ``D2`` | ``D3`` | ``D4`` | ``D5``.
     prompt
@@ -148,7 +147,7 @@ def _parse_task(raw: dict[str, Any]) -> Task:
         raise ValueError(f"{raw.get('id')}: rubric must be an object or null")
     return Task(
         id=raw["id"],
-        category=raw.get("category", "D"),
+        category="refactors",
         shape=shape,
         prompt=raw["prompt"],
         fixtures_dir=raw.get("fixtures_dir"),

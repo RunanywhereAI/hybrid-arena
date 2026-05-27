@@ -41,8 +41,8 @@ from hybrid_coding_eval.core.results import aggregate_by, append_row, load_resul
 def _mk_row(
     *,
     task_id: str = "t0",
-    category: str = "A",
-    route: str = "R1",
+    category: str = "puzzles",
+    route: str = "aider",
     prompt: int = 1000,
     completion: int = 500,
     cached: int = 0,
@@ -116,8 +116,8 @@ def test_round_trip_preserves_all_fields(tmp_path: Path):
         rows.append(
             _mk_row(
                 task_id=f"task-{i}",
-                category=rng.choice(["A", "B", "C"]),
-                route=rng.choice(["R1", "R2", "R3"]),
+                category=rng.choice(["puzzles", "refactors", "real-prs"]),
+                route=rng.choice(["aider", "opencode", "mini-swe-agent"]),
                 prompt=rng.randint(100, 10_000),
                 completion=rng.randint(50, 5_000),
                 cached=rng.randint(0, 500),
@@ -154,14 +154,14 @@ def test_round_trip_preserves_all_fields(tmp_path: Path):
 
 
 def test_aggregate_by_single_key_counts_and_central_tendency():
-    """10 rows split 6/4 across two routes; verify count/median/mean."""
+    """10 rows split 6/4 across two agents; verify count/median/mean."""
     rows: list[ResultRow] = []
-    # 6 R1 rows with prompts 100..600, completions all 100.
+    # 6 aider rows with prompts 100..600, completions all 100.
     for i in range(6):
         rows.append(
             _mk_row(
-                task_id=f"r1-{i}",
-                route="R1",
+                task_id=f"aider-{i}",
+                route="aider",
                 prompt=100 * (i + 1),  # 100, 200, ..., 600
                 completion=100,
                 cloud_prompt=100 * (i + 1),
@@ -169,12 +169,12 @@ def test_aggregate_by_single_key_counts_and_central_tendency():
                 wall_ms=1000 + 100 * i,
             )
         )
-    # 4 R3 rows with prompts 1000..4000, completions all 500.
+    # 4 cline rows with prompts 1000..4000, completions all 500.
     for i in range(4):
         rows.append(
             _mk_row(
-                task_id=f"r3-{i}",
-                route="R3",
+                task_id=f"cline-{i}",
+                route="cline",
                 prompt=1000 * (i + 1),  # 1000, 2000, 3000, 4000
                 completion=500,
                 local_prompt=200,
@@ -191,32 +191,31 @@ def test_aggregate_by_single_key_counts_and_central_tendency():
     df = aggregate_by(rows, keys=["route"])
     df = df.sort_values("route").reset_index(drop=True)
 
-    assert list(df["route"]) == ["R1", "R3"]
+    assert list(df["route"]) == ["aider", "cline"]
     assert list(df["count"]) == [6, 4]
 
-    # R1: prompts [100,200,300,400,500,600]; median = 350, mean = 350.
-    r1 = df[df["route"] == "R1"].iloc[0]
-    assert int(r1["prompt_tokens_median"]) == 350
-    assert int(r1["prompt_tokens_mean"]) == 350
-    assert int(r1["completion_tokens_median"]) == 100
-    assert int(r1["completion_tokens_mean"]) == 100
-    # R1 has no local split anywhere; the _row_cost_usd fallback treats
-    # tokens.prompt as cloud. Sum of local_prompt_tokens_sum should be 0.
-    assert int(r1["local_prompt_tokens_sum"]) == 0
-    assert int(r1["cloud_prompt_tokens_sum"]) == 100 + 200 + 300 + 400 + 500 + 600
+    # aider: prompts [100,200,300,400,500,600]; median = 350, mean = 350.
+    aider = df[df["route"] == "aider"].iloc[0]
+    assert int(aider["prompt_tokens_median"]) == 350
+    assert int(aider["prompt_tokens_mean"]) == 350
+    assert int(aider["completion_tokens_median"]) == 100
+    assert int(aider["completion_tokens_mean"]) == 100
+    # aider rows have no local split; _row_cost_usd treats tokens.prompt as cloud.
+    assert int(aider["local_prompt_tokens_sum"]) == 0
+    assert int(aider["cloud_prompt_tokens_sum"]) == 100 + 200 + 300 + 400 + 500 + 600
 
-    # R3: prompts [1000,2000,3000,4000]; median = 2500, mean = 2500.
-    r3 = df[df["route"] == "R3"].iloc[0]
-    assert int(r3["prompt_tokens_median"]) == 2500
-    assert int(r3["prompt_tokens_mean"]) == 2500
-    assert int(r3["completion_tokens_median"]) == 500
-    assert int(r3["local_prompt_tokens_sum"]) == 200 * 4
+    # cline: prompts [1000,2000,3000,4000]; median = 2500, mean = 2500.
+    cline = df[df["route"] == "cline"].iloc[0]
+    assert int(cline["prompt_tokens_median"]) == 2500
+    assert int(cline["prompt_tokens_mean"]) == 2500
+    assert int(cline["completion_tokens_median"]) == 500
+    assert int(cline["local_prompt_tokens_sum"]) == 200 * 4
     # cloud prompts: 800, 1800, 2800, 3800 → sum = 9200
-    assert int(r3["cloud_prompt_tokens_sum"]) == 800 + 1800 + 2800 + 3800
+    assert int(cline["cloud_prompt_tokens_sum"]) == 800 + 1800 + 2800 + 3800
     # total_calls is 3 across all 4 rows → median 3.
-    assert int(r3["total_calls_median"]) == 3
-    assert int(r3["local_calls_median"]) == 1
-    assert int(r3["cloud_calls_median"]) == 2
+    assert int(cline["total_calls_median"]) == 3
+    assert int(cline["local_calls_median"]) == 1
+    assert int(cline["cloud_calls_median"]) == 2
 
 
 # --------------------------------------------------------------------------- #
@@ -227,8 +226,8 @@ def test_aggregate_by_single_key_counts_and_central_tendency():
 def test_aggregate_by_two_keys_shape_and_values():
     """20 rows across 3 categories × 3 routes. Verify groupby shape & counts."""
     rng = random.Random(42)
-    cats = ["A", "B", "C"]
-    routes = ["R1", "R2", "R3"]
+    cats = ["puzzles", "refactors", "real-prs"]
+    routes = ["aider", "opencode", "mini-swe-agent"]
     rows: list[ResultRow] = []
     counts: dict[tuple[str, str], int] = {}
 
@@ -279,7 +278,7 @@ def test_cost_derivation_pure_cloud_and_pure_local_and_mixed():
     # --- Pure cloud.
     cloud_only = _mk_row(
         task_id="cloud",
-        route="R1",
+        route="aider",
         prompt=1000,
         completion=500,
         cloud_prompt=1000,
@@ -292,7 +291,7 @@ def test_cost_derivation_pure_cloud_and_pure_local_and_mixed():
     # --- Pure local.
     local_only = _mk_row(
         task_id="local",
-        route="R2",
+        route="opencode",
         prompt=1000,
         completion=500,
         local_prompt=1000,
@@ -305,7 +304,7 @@ def test_cost_derivation_pure_cloud_and_pure_local_and_mixed():
     # cloud cost = 500*5/1e6 + 300*30/1e6 = 0.0025 + 0.009 = 0.0115
     mixed = _mk_row(
         task_id="mix",
-        route="R3",
+        route="cline",
         prompt=1000,
         completion=500,
         local_prompt=500,
@@ -317,10 +316,9 @@ def test_cost_derivation_pure_cloud_and_pure_local_and_mixed():
     assert math.isclose(float(df[mean_col].iloc[0]), 0.0115, abs_tol=1e-12)
 
     # --- Fallback: no split set, prompt/completion only → treated as cloud.
-    # Same as the pure-cloud case. This is the R1-style fallback.
     fallback = _mk_row(
         task_id="fallback",
-        route="R1",
+        route="aider",
         prompt=1000,
         completion=500,
         cloud_prompt=0,
@@ -343,22 +341,22 @@ def test_none_quality_composite_aggregates_to_nan():
     A mixed group with some None and some floats → mean excludes Nones.
     """
     rows = [
-        _mk_row(task_id="a1", route="R1", composite=None),
-        _mk_row(task_id="a2", route="R1", composite=None),
-        _mk_row(task_id="b1", route="R2", composite=0.9),
-        _mk_row(task_id="b2", route="R2", composite=None),
-        _mk_row(task_id="b3", route="R2", composite=0.7),
+        _mk_row(task_id="a1", route="aider", composite=None),
+        _mk_row(task_id="a2", route="aider", composite=None),
+        _mk_row(task_id="b1", route="opencode", composite=0.9),
+        _mk_row(task_id="b2", route="opencode", composite=None),
+        _mk_row(task_id="b3", route="opencode", composite=0.7),
     ]
     df = aggregate_by(rows, keys=["route"]).sort_values("route").reset_index(drop=True)
 
-    r1 = df[df["route"] == "R1"].iloc[0]
-    assert math.isnan(float(r1["quality_composite_mean"]))
-    assert math.isnan(float(r1["quality_composite_median"]))
+    aider = df[df["route"] == "aider"].iloc[0]
+    assert math.isnan(float(aider["quality_composite_mean"]))
+    assert math.isnan(float(aider["quality_composite_median"]))
 
-    r2 = df[df["route"] == "R2"].iloc[0]
+    opencode = df[df["route"] == "opencode"].iloc[0]
     # Pandas .mean() / .median() skip NaN by default, so mean = 0.8, median = 0.8.
-    assert math.isclose(float(r2["quality_composite_mean"]), 0.8, abs_tol=1e-12)
-    assert math.isclose(float(r2["quality_composite_median"]), 0.8, abs_tol=1e-12)
+    assert math.isclose(float(opencode["quality_composite_mean"]), 0.8, abs_tol=1e-12)
+    assert math.isclose(float(opencode["quality_composite_median"]), 0.8, abs_tol=1e-12)
 
 
 # --------------------------------------------------------------------------- #
@@ -369,22 +367,22 @@ def test_none_quality_composite_aggregates_to_nan():
 def test_functional_pass_rate_ignores_none():
     """Pass rate is computed over non-None rows only."""
     rows = [
-        _mk_row(task_id="p1", route="R1", functional_pass=True),
-        _mk_row(task_id="p2", route="R1", functional_pass=False),
-        _mk_row(task_id="p3", route="R1", functional_pass=None),  # ignored
-        _mk_row(task_id="p4", route="R1", functional_pass=True),
+        _mk_row(task_id="p1", route="aider", functional_pass=True),
+        _mk_row(task_id="p2", route="aider", functional_pass=False),
+        _mk_row(task_id="p3", route="aider", functional_pass=None),  # ignored
+        _mk_row(task_id="p4", route="aider", functional_pass=True),
         # All-None group → NaN.
-        _mk_row(task_id="q1", route="R2", functional_pass=None),
-        _mk_row(task_id="q2", route="R2", functional_pass=None),
+        _mk_row(task_id="q1", route="opencode", functional_pass=None),
+        _mk_row(task_id="q2", route="opencode", functional_pass=None),
     ]
     df = aggregate_by(rows, keys=["route"]).sort_values("route").reset_index(drop=True)
 
-    r1 = df[df["route"] == "R1"].iloc[0]
+    aider = df[df["route"] == "aider"].iloc[0]
     # 2 of 3 non-None are True → 2/3.
-    assert math.isclose(float(r1["functional_pass_rate"]), 2.0 / 3.0, abs_tol=1e-12)
+    assert math.isclose(float(aider["functional_pass_rate"]), 2.0 / 3.0, abs_tol=1e-12)
 
-    r2 = df[df["route"] == "R2"].iloc[0]
-    assert math.isnan(float(r2["functional_pass_rate"]))
+    opencode = df[df["route"] == "opencode"].iloc[0]
+    assert math.isnan(float(opencode["functional_pass_rate"]))
 
 
 # --------------------------------------------------------------------------- #

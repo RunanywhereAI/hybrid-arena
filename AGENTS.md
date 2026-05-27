@@ -13,9 +13,10 @@ that publishes per-`(task-class, agent, strategy)` bootstrap-CI datasets
 for four coding agents (**aider · opencode · mini-swe-agent · cline**)
 across eight routing strategies, under five pricing scenarios.
 
-**Status (v1.4.1):** 4-agent leaderboard across 3 local models. Combined
-v1.4 dataset is 1,644 rows. New per-tag datasets ship as GitHub release
-tarballs (`results-v1.4.K.tar.gz`); the empirical record (tracked
+**Status (v1.4.3):** 4-agent leaderboard across 3 local models. Combined
+v1.4 dataset is 1,644 rows (frozen at v1.4.1). v1.4.3 is a code-only
+cleanup release — no new inference. Per-tag datasets ship as GitHub
+release tarballs (`results-v1.4.K.tar.gz`); the empirical record (tracked
 immutable runs in `results/runs/{01..04, 07, 11}/` + `docs/release-notes/`)
 stays tracked.
 
@@ -209,7 +210,6 @@ router/
 ├── pricing.mjs                   # shared pricing-table reader (in sync with configs/pricing)
 ├── start.sh                      # manual starter — loads ../.env, binds 127.0.0.1
 ├── package.json                  # minimal — declares "node-test" runner only
-├── agentic/architect.mjs         # architect-call helper (aider/opencode driver pattern)
 ├── tests/                        # router's own test sweep (prompts × strategies)
 └── logs/decisions.jsonl          # tracked routing-decision log
 ```
@@ -345,11 +345,11 @@ embedding-knn · cascade · phase-aware`. Each is one function in
 - **Env keys**: `OPENAI_API_KEY` / `OPEN_AI_API_KEY` accepted (router
   checks both). `ANTHROPIC_API_KEY` is unused in v1.4 (the LLM judge
   was removed).
-- **Task classes**: `puzzles`, `refactors`, `real-prs` — the user-facing
-  names in `BenchmarkConfig.task_classes` and release-notes prose.
-  `bootstrap_cis.json` / `aggregate.json` cell keys still use the
-  back-compat letters (`A` ↔ `puzzles`, `D` ↔ `refactors`, `B` ↔
-  `real-prs`).
+- **Task classes**: `puzzles`, `refactors`, `real-prs` — the same names
+  flow end-to-end through `BenchmarkConfig.task_classes`, the
+  `ResultRow.category` field, the `aggregate.json` / `bootstrap_cis.json`
+  cell keys (e.g. `puzzles::aider::heuristic`), and release-notes prose.
+  (The legacy single-letter codes `A`/`B`/`C`/`D` were retired in v1.4.3.)
 - **Agent names**: `aider`, `opencode`, `mini-swe-agent`, `cline`.
 - **Local guards** (v1.4.1): every local call is capped at 4096
   `num_predict`, 180 s wall-clock, `repeat_penalty=1.1`. Override via

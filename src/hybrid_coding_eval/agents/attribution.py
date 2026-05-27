@@ -1,16 +1,16 @@
-"""Shared agent-runner attribution helpers (R6 / R7 / R8).
+"""Shared agent-runner attribution helpers.
 
-Each agentic runner generates a short ``bench_run_id`` per ``(task, route,
+Each agent runner generates a short ``bench_run_id`` per ``(task, route,
 strategy)`` call, embeds it in the model field sent to the router proxy
 (``router/<strategy>/run-<id>``), and the proxy echoes it into every
 ``router/logs/decisions.jsonl`` row. Attribution back into ``TokenUsage``
-+ ``Routing`` filters on that id, eliminating the timestamp-window race
-that bit the v4 pilot when two strategy=heuristic runs overlapped.
++ ``Routing`` filters on that id, eliminating any timestamp-window race
+when two strategy=heuristic runs overlap.
 
-Backward-compatible fallback: rows that predate the ``bench_run_id``
-field (older v3.3 logs, or third-party clients that don't add the
-suffix) are matched by strategy + timestamp window, used **only if no
-primary rows are found**.
+Fallback: agents (e.g. opencode) that can't embed the ``bench_run_id``
+in the model field — opencode rejects unknown model ids — fall back to
+strategy + timestamp window matching. Used **only if no primary rows
+are found**.
 """
 
 from __future__ import annotations

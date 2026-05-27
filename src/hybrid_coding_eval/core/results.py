@@ -152,7 +152,7 @@ def _row_cost_usd(tokens: TokenUsage, scenario: str) -> float:
       * ``cloud_*`` tokens cost per ``scenario``.
       * If both ``local_*`` and ``cloud_*`` are zero on this row, fall
         back to treating ``tokens.prompt`` / ``tokens.completion`` as
-        cloud (covers R1 cloud-only rows that never set the split).
+        cloud (defensive default for never-set-split rows).
       * ``cached`` tokens are subtracted from the *cloud* prompt side
         and re-charged at the ``cache_read`` rate. (Local has no cache
         rate that isn't zero, so the distinction doesn't matter there.)
@@ -169,7 +169,7 @@ def _row_cost_usd(tokens: TokenUsage, scenario: str) -> float:
         and local_completion == 0
     ):
         # No split provided — fall back to treating the aggregate totals
-        # as cloud. Matches R1 cloud-only rows.
+        # as cloud (defensive default).
         cloud_prompt = int(tokens.prompt or 0)
         cloud_completion = int(tokens.completion or 0)
 

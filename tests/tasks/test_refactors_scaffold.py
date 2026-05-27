@@ -70,7 +70,7 @@ def test_load_tasks_parses_one_placeholder_row(tmp_path: Path) -> None:
     assert len(tasks) == 1
     t = tasks[0]
     assert t.id == "real-dev/d1-placeholder"
-    assert t.category == "D"
+    assert t.category == "refactors"
     assert t.shape == "D1"
     assert t.prompt == "Add a hello-world handler."
     assert t.fixtures_dir == "d1-placeholder"

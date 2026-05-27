@@ -1,19 +1,12 @@
-"""R7 — Aider in architect/editor mode on Exercism Python tasks.
+"""Aider runner — architect/editor mode on Exercism Python tasks.
 
-**EXPERIMENTAL in v1.1.** R7 is in the tree as the apples-to-apples Aider
-runner but is NOT exercised in the v1.1 canonical sweep — v1.1 focuses
-entirely on R8 (opencode). R7 rides free on shared refactors:
-correlation-id token attribution + the new agent-aware `heuristic`
-strategy. Full polish (Docker scoring for pytest, more fixtures) lands
-in v1.2.
+Aider (https://aider.chat) is a CLI coding assistant that operates *inside
+a repo*: read files, emit diffs, run tests, iterate. The architect/editor
+mode splits the work into two model calls per turn (architect proposes,
+editor patches), which is exactly the kind of routing-friendly call mix
+that this benchmark wants to measure.
 
-Aider is a CLI coding assistant that operates *inside a repo*: read files,
-emit diffs, run tests, iterate. The architect/editor mode splits the
-work into two model calls per turn (architect proposes, editor patches),
-which is exactly the kind of routing-friendly call mix that this
-benchmark wants to measure.
-
-What R7 does, per task:
+What this runner does, per task:
   1. Generate a 12-hex ``bench_run_id`` + copy the task fixture into a
      per-run scratch dir.
   2. Subprocess ``aider --architect`` with both architect-model and
@@ -233,7 +226,7 @@ def run(
     except Exception as exc:
         return ResultRow(
             task_id=task.id,
-            category=getattr(task, "category", "A"),
+            category=getattr(task, "category", "puzzles"),
             route=ROUTE,
             hardware_profile_ref=hardware_profile_ref,
             tokens=TokenUsage(),
@@ -346,7 +339,7 @@ def run(
 
     return ResultRow(
         task_id=task.id,
-        category=getattr(task, "category", "A"),
+        category=getattr(task, "category", "puzzles"),
         route=ROUTE,
         hardware_profile_ref=hardware_profile_ref,
         tokens=tokens,

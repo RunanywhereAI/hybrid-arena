@@ -14,7 +14,7 @@ project's own test suite in a per-task Docker container.
 | `tasks.jsonl` | 10 pinned tasks (`seed=42`, `difficulty="easy"`). Checked in. |
 | `verify_harness.py` | Manual end-to-end sanity check of the Docker scoring harness. |
 
-The **adapter** is what the runners (R1–R5) consume to build prompts. It never
+The **adapter** is what the agent runners consume to build prompts. It never
 touches Docker. Running `python -m pytest tests/test_swebench_verified.py -v`
 passes without Docker installed.
 

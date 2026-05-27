@@ -158,7 +158,7 @@ Every row in `results/runs/<sweep>/raw.jsonl` is a `ResultRow` (see
 @dataclass
 class ResultRow:
     task_id: str                 # 'exercism-python/grep'
-    category: str                # 'puzzles' | 'refactors' | 'real-prs' (or legacy A/D)
+    category: str                # 'puzzles' | 'refactors' | 'real-prs'
     route: str                   # 'aider' | 'opencode' | 'mini-swe-agent' | 'cline'
     router_strategy: str | None  # 'heuristic' | 'cascade' | ...
     seed: int | None             # deterministic seed stamped by the orchestrator
@@ -273,11 +273,12 @@ jq '.cells["D::cline::heuristic"].pass_rate' \
 That cell — `cline + your-model + heuristic + refactors` — is the headline
 number. Compare against the v1.4.1 release notes for context.
 
-> **Cell-key naming.** v1.4 cell keys still use the legacy single-letter
-> category codes for back-compat: `A` for `puzzles`, `D` for `refactors`,
-> `B` for `real-prs`. The high-level task-class name appears in
-> `BenchmarkConfig.task_classes` and in the release-notes prose; the
-> `bootstrap_cis.json` / `aggregate.json` keys use the letter.
+> **Cell-key naming.** Cell keys use the same human-readable task-class
+> name end-to-end: `puzzles::aider::heuristic`,
+> `refactors::cline::cascade`, `real-prs::mini-swe-agent::always-local`.
+> Pre-v1.4.3 datasets used single-letter codes (`A`/`B`/`D`); those keys
+> are retired — re-render legacy datasets with the v1.4.3+ harness to
+> migrate.
 
 ---
 

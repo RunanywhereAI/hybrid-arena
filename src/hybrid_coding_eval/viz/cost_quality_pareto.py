@@ -47,16 +47,11 @@ _ROUTE_COLORS = {
     "opencode":       "#ff7f0e",  # orange
     "mini-swe-agent": "#2ca02c",  # green
     "cline":          "#9467bd",  # purple
-    # Legacy fall-backs for re-rendering pre-v1.4 datasets.
-    "R1": "#d62728", "R2": "#2ca02c", "R3": "#1f77b4",
-    "R4": "#9467bd", "R5": "#ff7f0e",
 }
 _CATEGORY_MARKERS = {
     "puzzles":   "o",   # Exercism Python
-    "refactors": "s",   # D-tasks
+    "refactors": "s",   # real-PR D-tasks
     "real-prs":  "^",   # SWE-bench Verified
-    # Legacy fall-backs for re-rendering pre-v1.4 datasets.
-    "A": "o", "B": "s", "C": "^", "D": "s", "X": "o",
 }
 
 

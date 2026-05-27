@@ -18,7 +18,6 @@ import { mkdirSync, appendFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { STRATEGIES, lastUserText, totalPromptTokens } from "./strategies.mjs";
-import { runArchitect, answerFromRun, userTaskFromMessages } from "./pipelines/architect/core.mjs";
 import { costFor, fmtUSD } from "./pricing.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -449,12 +448,6 @@ async function handleChatCompletion(req, res) {
 
   const requestedModel = String(body.model || "");
 
-  // Special pseudo-strategy: router/architect runs the multi-step
-  // plan→execute→synthesise pipeline (Pattern A from ROUTING_STRATEGIES.md).
-  if (requestedModel === "router/architect" || requestedModel === "router/architect-mode") {
-    return handleArchitect(req, res, body, id, t0);
-  }
-
   const force = requestedModel.includes("!local")
     ? "local"
     : requestedModel.includes("!cloud")
@@ -462,9 +455,11 @@ async function handleChatCompletion(req, res) {
     : null;
   const stripped = requestedModel.replace(/!local|!cloud/g, "");
   // Parse "router/<strategy>" or "router/<strategy>/run-<bench_run_id>".
-  // v1.1+: agentic runners (R6/R7/R8) embed a 12-hex correlation id in the
-  // model field so attribution can join back into decisions.jsonl without
-  // timestamp races. Legacy callers (no suffix) keep working unchanged.
+  // Agent runners (aider / mini-swe-agent / cline) embed a 12-hex correlation
+  // id in the model field so attribution can join back into decisions.jsonl
+  // without timestamp races. opencode can't add the suffix (it validates
+  // model ids against its config), so attribution falls back to a timestamp
+  // window for those rows.
   const afterPrefix = stripped.startsWith("router/") ? stripped.slice("router/".length) : stripped;
   const runIdMatch = afterPrefix.match(/^(.+?)\/run-([a-zA-Z0-9_-]+)$/);
   const strategyName = runIdMatch ? runIdMatch[1] : afterPrefix;
@@ -809,157 +804,6 @@ async function streamThrough(res, upstream, record, decision, strategyName, back
   appendDecision(record);
 }
 
-// ----- router/architect handler --------------------------------------------
-async function handleArchitect(_req, res, body, id, t0) {
-  const task = userTaskFromMessages(body.messages);
-  if (!task) {
-    return sendJson(res, 400, {
-      error: { message: "router/architect requires a user message", type: "invalid_request_error" },
-    });
-  }
-  ctx.log("info", `[${id}] router/architect → starting pipeline (task: ${task.slice(0, 80)})`);
-  const proxyBase = `http://127.0.0.1:${PORT}`;
-
-  // SSE events to opencode so the user sees progress live.
-  const stream = !!body.stream;
-  if (stream) {
-    res.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-      "X-Router-Strategy": "architect",
-      "X-Router-Choice": "architect",
-      "X-Router-Backend": "(plan/execute/synth)",
-    });
-    const emit = (text) => {
-      const chunk = {
-        id: "router-architect",
-        object: "chat.completion.chunk",
-        created: Math.floor(Date.now() / 1000),
-        model: "router/architect",
-        choices: [{ index: 0, delta: { content: text } }],
-      };
-      res.write(`data: ${JSON.stringify(chunk)}\n\n`);
-    };
-
-    emit(`[architect] task: ${task.slice(0, 200)}\n\n`);
-    emit(`[architect] Phase 1 — planning…\n`);
-
-    let run;
-    try {
-      run = await runArchitect({
-        proxy: proxyBase,
-        task,
-        onProgress: (ev) => {
-          if (ev.type === "plan-done")
-            emit(
-              `[architect] plan: ${ev.plan.length} steps\n` +
-                ev.plan
-                  .map(
-                    (s) =>
-                      `  ${s.index}. (${s.kind || "?"}, hint=${s.router_hint || "auto"}) ${s.title || ""}`,
-                  )
-                  .join("\n") +
-                `\n\n[architect] Phase 2 — executing…\n`,
-            );
-          else if (ev.type === "step-start")
-            emit(
-              `  step ${ev.step.index} (${ev.step.kind || "?"}, hint=${ev.step.router_hint || "auto"}) → ${ev.model} …\n`,
-            );
-          else if (ev.type === "step-done")
-            emit(
-              `    ↳ ${ev.result.routerChoice} (${ev.result.routerBackend}) ${(ev.result.elapsed / 1000).toFixed(1)}s\n`,
-            );
-          else if (ev.type === "synth-start") emit(`\n[architect] Phase 3 — synthesising…\n`);
-          else if (ev.type === "synth-done")
-            emit(
-              `  synth → ${ev.synth.routerChoice} (${ev.synth.routerBackend}) ${(ev.synth.elapsed / 1000).toFixed(1)}s\n\n---\n\n`,
-            );
-        },
-      });
-    } catch (err) {
-      emit(`\n[architect] FATAL: ${err.message}\n`);
-      res.write(`data: [DONE]\n\n`);
-      res.end();
-      appendDecision({
-        ts: new Date().toISOString(),
-        id,
-        strategy: "architect",
-        choice: "error",
-        reason: `architect: ${err.message}`,
-        success: false,
-      });
-      return;
-    }
-
-    emit(answerFromRun(run));
-    res.write(`data: [DONE]\n\n`);
-    res.end();
-    appendDecision({
-      ts: new Date().toISOString(),
-      id,
-      strategy: "architect",
-      choice: "architect",
-      reason: `architect: plan=${run.plan.length} local=${run.totals.totalLocal} cloud=${run.totals.totalCloud}`,
-      backend_model: "(architect-pipeline)",
-      total_ms: Date.now() - t0,
-      stream: true,
-      success: true,
-      architect_plan_steps: run.plan.length,
-      architect_local_steps: run.totals.totalLocal,
-      architect_cloud_steps: run.totals.totalCloud,
-    });
-    return;
-  }
-
-  // Non-streaming: run pipeline, return single chat completion JSON.
-  let run;
-  try {
-    run = await runArchitect({ proxy: proxyBase, task });
-  } catch (err) {
-    return sendJson(res, 500, {
-      error: { message: `architect failed: ${err.message}`, type: "architect_error" },
-    });
-  }
-  const answer = answerFromRun(run);
-  const completion = {
-    id: `chatcmpl-architect-${id}`,
-    object: "chat.completion",
-    created: Math.floor(Date.now() / 1000),
-    model: "router/architect",
-    choices: [{ index: 0, message: { role: "assistant", content: answer }, finish_reason: "stop" }],
-    usage: {
-      prompt_tokens: 0,
-      completion_tokens: 0,
-      total_tokens: 0,
-    },
-  };
-  res.writeHead(200, {
-    "Content-Type": "application/json",
-    "X-Router-Strategy": "architect",
-    "X-Router-Choice": "architect",
-    "X-Router-Backend": "(plan/execute/synth)",
-    "X-Architect-Steps": String(run.plan.length),
-    "X-Architect-Local": String(run.totals.totalLocal),
-    "X-Architect-Cloud": String(run.totals.totalCloud),
-  });
-  res.end(JSON.stringify(completion));
-  appendDecision({
-    ts: new Date().toISOString(),
-    id,
-    strategy: "architect",
-    choice: "architect",
-    reason: `architect: plan=${run.plan.length} local=${run.totals.totalLocal} cloud=${run.totals.totalCloud}`,
-    backend_model: "(architect-pipeline)",
-    total_ms: Date.now() - t0,
-    stream: false,
-    success: true,
-    architect_plan_steps: run.plan.length,
-    architect_local_steps: run.totals.totalLocal,
-    architect_cloud_steps: run.totals.totalCloud,
-  });
-}
-
 // ----- /v1/models ----------------------------------------------------------
 function handleModels(_req, res) {
   const created = Math.floor(Date.now() / 1000);
@@ -970,14 +814,6 @@ function handleModels(_req, res) {
     owned_by: "opencode-hybrid-router",
     description: STRATEGIES[name].description,
   }));
-  data.push({
-    id: "router/architect",
-    object: "model",
-    created,
-    owned_by: "opencode-hybrid-router",
-    description:
-      "Architect/Editor pipeline: cloud planner emits a JSON plan, each step is routed individually via router/heuristic (with router_hint overrides), final answer is synthesised. Per-subtask granularity.",
-  });
   sendJson(res, 200, { object: "list", data });
 }
 

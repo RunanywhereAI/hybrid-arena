@@ -4,6 +4,55 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [1.4.3] — 2026-05-26
+
+**Back-compat-free cleanup.** Drops every v1.0–v1.3 legacy surface from
+the v1.4 harness. No new benchmark data; the v1.4.1 leaderboard
+(1,644 rows) stands. Full release notes at
+[`docs/release-notes/v1.4.3.md`](./docs/release-notes/v1.4.3.md).
+
+### Changed
+
+- **Task-class names are consistent end-to-end.** `ResultRow.category`,
+  `aggregate.json` cell keys, `bootstrap_cis.json` cell keys, and
+  `decision_matrix.md` rows all use `puzzles` / `refactors` / `real-prs`
+  instead of the legacy single letters (`A` / `D` / `B`). Affects
+  scripts that grep cell keys; the rename is mechanical.
+- **`README.md`** — added explicit Prerequisites section with per-platform
+  install commands (macOS Homebrew + Debian/Ubuntu apt) for Python,
+  Docker, Node, Ollama, jq.
+- **`scripts/reproduce.sh`** — platform-aware install hints. When a
+  prereq is missing it prints the exact `brew install …` or
+  `sudo apt install …` command for the host OS, plus a hint to start
+  the Ollama daemon when port 11434 isn't reachable.
+- **`core/experiment.pair_already_done`** is strict now — requires an
+  exact `(task, route, strategy)` match instead of treating
+  `router_strategy=None` as a wildcard. Stops a foot-gun where a
+  resume could silently skip a stale legacy row.
+
+### Removed
+
+- **`router/pipelines/architect/`** + **`router/agentic/`** — the v3
+  multi-step "plan → execute → synthesise" pipeline. Not referenced by
+  any v1.4 agent; the `model: "router/architect"` pseudo-strategy
+  dispatcher in `server.mjs` was unreachable. ~200 lines of dead code
+  plus 9 vendored example outputs.
+- **Single-letter category codes** (`A`/`B`/`C`/`D`/`X`) from adapter
+  defaults, agent fallbacks, viz colour/marker fall-backs, and the
+  refactor task JSONLs.
+- **`R6` / `R7` / `R8` / `R10` references** from every docstring,
+  comment, and test name. Agent modules read as standalone documents now.
+- **`results/raw.jsonl` historical round-trip test** —
+  `tests/test_metrics_new_fields.py::test_historical_dataset_still_loads`
+  was pure v1.0 back-compat coverage; dropped.
+
+### Fixed
+
+- **`agents/aider.py` + `agents/cline.py`** dispatcher tests no longer
+  rely on `mini-swe-agent` to dispatch a `puzzles` task. (Previously
+  worked only because the back-compat wildcard in `pair_already_done`
+  short-circuited the runner.)
+
 ## [1.4.2] — 2026-05-26
 
 **OSS readiness cleanup.** Code, docs, and reproducibility cleanup pass — no new benchmark data. The full release notes live at [`docs/release-notes/v1.4.2.md`](./docs/release-notes/v1.4.2.md).
@@ -137,7 +186,8 @@ The v1.0.0 → v1.3.0 release lineage is preserved on the [GitHub releases page]
 - **v1.0.0 (2026-05-18)** — First public OSS release. R1–R5 non-agentic surface, 250-row v3 publication sweep, `./bench setup`. (See GH release `v1.0.0`.)
 - **Pre-1.0 (v0.x → v3.x)** — Internal research iterations. The v3.3 sweep (3,581 rows, 33 variants, 6 local models) is the canonical pre-1.0 corpus under `results/runs/`. The 250-row v3 sweep at `results/runs/07-v3-devstral-all-routes/` is preserved bit-identically.
 
-[Unreleased]: https://github.com/RunanywhereAI/hybrid-coding-eval/compare/v1.4.2...HEAD
+[Unreleased]: https://github.com/RunanywhereAI/hybrid-coding-eval/compare/v1.4.3...HEAD
+[1.4.3]: https://github.com/RunanywhereAI/hybrid-coding-eval/releases/tag/v1.4.3
 [1.4.2]: https://github.com/RunanywhereAI/hybrid-coding-eval/releases/tag/v1.4.2
 [1.4.1]: https://github.com/RunanywhereAI/hybrid-coding-eval/releases/tag/v1.4.1
 [1.4.0]: https://github.com/RunanywhereAI/hybrid-coding-eval/releases/tag/v1.4.0

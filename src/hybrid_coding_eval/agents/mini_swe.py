@@ -1,4 +1,4 @@
-"""R6 — mini-swe-agent on SWE-bench Verified, routed through this repo's proxy.
+"""mini-swe-agent runner — SWE-bench Verified, routed through this repo's proxy.
 
 mini-swe-agent (PyPI ``mini-swe-agent``, github.com/SWE-agent/mini-swe-agent) is
 the apples-to-apples agent on the official SWE-bench Verified leaderboard
@@ -6,7 +6,7 @@ the apples-to-apples agent on the official SWE-bench Verified leaderboard
 call, so pointing it at this repo's proxy on :8787 routes every agent step
 through the configured strategy.
 
-What R6 does, per task:
+What this runner does, per task:
   1. Generate a 12-hex ``bench_run_id`` and write a per-strategy YAML
      config that sets LiteLLM ``api_base`` to ``http://127.0.0.1:8787/v1``
      and ``model_name`` to ``openai/router/<strategy>/run-<id>``.
@@ -16,8 +16,7 @@ What R6 does, per task:
   4. Score via the existing :mod:`hybrid_coding_eval.scorers.swebench`
      scorer (Docker SWE-bench harness, ~10 min/task under Rosetta).
   5. Reconstruct per-call token attribution from
-     ``router/logs/decisions.jsonl`` by filtering on ``bench_run_id``
-     (eliminates the timestamp-window race that bit the v4 pilot).
+     ``router/logs/decisions.jsonl`` by filtering on ``bench_run_id``.
 
 The runner is intentionally a thin wrapper: no model invocation here — that
 happens inside the mini-swe-agent subprocess.
@@ -135,12 +134,12 @@ def run(
 ) -> ResultRow:
     """Run one SWE-bench Verified instance through mini-swe-agent.
 
-    Returns a :class:`ResultRow` with ``route="R6"`` and
+    Returns a :class:`ResultRow` with ``route="mini-swe-agent"`` and
     ``router_strategy`` populated. Token attribution is reconstructed
     from ``router/logs/decisions.jsonl`` (timestamp-window).
     """
     if output_dir is None:
-        output_dir = _REPO_ROOT / "results" / "r6"
+        output_dir = _REPO_ROOT / "results" / "mini-swe-agent"
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -255,7 +254,7 @@ def run(
 
     row = ResultRow(
         task_id=task.id,
-        category=getattr(task, "category", "B"),
+        category=getattr(task, "category", "real-prs"),
         route=ROUTE,
         hardware_profile_ref=hardware_profile_ref,
         tokens=tokens,

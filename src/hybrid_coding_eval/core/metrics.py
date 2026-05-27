@@ -70,18 +70,16 @@ class ResultRow:
         Task adapter id, e.g. ``"exercism-python/grep"`` or
         ``"real-dev/d4-review-pagination"``.
     ``category``
-        v1.4 task class: ``"puzzles"``, ``"refactors"``, or ``"real-prs"``.
-        Older sweeps may use the legacy letters (``"A"``, ``"D"``, ``"X"``);
-        analysis code translates on read.
+        Task class: one of ``"puzzles"``, ``"refactors"``, ``"real-prs"``.
     ``route``
-        Agent name: ``"aider"``, ``"opencode"``, ``"mini-swe-agent"``, or
-        ``"cline"``. Older sweeps may use the legacy ``R6/R7/R8/R10`` ids.
+        Agent name: one of ``"aider"``, ``"opencode"``, ``"mini-swe-agent"``,
+        ``"cline"``.
     ``router_strategy``
         Which routing strategy was active: ``"always-cloud"``,
         ``"always-local"``, ``"heuristic"``, ``"cascade"``, etc.
     ``seed``
         Deterministic seed used for this row. Populated by the
-        orchestrator for every v1.4+ sweep. Older sweeps may have ``None``.
+        orchestrator for every sweep.
     """
 
     task_id: str

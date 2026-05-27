@@ -79,7 +79,7 @@ class Task:
             test_patch=row["test_patch"],
             expected_patch=row["patch"],
             hints_text=row.get("hints_text") or "",
-            category="B",
+            category="real-prs",
             metadata={
                 "difficulty": row.get("difficulty"),
                 "created_at": row.get("created_at"),
@@ -118,7 +118,7 @@ def _load_from_pinned_jsonl() -> list[Task] | None:
                 test_patch=row["test_patch"],
                 expected_patch=row["expected_patch"],
                 hints_text=row.get("hints_text", ""),
-                category=row.get("category", "B"),
+                category="real-prs",
                 metadata=row.get("metadata", {}),
             )
         )

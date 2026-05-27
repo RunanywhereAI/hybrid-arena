@@ -35,8 +35,30 @@ log()  { printf '\033[1;36m[reproduce]\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m[reproduce]\033[0m %s\n' "$*" >&2; }
 die()  { printf '\033[1;31m[reproduce]\033[0m %s\n' "$*" >&2; exit 1; }
 
+# Detect platform so we can print the right install command.
+case "$(uname -s)" in
+    Darwin*) PLATFORM="mac"   ;;
+    Linux*)  PLATFORM="linux" ;;
+    *)       PLATFORM="other" ;;
+esac
+
+install_hint() {
+    # $1=command, $2=mac hint, $3=linux hint
+    local cmd="$1" mac="$2" linux="$3"
+    case "$PLATFORM" in
+        mac)   printf "  → install with: %s\n" "$mac" ;;
+        linux) printf "  → install with: %s\n" "$linux" ;;
+        *)     printf "  → install %s and re-run.\n" "$cmd" ;;
+    esac
+}
+
 require_cmd() {
-    command -v "$1" >/dev/null 2>&1 || die "missing prerequisite: '$1'. ${2:-}"
+    # $1=command, $2=mac install hint, $3=linux install hint
+    if ! command -v "$1" >/dev/null 2>&1; then
+        warn "missing prerequisite: '$1'"
+        install_hint "$1" "$2" "$3"
+        exit 1
+    fi
 }
 
 #─── parse args ─────────────────────────────────────────────────────────────
@@ -55,19 +77,44 @@ done
 
 #─── prereq checks (fail fast) ──────────────────────────────────────────────
 log "checking prerequisites…"
-require_cmd python3   "install Python 3.11 or 3.12 from https://python.org"
-require_cmd docker    "install Docker Desktop from https://docker.com/products/docker-desktop"
-require_cmd node      "install Node 20+ from https://nodejs.org"
-require_cmd ollama    "install Ollama from https://ollama.com (only needed for local-routed sweeps)"
-require_cmd jq        "install jq (brew install jq / apt-get install jq)"
+require_cmd python3 \
+    "brew install python@3.12" \
+    "sudo apt install python3.12 python3.12-venv"
+require_cmd docker \
+    "open https://docker.com/products/docker-desktop and install Docker Desktop" \
+    "sudo apt install docker.io && sudo usermod -aG docker \$USER"
+require_cmd node \
+    "brew install node" \
+    "sudo apt install nodejs npm"
+require_cmd ollama \
+    "open https://ollama.com/download" \
+    "curl -fsSL https://ollama.com/install.sh | sh"
+require_cmd jq \
+    "brew install jq" \
+    "sudo apt install jq"
 
 if ! docker info >/dev/null 2>&1; then
-    die "docker daemon not running. Start Docker Desktop, then re-run."
+    case "$PLATFORM" in
+        mac)   die "docker daemon not running. Open Docker Desktop, then re-run." ;;
+        linux) die "docker daemon not running. Run: sudo systemctl start docker" ;;
+        *)     die "docker daemon not running. Start it, then re-run." ;;
+    esac
 fi
 
 PY_MINOR="$(python3 -c 'import sys; print(sys.version_info.minor)')"
 if [[ "$PY_MINOR" -lt 11 ]]; then
     die "Python 3.11+ required (got 3.$PY_MINOR)."
+fi
+
+# Ollama daemon must be reachable. We only warn (sweeps that use
+# always-cloud don't need it) but a fresh user almost always wants it.
+if ! curl -fsS http://127.0.0.1:11434/api/version >/dev/null 2>&1; then
+    warn "ollama daemon not reachable at 127.0.0.1:11434"
+    case "$PLATFORM" in
+        mac)   warn "  → start Ollama.app, or run: ollama serve &" ;;
+        linux) warn "  → run: sudo systemctl start ollama  (or just: ollama serve &)" ;;
+    esac
+    warn "  proceeding anyway — only the always-cloud strategy will work without it."
 fi
 
 #─── .env presence ──────────────────────────────────────────────────────────

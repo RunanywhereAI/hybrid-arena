@@ -1,10 +1,8 @@
-"""R10 — Cline coding-agent CLI on Exercism Python / real-dev fixtures.
+"""Cline coding-agent CLI runner — Exercism Python / real-dev fixtures.
 
-**EXPERIMENTAL in v1.4.** R10 is the third agent-loop runner alongside R7
-(aider) and R8 (opencode). Cline (https://github.com/cline/cline) is an
-open-source coding agent. The 3.0.9 release ships a real ``cline`` CLI
-binary (npm-installed) that can be driven from a subprocess for headless
-benchmark runs.
+Cline (https://github.com/cline/cline) is an open-source coding agent.
+The 3.0.9 release ships a real ``cline`` CLI binary (npm-installed) that
+can be driven from a subprocess for headless benchmark runs.
 
 Cline 3.0.9 invocation (verified via integration smoke against the router):
 
@@ -17,8 +15,7 @@ Notes / gotchas:
     Ollama-style endpoint (``/v1`` with OpenAI-compat schema). The
     actual base URL for the ``ollama`` provider is stored in
     ``~/.cline/data/settings/providers.json`` — it is NOT a CLI flag.
-    ``bench setup`` writes that file in Phase 1.5b; this runner just
-    drives the CLI.
+    ``bench setup`` writes that file; this runner just drives the CLI.
   * ``-m`` carries the model id verbatim through to the router; the
     router's ``runIdMatch`` regex extracts ``run-<id>`` and writes
     ``bench_run_id`` into ``decisions.jsonl`` for attribution.
@@ -26,14 +23,10 @@ Notes / gotchas:
     ``stdout.log`` for forensic inspection; the final task-completion
     event isn't required for scoring (pytest on the scratch dir gives
     the ground-truth pass/fail).
-  * Earlier code in this file used fictional flags (``run`` subcommand,
-    ``--task``, ``--provider openai-compatible``, ``--base-url``,
-    ``--non-interactive``, ``--yes``, ``--file``). None of those exist
-    in cline 3.0.9.
 
-What R10 does, per task:
+What this runner does, per task:
   1. Generate a 12-hex ``bench_run_id`` + copy the task fixture into a
-     per-run scratch dir (shared helper with R7).
+     per-run scratch dir (shared helper with the aider runner).
   2. Subprocess ``cline -P ollama -m router/<strategy>/run-<id>`` with
      ``cwd`` and ``-c`` set to the scratch dir so file edits happen
      there.
@@ -43,8 +36,7 @@ What R10 does, per task:
 
 If ``cline`` is not on PATH the runner returns a ResultRow with
 ``error="cline_not_installed"`` rather than raising — mirrors the
-graceful path R7 takes when ``aider`` is missing. Phase 2 will rename
-this file to ``agents/cline.py``.
+graceful path the aider runner takes when ``aider`` is missing.
 """
 
 from __future__ import annotations
@@ -113,7 +105,7 @@ def run(
     scratch = run_dir / "scratch"
     run_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. Copy fixture so the run is isolated. Reuses R7's helper which
+    # 1. Copy fixture so the run is isolated. Reuses the aider helper which
     # handles both Exercism (``fixture_dir`` Path) and real_dev
     # (``fixtures_dir`` slug) shapes.
     try:
@@ -121,7 +113,7 @@ def run(
     except Exception as exc:
         return ResultRow(
             task_id=task.id,
-            category=getattr(task, "category", "A"),
+            category=getattr(task, "category", "puzzles"),
             route=ROUTE,
             hardware_profile_ref=hardware_profile_ref,
             tokens=TokenUsage(),
@@ -133,7 +125,7 @@ def run(
             router_strategy=router_strategy,
         )
 
-    # 2. Build the prompt. Same shape as R7: single-file Exercism stub
+    # 2. Build the prompt. Same shape as the aider runner: Exercism stub
     # gets a hint about the stub filename; multi-file real_dev tasks
     # rely on the task's self-contained prompt. Cline has no ``--file``
     # flag, so the only way to scope its working set is to (a) cwd into
@@ -248,7 +240,7 @@ def run(
 
     return ResultRow(
         task_id=task.id,
-        category=getattr(task, "category", "A"),
+        category=getattr(task, "category", "puzzles"),
         route=ROUTE,
         hardware_profile_ref=hardware_profile_ref,
         tokens=tokens,

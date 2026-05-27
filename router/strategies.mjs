@@ -336,18 +336,17 @@ export async function embeddingKnn(req, ctx) {
 //
 // Extend at runtime via env: ROUTER_AGENT_SYSTEM_MARKERS=foo,bar.
 export const DEFAULT_AGENT_SYSTEM_MARKERS = [
-  // mini-swe-agent (R6)
+  // mini-swe-agent
   "You are a helpful assistant that can interact with a computer shell",
   "mini-swe-agent",
   "submit your solution",
   "You are a software engineer interacting continuously with a computer",
   "<pr_description>",
-  // Aider (R7)
+  // aider
   "Aider",
-  // opencode (R8)
+  // opencode
   "opencode",
-  // Generic agentic-tool markers — added for v1.2+ tool support.
-  // Educated guesses; refine when we integrate each tool.
+  // Generic agentic-tool markers (third-party clients).
   "Claude Code",
   "Cursor",
   "Cline",

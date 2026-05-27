@@ -1,10 +1,10 @@
-"""Unit tests for :mod:`hybrid_coding_eval.agents.cline` (R10).
+"""Unit tests for :mod:`hybrid_coding_eval.agents.cline`.
 
 These tests verify the module shape and the "cline binary missing"
 graceful-fallback path without spinning up the router proxy or
-invoking any model. The runner mirrors R7 (aider) for fixture copy +
-local pytest scoring so we lean on a synthetic Exercism-style fixture
-to exercise the FileNotFoundError → ResultRow branch.
+invoking any model. The runner mirrors the aider runner for fixture
+copy + local pytest scoring, so we lean on a synthetic Exercism-style
+fixture to exercise the FileNotFoundError → ResultRow branch.
 """
 
 from __future__ import annotations
@@ -24,13 +24,13 @@ if str(_REPO_ROOT) not in sys.path:
 
 
 def test_cline_module_imports() -> None:
-    """R10 module is importable and exposes the run() and ROUTE symbols."""
-    from hybrid_coding_eval.agents import cline as r10_cline
+    """The cline runner module is importable and exposes run() + ROUTE."""
+    from hybrid_coding_eval.agents import cline
 
-    assert r10_cline.ROUTE == "cline"
-    assert callable(r10_cline.run)
+    assert cline.ROUTE == "cline"
+    assert callable(cline.run)
 
-    sig = inspect.signature(r10_cline.run)
+    sig = inspect.signature(cline.run)
     for kw in (
         "proxy_url",
         "hardware_profile_ref",
@@ -41,16 +41,12 @@ def test_cline_module_imports() -> None:
         assert kw in sig.parameters, f"run() missing kw-only arg {kw!r}"
 
 
-def test_runner_dispatch_registers_r10() -> None:
-    """The core experiment dispatch should resolve 'R10' (and 'cline') to
-    our run().
-    """
-    from hybrid_coding_eval.agents import cline as r10_cline
+def test_runner_dispatch_registers_cline() -> None:
+    """The core experiment dispatch resolves 'cline' to our run()."""
+    from hybrid_coding_eval.agents import cline
     from hybrid_coding_eval.core.experiment import _runner_for
 
-    assert _runner_for("cline") is r10_cline.run
-    # Phase-2-friendly alias.
-    assert _runner_for("cline") is r10_cline.run
+    assert _runner_for("cline") is cline.run
 
 
 class _FakeTask:
@@ -58,7 +54,7 @@ class _FakeTask:
 
     def __init__(self, fixture_dir: Path) -> None:
         self.id = "exercism-python/leap"
-        self.category = "X"
+        self.category = "puzzles"
         self.prompt = "Implement is_leap_year so the tests pass."
         self.fixture_dir = fixture_dir
 
@@ -264,13 +260,13 @@ def test_cline_argv_matches_real_cli_shape(
 
 def test_cline_run_fixture_copy_failure_returns_error_row(tmp_path: Path) -> None:
     """When the task fixture is missing, run() returns a ``fixture_copy_failed``
-    row rather than crashing. Mirrors R7/R8.
+    row rather than crashing. Mirrors the aider + opencode runners.
     """
     from hybrid_coding_eval.agents import cline as r10_cline
 
     class _BadTask:
         id = "exercism-python/does-not-exist"
-        category = "X"
+        category = "puzzles"
         prompt = "noop"
         fixture_dir = tmp_path / "does_not_exist"  # never created
 

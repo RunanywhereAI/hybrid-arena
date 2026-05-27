@@ -38,8 +38,8 @@ from hybrid_coding_eval.core.results import append_row  # noqa: E402
 def _mk_row(
     *,
     task_id: str,
-    category: str = "A",
-    route: str = "R1",
+    category: str = "puzzles",
+    route: str = "aider",
     prompt: int = 1000,
     completion: int = 500,
     local_prompt: int = 0,
@@ -112,8 +112,8 @@ def test_compute_row_cost_pure_cloud_and_local():
 
 def test_compute_scenario_costs_swaps_column_per_scenario():
     rows = [
-        _mk_row(task_id="a", route="R1", cloud_prompt=1000, cloud_completion=500),
-        _mk_row(task_id="b", route="R2", local_prompt=1000, local_completion=500, composite=0.5),
+        _mk_row(task_id="a", route="aider", cloud_prompt=1000, cloud_completion=500),
+        _mk_row(task_id="b", route="opencode", local_prompt=1000, local_completion=500, composite=0.5),
     ]
     df = compute_scenario_costs(rows, ["openai-gpt5.5", "openai-gpt5-mini"])
     assert list(df.columns) == [
@@ -123,7 +123,7 @@ def test_compute_scenario_costs_swaps_column_per_scenario():
         "cost_openai-gpt5.5",
         "cost_openai-gpt5-mini",
     ]
-    # R1 row should have non-zero cloud cost, R2 row zero local cost.
+    # Cloud row should have non-zero cost, local row zero cost.
     assert float(df.loc[df["task_id"] == "a", "cost_openai-gpt5.5"].iloc[0]) > 0
     assert float(df.loc[df["task_id"] == "b", "cost_openai-gpt5.5"].iloc[0]) == 0.0
     # gpt5-mini cheaper than gpt5.5 for the same tokens.
@@ -133,13 +133,13 @@ def test_compute_scenario_costs_swaps_column_per_scenario():
 
 
 def test_aggregate_results_shape_and_headline(tmp_path: Path):
-    """5 rows across 2 categories × 2 routes → check the JSON shape."""
+    """5 rows across 2 task-classes × 2 agents → check the JSON shape."""
     rows = [
-        _mk_row(task_id="t1", category="A", route="R1", cloud_prompt=1000, cloud_completion=500, composite=1.0, functional_pass=True),
-        _mk_row(task_id="t2", category="A", route="R1", cloud_prompt=1200, cloud_completion=400, composite=0.9, functional_pass=True),
-        _mk_row(task_id="t3", category="A", route="R2", local_prompt=1000, local_completion=500, composite=0.4, functional_pass=False),
-        _mk_row(task_id="t4", category="B", route="R1", cloud_prompt=2000, cloud_completion=800, composite=0.7, functional_pass=True),
-        _mk_row(task_id="t5", category="B", route="R2", local_prompt=1500, local_completion=500, composite=0.5, functional_pass=False),
+        _mk_row(task_id="t1", category="puzzles",   route="aider",    cloud_prompt=1000, cloud_completion=500, composite=1.0, functional_pass=True),
+        _mk_row(task_id="t2", category="puzzles",   route="aider",    cloud_prompt=1200, cloud_completion=400, composite=0.9, functional_pass=True),
+        _mk_row(task_id="t3", category="puzzles",   route="opencode", local_prompt=1000, local_completion=500, composite=0.4, functional_pass=False),
+        _mk_row(task_id="t4", category="refactors", route="aider",    cloud_prompt=2000, cloud_completion=800, composite=0.7, functional_pass=True),
+        _mk_row(task_id="t5", category="refactors", route="opencode", local_prompt=1500, local_completion=500, composite=0.5, functional_pass=False),
     ]
     path = tmp_path / "raw.jsonl"
     _write_rows(path, rows)
@@ -149,39 +149,43 @@ def test_aggregate_results_shape_and_headline(tmp_path: Path):
 
     assert agg["row_count"] == 5
     assert agg["source"].endswith("raw.jsonl")
-    assert set(agg["per_category_route"].keys()) == {"A/R1", "A/R2", "B/R1", "B/R2"}
+    assert set(agg["per_category_route"].keys()) == {
+        "puzzles/aider",
+        "puzzles/opencode",
+        "refactors/aider",
+        "refactors/opencode",
+    }
 
-    a_r1 = agg["per_category_route"]["A/R1"]
-    assert a_r1["count"] == 2
+    puzzles_aider = agg["per_category_route"]["puzzles/aider"]
+    assert puzzles_aider["count"] == 2
     # Quality median of [1.0, 0.9] = 0.95.
-    assert math.isclose(a_r1["quality_median"], 0.95)
-    # Cost column present.
+    assert math.isclose(puzzles_aider["quality_median"], 0.95)
+    # Cost columns present and positive for the cloud cell.
     for s in PRICING_SCENARIOS:
-        assert f"cost_{s}_median" in a_r1
-        assert f"cost_{s}_total" in a_r1
-        # All R1 (cloud) cells should have positive cost.
-        assert a_r1[f"cost_{s}_total"] > 0
+        assert f"cost_{s}_median" in puzzles_aider
+        assert f"cost_{s}_total" in puzzles_aider
+        assert puzzles_aider[f"cost_{s}_total"] > 0
 
-    # A/R2 is pure-local → zero cost regardless of scenario.
-    a_r2 = agg["per_category_route"]["A/R2"]
+    # puzzles/opencode is pure-local → zero cost regardless of scenario.
+    puzzles_opencode = agg["per_category_route"]["puzzles/opencode"]
     for s in PRICING_SCENARIOS:
-        assert a_r2[f"cost_{s}_total"] == 0.0
+        assert puzzles_opencode[f"cost_{s}_total"] == 0.0
 
-    # Headline has flat keys like "A_R1".
-    assert "A_R1" in agg["headline"]["quality"]
-    assert "A_R1" in agg["headline"]["cost_openai-gpt5.5"]
+    # Headline has flat keys like "puzzles_aider".
+    assert "puzzles_aider" in agg["headline"]["quality"]
+    assert "puzzles_aider" in agg["headline"]["cost_openai-gpt5.5"]
 
     # Totals per route.
     per_route = agg["totals"]["per_route"]
-    assert set(per_route.keys()) == {"R1", "R2"}
-    assert per_route["R1"]["tokens_cloud_prompt_total"] == 1000 + 1200 + 2000
-    assert per_route["R2"]["tokens_local_prompt_total"] == 1000 + 1500
+    assert set(per_route.keys()) == {"aider", "opencode"}
+    assert per_route["aider"]["tokens_cloud_prompt_total"] == 1000 + 1200 + 2000
+    assert per_route["opencode"]["tokens_local_prompt_total"] == 1000 + 1500
 
     # Success rate per route per category.
     srr = agg["success_rate_per_route_per_category"]
-    assert srr["A"]["R1"] == 1.0
-    assert srr["A"]["R2"] == 0.0
-    assert srr["B"]["R1"] == 1.0
+    assert srr["puzzles"]["aider"] == 1.0
+    assert srr["puzzles"]["opencode"] == 0.0
+    assert srr["refactors"]["aider"] == 1.0
 
     # Output file exists and parses as JSON (no raw NaN).
     raw_out = out_path.read_text()
@@ -202,19 +206,19 @@ def test_aggregate_results_handles_empty_input(tmp_path: Path):
 
 
 def test_aggregate_results_none_composite_becomes_null(tmp_path: Path):
-    """Category C rows often have no composite — should serialise as JSON null."""
+    """Rows with no composite (e.g. judge-only tasks) serialise as JSON null."""
     rows = [
-        _mk_row(task_id="c1", category="C", route="R3", composite=None, functional_pass=None),
-        _mk_row(task_id="c2", category="C", route="R3", composite=None, functional_pass=None),
+        _mk_row(task_id="c1", category="refactors", route="cline", composite=None, functional_pass=None),
+        _mk_row(task_id="c2", category="refactors", route="cline", composite=None, functional_pass=None),
     ]
     path = tmp_path / "raw.jsonl"
     _write_rows(path, rows)
     out = tmp_path / "agg.json"
     agg = aggregate_results(path, out)
-    cell = agg["per_category_route"]["C/R3"]
+    cell = agg["per_category_route"]["refactors/cline"]
     assert cell["quality_median"] is None  # NaN → None
     parsed = json.loads(out.read_text())
-    assert parsed["per_category_route"]["C/R3"]["quality_median"] is None
+    assert parsed["per_category_route"]["refactors/cline"]["quality_median"] is None
 
 
 def test_rows_to_frame_includes_all_scenario_columns():

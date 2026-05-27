@@ -70,7 +70,7 @@ def _row_tokens_split(row: ResultRow) -> tuple[int, int, int, int]:
     completion_cloud)`` for one row.
 
     Mirrors the fallback used by :func:`compute_row_cost`: when neither
-    a local nor cloud split is populated (older R1 cloud-only rows), the
+    a local nor cloud split is populated (defensive default), the
     aggregate ``tokens.prompt`` / ``tokens.completion`` are treated as
     cloud so the cloud-fraction computation stays consistent with the
     per-row cost.

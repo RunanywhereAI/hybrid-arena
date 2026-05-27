@@ -1,4 +1,4 @@
-"""Exercism Python adapter — feeds R7 (Aider) with polyglot-style tasks.
+"""Exercism Python adapter — polyglot-style puzzle tasks for the agents.
 
 Reads task subdirectories from ``fixtures/``. Each task dir has:
   - ``<slug>.py``         — the stub the model edits in place
@@ -108,7 +108,7 @@ def load_tasks(slugs: Optional[list[str]] = None) -> list[Task]:
         out.append(
             Task(
                 id=f"exercism-python/{slug}",
-                category="A",
+                category="puzzles",
                 slug=slug,
                 prompt=prompt,
                 stub_path=stub,

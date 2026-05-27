@@ -29,7 +29,7 @@ def _mk_row(
     task_id: str,
     route: str,
     variant: str = "test",
-    category: str = "A",
+    category: str = "puzzles",
     local_prompt: int = 0,
     local_completion: int = 0,
     cloud_prompt: int = 0,
@@ -61,17 +61,17 @@ def _mk_row(
 def _fixture() -> list[ResultRow]:
     """Synthesize a 2-route × 3-task fixture.
 
-    Route ``R1`` (cloud-only): 3 tasks, nonzero cloud tokens, zero
-    local.
-    Route ``R2`` (local-only): 3 tasks, nonzero local tokens, zero
-    cloud.
+    Route ``aider`` (cloud-only here): 3 tasks, nonzero cloud tokens,
+    zero local.
+    Route ``opencode`` (local-only here): 3 tasks, nonzero local
+    tokens, zero cloud.
     """
     rows: list[ResultRow] = []
     for i, task in enumerate(("t1", "t2", "t3")):
         rows.append(
             _mk_row(
                 task_id=task,
-                route="R1",
+                route="aider",
                 cloud_prompt=1000 * (i + 1),
                 cloud_completion=500 * (i + 1),
             )
@@ -79,7 +79,7 @@ def _fixture() -> list[ResultRow]:
         rows.append(
             _mk_row(
                 task_id=task,
-                route="R2",
+                route="opencode",
                 local_prompt=800 * (i + 1),
                 local_completion=400 * (i + 1),
                 # exercise the None path for composite on one row
@@ -104,15 +104,15 @@ def test_cloud_fraction_in_unit_interval() -> None:
 def test_local_only_rows_have_zero_cost_under_every_scenario() -> None:
     rows = _fixture()
     df = compute_token_budget(rows, HEADLINE_SCENARIOS)
-    local_only = df[df["route"] == "R2"]
+    local_only = df[df["route"] == "opencode"]
     assert not local_only.empty
     for s in HEADLINE_SCENARIOS:
         col = f"cost_{s}_usd"
         assert col in df.columns, f"missing column {col}"
-        # R2 rows have zero cloud tokens → cost must be 0 under every
-        # scenario (local tokens are priced at __local__ = $0).
+        # local-only rows have zero cloud tokens → cost must be 0 under
+        # every scenario (local tokens are priced at __local__ = $0).
         assert (local_only[col].abs() < 1e-12).all(), (
-            f"R2 rows should have zero cost under {s}, got "
+            f"opencode rows should have zero cost under {s}, got "
             f"{local_only[col].tolist()}"
         )
 
@@ -126,14 +126,14 @@ def test_dataframe_length_equals_input_length() -> None:
 def test_cloud_only_rows_have_cloud_fraction_one() -> None:
     rows = _fixture()
     df = compute_token_budget(rows, HEADLINE_SCENARIOS)
-    cloud_only = df[df["route"] == "R1"]
+    cloud_only = df[df["route"] == "aider"]
     assert (cloud_only["cloud_fraction"] == 1.0).all()
 
 
 def test_cloud_only_rows_have_nonzero_cost() -> None:
     rows = _fixture()
     df = compute_token_budget(rows, HEADLINE_SCENARIOS)
-    cloud_only = df[df["route"] == "R1"]
+    cloud_only = df[df["route"] == "aider"]
     # openai-gpt5.5 has nonzero rates in pricing_tables.json, so any
     # nonzero cloud tokens must produce a strictly positive cost.
     col = "cost_openai-gpt5.5_usd"

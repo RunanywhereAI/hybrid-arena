@@ -119,23 +119,19 @@ def _render(rows: list[ResultRow], scenario: str = "openai-gpt5.5") -> str:
     lines.append("### What to read from this")
     lines.append("")
     lines.append(
-        "- R1 rows are pure cloud (local = 0). Any nonzero local on an R1 "
-        "row would be a routing bug."
+        "- `always-cloud` rows are pure cloud (local = 0). Any nonzero "
+        "local on those rows is a routing bug."
     )
     lines.append(
-        "- R2 rows are pure local (cloud = 0). The dollar cost column for R2 "
-        "is always $0 under every scenario — the cost baseline."
+        "- `always-local` rows are pure local (cloud = 0). The dollar "
+        "cost column is always $0 — the cost baseline."
     )
     lines.append(
-        "- R3 rows split planner+synth (cloud) from executor steps (mostly "
-        "local when the heuristic sends a step there). The *routed local* "
-        "percentage is R3's ability to offload — 100% means every step went "
-        "local, 0% means every step went cloud."
-    )
-    lines.append(
-        "- R4 rows put the supervisor in the cloud and the worker on the "
-        "local model. The routed-local percentage grows with context size "
-        "because the worker does most of the reading."
+        "- Hybrid strategies (`heuristic`, `cascade`, `phase-aware`, "
+        "`llm-classifier`, `embedding-knn`, `rules`) split work between "
+        "local and cloud. The *routed local* percentage is the strategy's "
+        "ability to offload work onto local hardware — 100 % means every "
+        "call went local, 0 % means every call went cloud."
     )
 
     return "\n".join(lines) + "\n"

@@ -127,7 +127,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
             )
 
     # Explicit task-ID whitelist (v1.3+) — scopes a sweep to a known-good
-    # subset (e.g. R7-compatible D1+D5 real_dev tasks).
+    # subset (e.g. the aider-compatible D1+D5 refactor tasks).
     if config.benchmark.task_ids:
         argv += ["--task-ids", ",".join(config.benchmark.task_ids)]
 
@@ -318,7 +318,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent  # repo root
 
 
 def _ensure_opencode(verbose: bool = True) -> bool:
-    """Clone the opencode fork (R8 route) into ``vendor/opencode/``.
+    """Clone the opencode fork into ``vendor/opencode/``.
 
     Fork + ref are env-overridable:
 
@@ -370,8 +370,8 @@ def _ensure_opencode_config(verbose: bool = True) -> bool:
 
     If the file already mentions ``hybrid-router`` (substring), leave it
     alone. Otherwise back it up (or create fresh) with a minimal config
-    pointing at the proxy on :8787. The R8 runner expects model id shape
-    ``hybrid-router/router/<strategy>[/run-<id>]``.
+    pointing at the proxy on :8787. The opencode runner expects the model
+    id shape ``hybrid-router/router/<strategy>[/run-<id>]``.
     """
     import os
     from pathlib import Path as _P
