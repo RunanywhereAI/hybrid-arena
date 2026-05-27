@@ -38,6 +38,26 @@ hard tasks with 3 seeds each. Full notes at
 - `tasks/refactors/scorers.py` dispatches `D6` through the
   existing D1 overlay+pytest path.
 
+### Fixed
+
+- **aider pytest-summary parser bug.** `_parse_pytest_summary`
+  in `src/hybrid_coding_eval/agents/aider.py` previously read
+  the summary line positionally and missed the "failed" count
+  when it preceded "passed" (e.g. `2 failed, 21 passed` was
+  scored 0/2 instead of 21/23). New implementation uses
+  independent regexes per token and is order-agnostic. Covered
+  by `tests/agents/test_aider_parser.py` (18 parametrized cases).
+
+### Findings (post-sweep)
+
+- **cline + qwen3.6:35b + always-local on D6 hits 67% with $0 cloud spend** —
+  the new headline. 30B local-only solves token-bucket and toposort 3/3,
+  partial-passes lru-ttl-cache and mini-template.
+- **aider + gemma4 + heuristic on D6 falls to 58%** vs always-cloud 100%.
+  The v1.3 marquee profile breaks on harder calibration.
+- **cline + qwen3.6 + cascade on D6 drops from v1.4.1's 100%/8% to 75%/13%** —
+  the router under-escalates on `d6-mini-template` (recursive parser).
+
 ## [1.4.4] — 2026-05-27
 
 **Fresh-user reproducibility patch.** Targets the last two paper cuts a
