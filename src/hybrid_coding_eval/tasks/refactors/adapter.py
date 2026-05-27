@@ -86,7 +86,7 @@ _VALID_SHAPES = ("D1", "D2", "D3", "D4", "D5")
 
 @dataclass(frozen=True)
 class Task:
-    """A single Category-D task.
+    """A single refactors task.
 
     Fields
     ------
@@ -95,7 +95,8 @@ class Task:
     category
         Always ``"refactors"`` for this adapter.
     shape
-        One of ``D1`` | ``D2`` | ``D3`` | ``D4`` | ``D5``.
+        One of ``D1`` | ``D2`` | ``D3`` | ``D4`` | ``D5`` (legacy fixture
+        groupings carried over from the upstream dataset).
     prompt
         The natural-language instruction, without inlined fixtures.
         Use :func:`task_prompt` to get the version sent to the model.
@@ -122,7 +123,7 @@ class Task:
     id: str
     shape: str
     prompt: str
-    category: str = "D"
+    category: str = "refactors"
     fixtures_dir: str | None = None
     tests: str | None = None
     rubric: dict[str, str] | None = None
@@ -163,7 +164,7 @@ def load_tasks(
     seed: int = 42,
     path: Path | None = None,
 ) -> list[Task]:
-    """Load Category-D tasks from ``tasks.jsonl``.
+    """Load refactor tasks from ``tasks.jsonl``.
 
     Parameters
     ----------

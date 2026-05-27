@@ -144,7 +144,7 @@ def run(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     slug = _task_slug(task.id)
-    run_dir = output_dir / f"r6_{slug}_{router_strategy}"
+    run_dir = output_dir / f"mini-swe-agent_{slug}_{router_strategy}"
     run_dir.mkdir(parents=True, exist_ok=True)
 
     # 1. Generate correlation id + write per-strategy YAML config.

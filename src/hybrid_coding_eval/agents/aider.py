@@ -211,12 +211,12 @@ def run(
 ) -> ResultRow:
     """Run one Exercism Python task through Aider's architect mode."""
     if output_dir is None:
-        output_dir = _REPO_ROOT / "results" / "r7"
+        output_dir = _REPO_ROOT / "results" / "aider"
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     slug = _task_slug(task.id)
-    run_dir = output_dir / f"r7_{slug}_{router_strategy}"
+    run_dir = output_dir / f"aider_{slug}_{router_strategy}"
     scratch = run_dir / "scratch"
     run_dir.mkdir(parents=True, exist_ok=True)
 

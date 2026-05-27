@@ -77,9 +77,27 @@ done
 
 #─── prereq checks (fail fast) ──────────────────────────────────────────────
 log "checking prerequisites…"
-require_cmd python3 \
-    "brew install python@3.12" \
-    "sudo apt install python3.12 python3.12-venv"
+
+# Prefer python3.12 → python3.11 → python3 (in that order). Python 3.13+
+# breaks several agent installers (e.g. aider-chat) because they expect
+# a setuptools backend that 3.13/3.14 dropped from the stdlib bootstrap.
+PYTHON_BIN=""
+for candidate in python3.12 python3.11; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+        PYTHON_BIN="$candidate"
+        break
+    fi
+done
+if [[ -z "$PYTHON_BIN" ]]; then
+    warn "missing prerequisite: 'python3.11' or 'python3.12'"
+    install_hint "python3.12" \
+        "brew install python@3.12" \
+        "sudo apt install python3.12 python3.12-venv"
+    warn "  (python3 alone is not enough — the agent runners need 3.11/3.12 specifically.)"
+    exit 1
+fi
+log "python: $PYTHON_BIN ($($PYTHON_BIN --version))"
+
 require_cmd docker \
     "open https://docker.com/products/docker-desktop and install Docker Desktop" \
     "sudo apt install docker.io && sudo usermod -aG docker \$USER"
@@ -101,10 +119,7 @@ if ! docker info >/dev/null 2>&1; then
     esac
 fi
 
-PY_MINOR="$(python3 -c 'import sys; print(sys.version_info.minor)')"
-if [[ "$PY_MINOR" -lt 11 ]]; then
-    die "Python 3.11+ required (got 3.$PY_MINOR)."
-fi
+PY_MINOR="$($PYTHON_BIN -c 'import sys; print(sys.version_info.minor)')"
 
 # Ollama daemon must be reachable. We only warn (sweeps that use
 # always-cloud don't need it) but a fresh user almost always wants it.
@@ -130,9 +145,18 @@ if [[ -z "${OPEN_AI_API_KEY:-}${OPENAI_API_KEY:-}" ]]; then
 fi
 
 #─── venv ───────────────────────────────────────────────────────────────────
+# If a stale .venv exists pinned to a different Python (e.g. 3.13/3.14 from
+# a previous shell), nuke it — agent installs (aider-chat) need 3.11/3.12.
+if [[ -x .venv/bin/python ]]; then
+    EXISTING_PY_MINOR="$(.venv/bin/python -c 'import sys; print(sys.version_info.minor)' 2>/dev/null || echo "x")"
+    if [[ "$EXISTING_PY_MINOR" != "$PY_MINOR" ]]; then
+        warn "existing .venv is Python 3.$EXISTING_PY_MINOR — recreating with $PYTHON_BIN…"
+        rm -rf .venv
+    fi
+fi
 if [[ ! -x .venv/bin/python ]]; then
-    log "creating .venv (Python 3.$PY_MINOR)…"
-    python3 -m venv .venv
+    log "creating .venv ($PYTHON_BIN)…"
+    "$PYTHON_BIN" -m venv .venv
 fi
 log "installing package (editable)…"
 # Hide the routine "pip dependency resolver" warnings — the harness pins

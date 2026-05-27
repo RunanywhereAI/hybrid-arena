@@ -59,7 +59,7 @@ class Task:
     test_patch: str
     expected_patch: str
     hints_text: str
-    category: str = "B"
+    category: str = "real-prs"
     metadata: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:

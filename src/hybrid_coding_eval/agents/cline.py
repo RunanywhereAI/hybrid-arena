@@ -96,12 +96,12 @@ def run(
 ) -> ResultRow:
     """Run one task through the Cline coding-agent CLI."""
     if output_dir is None:
-        output_dir = _REPO_ROOT / "results" / "r10"
+        output_dir = _REPO_ROOT / "results" / "cline"
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     slug = _task_slug(task.id)
-    run_dir = output_dir / f"r10_{slug}_{router_strategy}"
+    run_dir = output_dir / f"cline_{slug}_{router_strategy}"
     scratch = run_dir / "scratch"
     run_dir.mkdir(parents=True, exist_ok=True)
 

@@ -6,6 +6,8 @@
 # Core (matches pyproject.toml [project.dependencies]).
 pytest>=8.3,<9
 pandas>=2.2,<3
+numpy>=1.26,<3
+matplotlib>=3.8,<4
 httpx>=0.27,<1
 docker>=7.1,<8
 tiktoken>=0.8,<1
@@ -14,8 +16,8 @@ anthropic>=0.40,<1
 pydantic>=2.6,<3
 pyyaml>=6.0,<7
 
-# Analysis + visualization extras pulled by `bench analyze`.
-matplotlib>=3.8,<4
+# Pillow ships transitively via matplotlib but pin it for image-save
+# compatibility on older Linux distros.
 Pillow>=10.0
 
 # Optional adapters (only needed if you regenerate pinned task lists or

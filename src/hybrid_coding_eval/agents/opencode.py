@@ -184,12 +184,12 @@ def run(
 ) -> ResultRow:
     """Run one real-dev D1/D5 task through opencode."""
     if output_dir is None:
-        output_dir = _REPO_ROOT / "results" / "r8"
+        output_dir = _REPO_ROOT / "results" / "opencode"
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     slug = _task_slug(task.id)
-    run_dir = output_dir / f"r8_{slug}_{router_strategy}"
+    run_dir = output_dir / f"opencode_{slug}_{router_strategy}"
     scratch = run_dir / "scratch"
     run_dir.mkdir(parents=True, exist_ok=True)
 

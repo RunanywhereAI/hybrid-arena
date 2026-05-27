@@ -4,6 +4,51 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [1.4.4] — 2026-05-27
+
+**Fresh-user reproducibility patch.** Targets the last two paper cuts a
+brand-new clone hits on the way from `git clone` to a green
+`bench analyze` chart. Full notes at
+[`docs/release-notes/v1.4.4.md`](./docs/release-notes/v1.4.4.md).
+
+### Changed
+
+- **`scripts/reproduce.sh`** explicitly prefers `python3.12` /
+  `python3.11` over generic `python3` and recreates `.venv` if it
+  was pinned to a different (e.g. 3.13/3.14) interpreter. Python
+  3.13+ breaks several agent installers (notably `aider-chat`)
+  because they depend on a `setuptools` bootstrap that 3.13/3.14
+  dropped from the stdlib.
+
+### Fixed
+
+- **`bench analyze` works on a clean `pip install -e ".[dev]"`.**
+  `matplotlib` + `numpy` are now declared in
+  `pyproject.toml::[project.dependencies]` (they were previously only
+  in `requirements.txt`, so the canonical install path left them
+  missing and `bench analyze` died with
+  `ModuleNotFoundError: No module named 'matplotlib'`).
+- **Per-agent scratch directories no longer carry the legacy R-prefix.**
+  aider writes to `outputs/aider_<task>_<strategy>/`, cline to
+  `outputs/cline_<task>_<strategy>/`, opencode to
+  `outputs/opencode_<task>_<strategy>/`, mini-swe-agent to
+  `outputs/mini-swe-agent_<task>_<strategy>/`. Default `output_dir`
+  per agent is now `results/<agent-name>/` instead of
+  `results/r6/`…`results/r10/`. The v1.4.3 commit cleaned every other
+  R-number surface but missed these inline path templates.
+- **Task adapter dataclass defaults align with the v1.4.3 rename.**
+  `refactors.Task.category` defaults to `"refactors"` (was `"D"`) and
+  `real_prs.Task.category` defaults to `"real-prs"` (was `"B"`). The
+  parsers already overrode these defaults in v1.4.3, but the
+  dataclass field defaults still leaked the legacy letters if a row
+  was constructed without going through `_parse_task`.
+
+### Verified
+
+End-to-end fresh-user replay: `rm -rf .venv && ./scripts/reproduce.sh
+--smoke` → 1m 26s wall, 1/1 PASS, all charts emitted, no missing
+modules, no R-prefix leaks in `output_ref`.
+
 ## [1.4.3] — 2026-05-26
 
 **Back-compat-free cleanup.** Drops every v1.0–v1.3 legacy surface from
@@ -25,6 +70,17 @@ the v1.4 harness. No new benchmark data; the v1.4.1 leaderboard
   prereq is missing it prints the exact `brew install …` or
   `sudo apt install …` command for the host OS, plus a hint to start
   the Ollama daemon when port 11434 isn't reachable.
+- **`pyproject.toml`** — `matplotlib` and `numpy` are now first-class
+  runtime dependencies. `bench analyze` needs them for chart
+  generation, but they were previously only in `requirements.txt`,
+  so `pip install -e ".[dev]"` left them missing. Fresh installs now
+  work end-to-end with zero extra steps.
+- **Per-agent scratch directories** drop the R-prefix. aider writes
+  to `outputs/aider_<task>_<strategy>/`, opencode to
+  `outputs/opencode_<task>_<strategy>/`, cline to
+  `outputs/cline_<task>_<strategy>/`, mini-swe-agent to
+  `outputs/mini-swe-agent_<task>_<strategy>/`. Default
+  `output_dir` per agent is `results/<agent-name>/`.
 - **`core/experiment.pair_already_done`** is strict now — requires an
   exact `(task, route, strategy)` match instead of treating
   `router_strategy=None` as a wildcard. Stops a foot-gun where a

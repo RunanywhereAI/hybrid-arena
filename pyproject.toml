@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hybrid-coding-eval"
-version = "1.4.3"
+version = "1.4.4"
 description = "Reproducible cost/latency/quality benchmark comparing local vs cloud vs hybrid LLM routing for coding tasks."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -13,6 +13,8 @@ authors = [{ name = "Sanchit Monga" }]
 dependencies = [
     "pytest>=8.3,<9",
     "pandas>=2.2,<3",
+    "numpy>=1.26,<3",
+    "matplotlib>=3.8,<4",
     "httpx>=0.27,<1",
     "docker>=7.1,<8",
     "tiktoken>=0.8,<1",
