@@ -87,7 +87,7 @@ def test_cline_run_no_cline_installed_returns_error_row(
     The runner should catch FileNotFoundError from subprocess.run and
     return a ResultRow with ``error="cline_not_installed"``.
     """
-    from hybrid_coding_eval.agents import cline as r10_cline
+    from hybrid_coding_eval.agents import cline as cline_runner
 
     # 1. Seed a minimal Exercism-style fixture so the copy step succeeds.
     fixture_dir = tmp_path / "fixture"
@@ -100,7 +100,7 @@ def test_cline_run_no_cline_installed_returns_error_row(
     # running this test (the runner falls back to /opt/homebrew/bin/cline
     # when which() returns None — that fallback string also ends in
     # "cline" so the argv0 check below still catches it).
-    monkeypatch.setattr(r10_cline.shutil, "which", lambda _name: None)
+    monkeypatch.setattr(cline_runner.shutil, "which", lambda _name: None)
 
     real_run = subprocess.run
 
@@ -112,12 +112,12 @@ def test_cline_run_no_cline_installed_returns_error_row(
             raise FileNotFoundError(2, "No such file or directory: 'cline'")
         return real_run(cmd, *args, **kwargs)
 
-    monkeypatch.setattr(r10_cline.subprocess, "run", _maybe_raise)
+    monkeypatch.setattr(cline_runner.subprocess, "run", _maybe_raise)
 
     # 3. Invoke the runner. Output dir under tmp_path to avoid littering
     # the repo's results/ tree.
     output_dir = tmp_path / "out"
-    row = r10_cline.run(
+    row = cline_runner.run(
         task,
         proxy_url="http://127.0.0.1:8787",
         hardware_profile_ref="test-hw",
@@ -158,7 +158,7 @@ def test_cline_argv_matches_real_cli_shape(
     ``--non-interactive``, ``--yes``, ``--file``) — none of which exist
     in cline 3.0.9. This test exists to catch a regression.
     """
-    from hybrid_coding_eval.agents import cline as r10_cline
+    from hybrid_coding_eval.agents import cline as cline_runner
 
     fixture_dir = tmp_path / "fixture"
     _seed_fixture(fixture_dir)
@@ -166,9 +166,9 @@ def test_cline_argv_matches_real_cli_shape(
 
     # Pretend cline is installed at a predictable path so argv[0] is stable.
     fake_cline = "/usr/local/bin/cline"
-    _orig_which = r10_cline.shutil.which
+    _orig_which = cline_runner.shutil.which
     monkeypatch.setattr(
-        r10_cline.shutil, "which",
+        cline_runner.shutil, "which",
         lambda name: fake_cline if name == "cline" else _orig_which(name),
     )
 
@@ -191,9 +191,9 @@ def test_cline_argv_matches_real_cli_shape(
         # Let host pytest scoring run normally.
         return real_run(cmd, *args, **kwargs)
 
-    monkeypatch.setattr(r10_cline.subprocess, "run", _intercept)
+    monkeypatch.setattr(cline_runner.subprocess, "run", _intercept)
 
-    r10_cline.run(
+    cline_runner.run(
         task,
         proxy_url="http://127.0.0.1:8787",
         hardware_profile_ref="test-hw",
@@ -262,7 +262,7 @@ def test_cline_run_fixture_copy_failure_returns_error_row(tmp_path: Path) -> Non
     """When the task fixture is missing, run() returns a ``fixture_copy_failed``
     row rather than crashing. Mirrors the aider + opencode runners.
     """
-    from hybrid_coding_eval.agents import cline as r10_cline
+    from hybrid_coding_eval.agents import cline as cline_runner
 
     class _BadTask:
         id = "exercism-python/does-not-exist"
@@ -270,7 +270,7 @@ def test_cline_run_fixture_copy_failure_returns_error_row(tmp_path: Path) -> Non
         prompt = "noop"
         fixture_dir = tmp_path / "does_not_exist"  # never created
 
-    row = r10_cline.run(
+    row = cline_runner.run(
         _BadTask(),
         output_dir=tmp_path / "out",
         router_strategy="heuristic",

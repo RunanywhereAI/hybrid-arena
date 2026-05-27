@@ -251,5 +251,5 @@
 
 ## summary
 - planned pairs: 131
-- out dir: /Users/sanchitmonga/development/ODLM/MONOREPOOO/CODING/hybrid-coding-eval/results/runs/07-v3-devstral-all-routes
-- raw.jsonl: /Users/sanchitmonga/development/ODLM/MONOREPOOO/CODING/hybrid-coding-eval/results/runs/07-v3-devstral-all-routes/raw.jsonl
+- out dir: results/runs/07-v3-devstral-all-routes
+- raw.jsonl: results/runs/07-v3-devstral-all-routes/raw.jsonl

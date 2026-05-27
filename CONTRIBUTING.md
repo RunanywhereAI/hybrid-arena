@@ -24,8 +24,9 @@ cp .env.example .env                # add OPEN_AI_API_KEY
 ./bench setup                       # builds Docker image, pulls aux models, installs aider + cline
 ```
 
-`./bench setup` is idempotent — safe to re-run. The one-command reproducer
-at `scripts/reproduce.sh --smoke` runs setup + a 1-task smoke sweep end-to-end.
+`./bench setup` is idempotent — safe to re-run. After it succeeds,
+`./bench sweep --config configs/v1.4-smoke.yaml` runs a 1-task smoke sweep
+end-to-end (cloud only — does not require a local ollama model).
 
 ## Running tests
 
@@ -51,7 +52,7 @@ The most common contribution; ~90 seconds for an Ollama model.
 
 ```bash
 ollama pull <new-model>
-./scripts/reproduce.sh \
+./bench sweep \
     --config configs/v1.4-canonical-gemma4.yaml \
     --set models.local=<new-model> \
     --set out_dir=results/runs/v1.4-<new-model> \
@@ -102,7 +103,9 @@ is enough for a first PR.
    the `TaskClass` `Literal` in `core/config/schema.py`.
 3. Add a row to the task-class table in
    `docs/HYBRID_ROUTING_DESIGN.md §5`.
-4. Document upstream attribution + license in `NOTICE.md`.
+4. Document upstream attribution + license in a comment block at the
+   top of the adapter, and link to the upstream repo / paper from the
+   task class's `README.md`.
 5. Add at least one unit test loading the first task.
 
 ---

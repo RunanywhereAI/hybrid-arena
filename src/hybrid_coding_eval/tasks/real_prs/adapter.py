@@ -176,7 +176,7 @@ def load_tasks(
 
     Strategy:
 
-    1. If ``benchmark/swebench_verified/tasks.jsonl`` exists with at least ``n``
+    1. If the local ``tasks.jsonl`` next to this adapter exists with at least ``n``
        pinned tasks of the requested difficulty, use that (zero-network).
     2. Otherwise, download the dataset from HuggingFace, filter by difficulty,
        sample ``n`` with ``seed``.

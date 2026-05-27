@@ -667,7 +667,7 @@ def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
         print("\nNext:")
     print("  1. Ensure .env has OPEN_AI_API_KEY (required to call gpt-5.5 through the router).")
     print("  2. (Optional, only for hybrid/local sweeps) `ollama pull gemma4:31b` (or qwen3-coder:30b / qwen3.6:35b).")
-    print("  3. Run the smoke sweep:  `./scripts/reproduce.sh --smoke`  (or  `./bench sweep --config configs/v1.4-smoke.yaml`).")
+    print("  3. Run the smoke sweep:  `./bench sweep --config configs/v1.4-smoke.yaml`.")
     print("     The router proxy is auto-spawned from `models.local`.")
     return 1 if failures else 0
 

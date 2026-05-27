@@ -10,7 +10,7 @@ Raw experiment output lives in ``results/*.jsonl`` — one row per
     ``list[ResultRow]``.
   * :func:`aggregate_by` — pandas ``groupby`` with *derived* costs: the
     per-scenario USD is computed on the fly from the token counts +
-    :mod:`lib.pricing` tables, never stored. Same ``raw.jsonl`` can be
+    :mod:`hybrid_coding_eval.core.pricing` tables, never stored. Same ``raw.jsonl`` can be
     re-priced under any scenario by swapping ``pricing_scenario``.
 
 Design constraint from the plan: **cost is never persisted**. Every
@@ -51,7 +51,7 @@ logger = logging.getLogger(__name__)
 # cloud_* tokens be priced at?". The mapping lives here rather than in the
 # pricing tables so eval consumers can add their own scenarios without
 # touching the shared ``pricing_tables.json``. Each value is a model id that
-# ``lib.pricing.normalise_model_id`` knows how to resolve.
+# ``core.pricing.normalise_model_id`` knows how to resolve.
 PRICING_SCENARIOS: dict[str, str] = {
     "openai-gpt5.5": "gpt-5.5",
     "openai-gpt5.5-pro": "gpt-5.5-pro",

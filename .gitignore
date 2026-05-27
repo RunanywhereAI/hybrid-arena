@@ -13,7 +13,6 @@ _run.pid
 .pytest_cache/
 .ruff_cache/
 .embedder/
-minion_logs/
 
 # --- results ---
 # v1.0.0 dataset files were force-added before v1.1 and stay tracked
@@ -43,13 +42,11 @@ router/logs/*.jsonl
 .aider.input.history
 .claude/
 
-# v3.3 sweep + scripts logs — track INDEX.md as the canonical pointer; ignore the rest.
+# Sweep logs / temp output / token-budget reports
 logs/
-!logs/v3.3/
-!logs/v3.3/INDEX.md
+reports/
 
 # Owner's personal working material (article, appendices, charts, HTML report,
-# pre-v1.1 pilot runs under raw-runs/, scratch sweep wrappers under scripts/,
-# iteration logs + LLM-judge reviews under iterations/).
+# pre-v1.1 pilot runs, iteration logs + LLM-judge reviews under iterations/).
 # Not part of the OSS surface — kept here for the article publication workflow.
 personal/

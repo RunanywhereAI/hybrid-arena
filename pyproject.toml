@@ -4,14 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hybrid-coding-eval"
-version = "1.5.0"
+version = "1.5.1"
 description = "Reproducible cost/latency/quality benchmark comparing local vs cloud vs hybrid LLM routing for coding tasks."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Sanchit Monga" }]
 dependencies = [
-    "pytest>=8.3,<9",
     "pandas>=2.2,<3",
     "numpy>=1.26,<3",
     "matplotlib>=3.8,<4",
@@ -48,16 +47,12 @@ include = ["hybrid_coding_eval*"]
 minversion = "8.0"
 testpaths = ["tests"]
 addopts = "-ra"
-markers = [
-    "slow: end-to-end tests that invoke the SWE-bench Docker harness (minutes per test).",
-]
 
 [tool.ruff]
 target-version = "py311"
 line-length = 100
 extend-exclude = [
     "vendor",
-    "archive",
     "src/hybrid_coding_eval/tasks/refactors/fixtures",
     "src/hybrid_coding_eval/tasks/puzzles/fixtures",
     "src/hybrid_coding_eval/tasks/real_prs/fixtures",

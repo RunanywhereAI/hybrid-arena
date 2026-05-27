@@ -1,8 +1,9 @@
 """SWE-bench scorer.
 
-Wraps the working :mod:`swebench.harness.run_evaluation` CLI (already
-validated end-to-end by ``benchmark/swebench_verified/verify_harness.py``)
-into a simple ``score(task, model_output, ...) -> Quality`` function.
+Wraps the working :mod:`swebench.harness.run_evaluation` CLI (validated
+end-to-end by
+``src/hybrid_coding_eval/tasks/real_prs/verify_harness.py``) into a
+simple ``score(task, model_output, ...) -> Quality`` function.
 
 The scorer is intentionally narrow: it is given *one* task and *one*
 model-produced raw string, extracts the unified diff, invokes the upstream
@@ -97,7 +98,7 @@ def extract_diff(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Harness invocation helpers (adapted from benchmark/swebench_verified/verify_harness.py)
+# Harness invocation helpers (adapted from tasks/real_prs/verify_harness.py)
 # ---------------------------------------------------------------------------
 
 MODEL_NAME = "hybrid-coding-eval"

@@ -1,12 +1,11 @@
 """Functional Python scorer.
 
-Given a model-generated answer and a task (from either
-``benchmark.humaneval_plus`` or ``benchmark.bigcodebench_hard``), verify
-whether the generated code actually passes the task's authored tests.
+Given a model-generated answer and a task, verify whether the generated
+code actually passes the task's authored tests.
 
 The scorer runs pytest inside the ephemeral Docker sandbox from
-``lib.sandbox`` (``network=none``, memory + pids caps, wall-clock
-timeout) so untrusted model output can't touch the host.
+:mod:`hybrid_coding_eval.core.sandbox` (``network=none``, memory + pids
+caps, wall-clock timeout) so untrusted model output can't touch the host.
 
 Public API
 ----------
@@ -16,12 +15,10 @@ Public API
 - Extracts Python source from ``model_output`` (handles raw code,
   ```python fences, bare ``` fences, surrounding prose, and multiple
   fences).
-- Assembles ``solution.py`` + ``test_solution.py`` appropriate to the
-  task type (HumanEval+ ``def check(candidate)`` vs BigCodeBench-Hard
-  ``class TestCases(unittest.TestCase)``).
+- Assembles ``solution.py`` + a per-task ``test_solution.py``.
 - Runs pytest in a sandbox, parses the summary line, and returns a
-  ``lib.metrics.Quality`` with ``functional_pass``,
-  ``tests_passed``/``tests_total``, and ``composite``.
+  :class:`hybrid_coding_eval.core.metrics.Quality` with
+  ``functional_pass``, ``tests_passed``/``tests_total``, and ``composite``.
 
 Image strategy
 --------------
@@ -340,7 +337,7 @@ def score(
         ``hybrid-eval-python:latest`` (see
         ``scorers/Dockerfile.functional_python``).
     memory_mb:
-        Memory cap passed through to ``lib.sandbox.run_in_sandbox``.
+        Memory cap passed through to ``core.sandbox.run_in_sandbox``.
         Defaults to 1 GB, higher than the sandbox default to
         accommodate numpy/pandas/matplotlib in BigCodeBench-Hard.
     pids_limit:

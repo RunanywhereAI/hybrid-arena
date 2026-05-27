@@ -1,10 +1,16 @@
-# SWE-bench Verified — easy tier (10 tasks)
+# `real-prs` — SWE-bench Verified (easy tier, 10 tasks)
 
-Category B in the hybrid-coding-eval taxonomy: **real agentic software
-engineering on real GitHub issues**. This is the gold-standard tier of the
-benchmark. Each task is one pull-request-sized bug-fix from a well-known
-Python project (Django, Sphinx, Astropy, xarray…), graded by running the
-project's own test suite in a per-task Docker container.
+The third task class in hybrid-coding-eval: **real agentic software
+engineering on real GitHub issues**. Each task is one pull-request-sized
+bug-fix from a well-known Python project (Django, Sphinx, Astropy,
+xarray…), graded by running the project's own test suite in a per-task
+Docker container.
+
+This task class is **not in the v1.4 / v1.5 canonical sweep** — Apple
+Silicon hosts run the per-task x86 Docker images under emulation, which
+makes a full sweep impractical on the same M4 Max laptop the rest of
+the benchmark runs on. The adapter + verify-harness are kept so the
+sweep can be picked up on an x86 Linux host in a later release.
 
 ## What's here
 
@@ -68,7 +74,7 @@ Regenerate via:
 
 ```bash
 python -c "
-from benchmark.swebench_verified.adapter import load_tasks, write_tasks_jsonl
+from hybrid_coding_eval.tasks.real_prs.adapter import load_tasks, write_tasks_jsonl
 write_tasks_jsonl(load_tasks(n=10, seed=42, difficulty='easy'))
 "
 ```
@@ -105,7 +111,7 @@ cannot run the harness" message if the emulation path fails or times out.
 
 ```bash
 # from repo root, with .venv active
-python benchmark/swebench_verified/verify_harness.py
+python -m hybrid_coding_eval.tasks.real_prs.verify_harness
 ```
 
 Exit codes:
@@ -119,16 +125,15 @@ The script loads task #1 (`astropy__astropy-7166` after seeded shuffle), runs
 the harness twice (empty patch + gold patch), and checks each row in the
 harness's output report.
 
-## Why SWE-bench is the category-B signal
+## Why this task class matters
 
-From the project plan:
+SWE-bench Verified easy tier is the gold-standard tier — real agentic
+coding on real GitHub issues. The harness runs each task in a Docker
+container with the repo's own test suite, giving binary pass/fail.
+Frontier scores at time of writing: Claude Opus 4.6 77.2 %, GPT-5 74.9 %,
+Devstral-Small-2-24B 72.2 % — the gap between the best open and the best
+cloud model is ~5pp here, so hybrid routing should be measurable.
 
-> SWE-bench Verified easy tier is the gold-standard tier — real agentic
-> coding on real GitHub issues. The `mini-SWE-agent` harness runs each
-> task in a Docker container with the repo's own test suite, giving binary
-> pass/fail. Frontier scores: Claude Opus 4.6 77.2 %, GPT-5 74.9 %,
-> Devstral-Small-2-24B 72.2 % — the gap between best open and best cloud
-> is 5 pp here. This is the most important tier for our routing eval.
-
-5 pp between the best open and best cloud model means *hybrid routing should
-be measurable here*.
+This is on the v1.6+ roadmap once we have an x86 host available for full
+sweeps; the adapter + verify-harness ship today so contributors can pick
+it up.

@@ -1,12 +1,13 @@
-"""Orchestrator core for :mod:`bin.run-experiment` (T4.1).
+"""Orchestrator core for ``bench sweep`` / ``bench run``.
 
 The orchestrator loops over ``(task, route)`` pairs, invokes the right
-runner, optionally scores the output, and appends one
-:class:`lib.metrics.ResultRow` per pair to ``<out>/raw.jsonl`` *immediately*
-so the sweep is resume-safe.
+agent runner, optionally scores the output, and appends one
+:class:`hybrid_coding_eval.core.metrics.ResultRow` per pair to
+``<out>/raw.jsonl`` *immediately* so the sweep is resume-safe.
 
 This module holds the benchmark-loading, resume-scan and per-pair
-execution helpers. The CLI (``bin/run-experiment.py``) is kept thin.
+execution helpers. The CLI dispatcher (``hybrid_coding_eval.cli.bench``)
+is kept thin.
 """
 
 from __future__ import annotations

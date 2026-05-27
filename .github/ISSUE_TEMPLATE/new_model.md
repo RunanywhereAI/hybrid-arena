@@ -27,8 +27,8 @@ labels: ["model-request"]
 
 If you've already tried it, please attach:
 
-- Your variant config (or a diff against `configs/variants/_template.yaml`)
-- `progress.log` from `./bench run --config <your-config>.yaml --smoke`
+- The exact command you ran (typically `./bench sweep --config configs/v1.4-canonical-gemma4.yaml --set models.local=<model> --set out_dir=results/runs/<your-model>` with overrides)
+- `progress.log` from the run's output directory
 - Any errors hit
 
 If not yet tested, that's fine — flag the model and the maintainer or another contributor can run the smoke sweep.

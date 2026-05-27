@@ -1,25 +1,50 @@
-# Category D — Real-developer tasks
+# `refactors` — real-developer Python refactor tasks
 
-Real-developer tasks across 5 shapes:
+A hand-written task class meant to look like the kind of small Python
+work a developer actually does in a working session: implement a
+feature, fix a bug from a stack trace, refactor a small module, review
+a PR diff, or write a one-shot script. Six shapes total:
 
-- **D1** — feature (add a small endpoint / handler / utility)
-- **D2** — bug-fix (reproducer + patch)
-- **D3** — refactor (extract / move code; behaviour preserved)
-- **D4** — review (given a PR diff, produce a critique)
-- **D5** — script (one-shot data-munging / CLI glue)
+| Shape | What | Scored by |
+| ----- | ---- | --------- |
+| `D1` | Implement a small feature in an existing file (e.g. `auth.login()`) | Overlay + pytest |
+| `D2` | Fix a real upstream bug given the stack trace; return a unified diff | LLM-judge against rubric (kept for reference, not in canonical sweep) |
+| `D3` | Refactor (extract / split / move code; behaviour preserved) | LLM-judge against rubric |
+| `D4` | Review a PR diff and produce a structured critique | LLM-judge against rubric |
+| `D5` | One-shot script (Python or bash) for data-munging / CLI glue | Overlay + pytest |
+| `D6` | **Hard implementation challenge** (v1.5): single-file algorithmic + state-machine problems calibrated to stress 30B local models | Overlay + pytest |
 
-Populated incrementally by **P1.1–P1.4**. See `adapter.py` module
-docstring for the full `tasks.jsonl` schema, and refer to
-`fixtures/<slug>/` for per-task fixture layout.
+The v1.4 canonical sweep uses **D1 + D5** only (eight tasks). v1.5 adds
+the four D6 tasks. D2/D3/D4 are retained as fixtures + scorers but not
+part of the headline benchmark.
 
-Scoring lives in `scorers.py` (stub until P2.1). D1/D2/D5 will be
-scored functionally via the fixture's pytest/jest file; D3/D4 by the
-LLM-judge against the 5-dimension rubric shipped on each row.
+The `tasks.jsonl` file at this directory holds one JSON object per
+task. Each row carries `id`, `shape`, `prompt`, `fixtures_dir` (relative
+to this directory), `tests` (path to the pytest test file used for
+overlay scoring), and per-row attribution (`source_url`, `source_license`).
+
+## Layout
+
+```text
+refactors/
+├── README.md            (you are here)
+├── adapter.py           — loads tasks.jsonl into the harness
+├── scorers.py           — dispatches per-shape scoring
+├── tasks.jsonl          — task metadata
+└── fixtures/
+    ├── d1-rate-limit/
+    │   ├── app.py
+    │   ├── middleware.py
+    │   ├── test_rate_limit.py
+    │   └── _reference/  — reference solution (used for scoring only)
+    ├── d6-lru-ttl-cache/
+    └── ...
+```
 
 ## Attribution
 
-Per-task source URLs, upstream repos, SPDX licenses, and (for D2) base
-commits are enumerated in the repo-root `NOTICE.md` under the section
-"Category D — real-developer tasks". `LICENSE-DATA` at the repo root
-additionally clarifies how the CC-BY-4.0 data license and the per-task
-upstream licenses interact for fixtures under `fixtures/`.
+D1–D5 fixtures are original work, **CC-BY-4.0**. D2 reproducers
+reference real upstream issues; the per-task `source_url` and
+`base_commit` in `tasks.jsonl` point to the canonical issue and the
+upstream repo (pytest, jsonschema, click, werkzeug). The fixture files
+are minimised reproductions, not redistributions of those projects.

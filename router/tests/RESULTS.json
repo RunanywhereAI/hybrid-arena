@@ -35,7 +35,7 @@
       ]
     },
     "router_model": "qwen3:0.6b",
-    "log_file": "/Users/sanchitmonga/development/ODLM/MONOREPOOO/CODING/opencode/router/logs/decisions.jsonl",
+    "log_file": "logs/decisions.jsonl",
     "banner_enabled": true
   },
   "matrix": {

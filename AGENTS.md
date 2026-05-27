@@ -1,8 +1,8 @@
 # AGENTS.md
 
-A single canonical guide for any AI coding agent (Cursor, Claude Code, Codex,
-aider, etc.) working in this repository. Read this first — it's the
-folder-by-folder map and the rules-of-the-road for landing changes.
+A single canonical guide for any AI coding agent (Cursor, Claude Code,
+Codex, aider, etc.) working in this repository. Read this first — it's
+the folder-by-folder map and the rules-of-the-road for landing changes.
 
 ## What this repo is
 
@@ -11,27 +11,27 @@ should run on local hardware, the cloud, or via hybrid routing. It is
 **not** a coding product. It is a one-developer-laptop research artefact
 that publishes per-`(task-class, agent, strategy)` bootstrap-CI datasets
 for four coding agents (**aider · opencode · mini-swe-agent · cline**)
-across eight routing strategies, under five pricing scenarios.
+across eight routing strategies, under six pricing scenarios.
 
-**Status (v1.5.0):** 4-agent leaderboard across 3 local models, now
-with a **D6 hard-task class** that stress-tests the v1.4.1 top
-configurations. Combined v1.4 dataset is 1,644 rows (frozen at
-v1.4.1); v1.5 adds **60 rows** of hard-task data targeted at the
-top-3 configs. v1.4.3 + v1.4.4 are code-only cleanup releases. Per-tag
-datasets ship as GitHub release tarballs; the empirical record
-(tracked immutable runs in `results/runs/{01..04, 07, 11}/` +
-`docs/release-notes/`) stays tracked.
+**Status (v1.5.0):** 4-agent leaderboard across 3 local models, with a
+v1.5 **D6 hard-task class** that stress-tests the v1.4.1 champion
+configurations. Combined dataset is **1,704 rows** (1,644 v1.4 canonical
++ 60 v1.5 hard-task). Per-tag datasets ship as GitHub release tarballs;
+the empirical record (tracked immutable runs in
+`results/runs/{01..04, 07, 11}/` + `docs/release-notes/`) stays tracked.
 
 For the canonical design + headline findings:
-- [`README.md`](./README.md) — landing page.
+
+- [`README.md`](./README.md) — landing page + quickstart.
 - [`docs/HYBRID_ROUTING_DESIGN.md`](./docs/HYBRID_ROUTING_DESIGN.md) — design doc.
-- [`docs/release-notes/v1.4.1.md`](./docs/release-notes/v1.4.1.md) — latest results.
+- [`docs/release-notes/v1.5.0.md`](./docs/release-notes/v1.5.0.md) — latest findings (D6 stress test).
+- [`docs/release-notes/v1.4.1.md`](./docs/release-notes/v1.4.1.md) — canonical 3-model leaderboard.
 
 ## Drop in a new local model
 
 ```bash
 ollama pull <new-model>
-./scripts/reproduce.sh \
+./bench sweep \
     --config configs/v1.4-canonical-gemma4.yaml \
     --set models.local=<new-model> \
     --set out_dir=results/runs/v1.4-<new-model> \
@@ -39,22 +39,22 @@ ollama pull <new-model>
 ./bench analyze results/runs/v1.4-<new-model>
 ```
 
-`scripts/reproduce.sh` is the one-command reproducer (checks prereqs,
-runs `./bench setup` if needed, then `./bench sweep`). Long-form
-lifecycle commands live in `./bench --help`.
+`./bench setup` is idempotent — re-run any time. Long-form lifecycle
+commands (`start`/`pause`/`resume`/`stop`/`status`) live in
+`./bench --help`.
 
 ## Common commands
 
 Python env is pinned at 3.11/3.12. Always use `.venv/bin/python` or
 `.venv/bin/pytest` — the repo installs editable via
-`pip install -e ".[dev]"`.
+`pip install -e ".[dev]"` (add `,agents` for aider + mini-swe-agent).
 
 ```bash
 # one-time env setup
-python3.12 -m venv .venv && .venv/bin/pip install -e ".[dev]"
+python3.12 -m venv .venv && .venv/bin/pip install -e ".[dev,agents]"
 
-# fast tests (Docker tests marked `slow`)
-.venv/bin/pytest tests/ -q -m 'not slow'
+# tests
+.venv/bin/pytest tests/ -q
 
 # one test
 .venv/bin/pytest tests/test_orchestrator.py::test_name -q
@@ -104,23 +104,19 @@ you `--clear-state`.
 
 ### Top level
 
-| Path                  | What it is                                            |
-| --------------------- | ----------------------------------------------------- |
-| `README.md`           | OSS landing page                                      |
-| `AGENTS.md`           | **this file** — canonical agent guide                 |
-| `CHANGELOG.md`        | Keep-a-Changelog release history                      |
-| `CONTRIBUTING.md`     | Dev setup; how to add a model / agent / strategy      |
-| `CODE_OF_CONDUCT.md`  | Contributor Covenant 2.1                              |
-| `SECURITY.md`         | Vulnerability-reporting channel                       |
-| `LICENSE`             | MIT (code under `src/`, `router/`, `tests/`, `configs/`, `scripts/`) |
-| `LICENSE-DATA`        | CC-BY-4.0 (results, charts, docs prose)               |
-| `LICENSE.md`          | File-type breakdown of MIT vs CC-BY-4.0               |
-| `NOTICE.md`           | Third-party attribution                               |
-| `bench`               | Shell wrapper → `python -m hybrid_coding_eval.cli.bench` |
-| `scripts/reproduce.sh`| One-command reproducer                                |
-| `pyproject.toml`      | Python package config — version, deps, ruff, pytest   |
-| `requirements.txt`    | Pip pins (kept in sync with `[project.dependencies]`) |
-| `.env.example`        | Template — copy to `.env`, fill `OPEN_AI_API_KEY`     |
+| Path | What it is |
+| --- | --- |
+| `README.md` | OSS landing page + quickstart |
+| `AGENTS.md` | **this file** — canonical agent guide |
+| `CHANGELOG.md` | Keep-a-Changelog release history |
+| `CONTRIBUTING.md` | Dev setup; how to add a model / agent / strategy / task |
+| `CODE_OF_CONDUCT.md` | Short and direct (be kind, stay on-topic, email maintainer for issues) |
+| `SECURITY.md` | Vulnerability-reporting channel |
+| `LICENSE` | MIT (code + data + docs all unified under MIT in v1.5.1+) |
+| `bench` | Shell wrapper → `python -m hybrid_coding_eval.cli.bench` |
+| `pyproject.toml` | Python package config — version, deps, ruff, pytest |
+| `requirements.txt` | Pip pins (kept in sync with `[project.dependencies]`) |
+| `.env.example` | Template — copy to `.env`, fill `OPEN_AI_API_KEY` |
 
 ### `configs/` — sweep configs, pricing, router corpus, JSON schema
 
@@ -132,8 +128,11 @@ configs/
 ├── v1.4-opencode-fairness.yaml      # opencode-only fairness slice
 ├── v1.4-strategy-sweep.yaml         # all 8 strategies on aider/gemma4 for explainer
 ├── v1.4-real-prs.yaml               # SWE-bench Verified replay (real-prs class)
-├── v1.4-smoke.yaml                  # 1-task-per-class smoke check
-├── pricing/pricing_tables.json      # 5 pricing scenarios, SHA256-pinned
+├── v1.4-smoke.yaml                  # 1-task smoke check (cloud only)
+├── v1.5-hard-gemma4.yaml            # v1.5 D6 hard-task sweep on aider+gemma4
+├── v1.5-hard-qwen3.6.yaml           # v1.5 D6 hard-task sweep on cline+qwen3.6
+├── v1.5-hard-smoke.yaml             # v1.5 D6 smoke check
+├── pricing/pricing_tables.json      # 6 pricing scenarios, SHA256-pinned
 ├── router/corpus.json               # 50-example hand-labelled corpus for embedding-kNN
 └── schema.json                      # auto-generated JSON Schema for BenchConfig
 ```
@@ -180,9 +179,9 @@ src/hybrid_coding_eval/
 │
 ├── tasks/                        # task-source adapters
 │   ├── puzzles/                  # Exercism Python (Aider polyglot benchmark, MIT)
-│   ├── refactors/                # real-developer D-tasks
-│   │   ├── tasks-d*.jsonl, scorers.py, fixtures/
-│   └── real_prs/                 # SWE-bench Verified replay
+│   ├── refactors/                # real-developer refactor tasks (D1/D2/D3/D4/D5/D6)
+│   │   ├── tasks.jsonl + tasks-d{2,3,4}.jsonl, scorers.py, fixtures/
+│   └── real_prs/                 # SWE-bench Verified replay (adapter shipped, sweep v1.6+)
 │
 ├── analysis/                     # post-sweep number-crunching
 │   ├── all.py                    # entry-point; runs everything below
@@ -213,17 +212,17 @@ router/
 ├── start.sh                      # manual starter — loads ../.env, binds 127.0.0.1
 ├── package.json                  # minimal — declares "node-test" runner only
 ├── tests/                        # router's own test sweep (prompts × strategies)
-└── logs/decisions.jsonl          # tracked routing-decision log
+└── logs/                         # routing-decision log (gitignored)
 ```
 
 Local-call guards (added in v1.4.1 to fix qwen3-coder runaway-generation
 crashes):
 
-| Env var                            | Default  | Purpose                                                       |
-| ---------------------------------- | -------- | ------------------------------------------------------------- |
-| `ROUTER_LOCAL_NUM_PREDICT_CAP`     | `4096`   | Cap Ollama `num_predict`. `-1` disables.                      |
-| `ROUTER_LOCAL_REQUEST_TIMEOUT_MS`  | `180000` | 3-min hard wall-clock per local call (`AbortSignal.timeout`). |
-| `ROUTER_LOCAL_REPEAT_PENALTY`      | `1.1`    | Override weak model defaults (e.g. qwen3-coder ships `1.05`). |
+| Env var | Default | Purpose |
+| --- | --- | --- |
+| `ROUTER_LOCAL_NUM_PREDICT_CAP` | `4096` | Cap Ollama `num_predict`. `-1` disables. |
+| `ROUTER_LOCAL_REQUEST_TIMEOUT_MS` | `180000` | 3-min hard wall-clock per local call (`AbortSignal.timeout`). |
+| `ROUTER_LOCAL_REPEAT_PENALTY` | `1.1` | Override weak model defaults (e.g. qwen3-coder ships `1.05`). |
 
 Required env: `LOCAL_BASE`, `LOCAL_MODEL`, `CLOUD_MODEL`,
 `CLOUD_API_KEY` (resolves from `OPENAI_API_KEY` or `OPEN_AI_API_KEY`).
@@ -233,7 +232,7 @@ Binds 127.0.0.1 only; no auth — don't expose.
 
 ```
 tests/
-├── agents/test_{cline,mini_swe}.py
+├── agents/test_{aider_parser,cline,mini_swe}.py
 ├── analysis/test_token_budget.py
 ├── scorers/test_real_dev_scorers.py
 ├── tasks/test_refactors_scaffold.py
@@ -246,8 +245,9 @@ tests/
 └── test_viz.py
 ```
 
-Subprocess-based tests `pytest.skip` cleanly if the router proxy is down.
-SWE-bench Docker tests are marked `slow`; skip them with `-m 'not slow'`.
+120 fast tests, all run on every CI build (3.11 + 3.12 matrix).
+Subprocess-based tests `pytest.skip` cleanly if the router proxy is down
+or Docker is unavailable.
 
 ### `vendor/` — third-party (read-only)
 
@@ -260,7 +260,7 @@ vendor/
 Treat `vendor/` as immutable. If you find a bug, patch our wrapper in
 `agents/`, not the vendored source. Long-term fix is an upstream PR.
 
-### `results/` — canonical research data (CC-BY-4.0)
+### `results/` — canonical research data
 
 ```
 results/
@@ -273,22 +273,24 @@ results/
     ├── 02-v2-qwen-fixed-synth/   # MVP v2 (Opus judge)
     ├── 03-v2-devstral/           # MVP v2 with devstral local
     ├── 04-r4-minion/             # MVP R4 Minion sweep (preserved data)
-    ├── 07-v3-devstral-all-routes/# v3 canonical 250-row sweep (legacy R1–R5)
+    ├── 07-v3-devstral-all-routes/# v3 canonical 250-row sweep
     └── 11-judge-robust-D/        # 96-verdict triple-judge audit on D3+D4
 ```
 
 **`results/runs/` is gitignored going forward.** v1.4+ datasets are
-GitHub release tarballs (`results-v1.4.K.tar.gz`). Pre-existing tracked
+GitHub release tarballs (`results-v1.K.tar.gz`). Pre-existing tracked
 runs (01–04, 07, 11) are immutable.
 
-### `docs/` — reference documentation (CC-BY-4.0)
+### `docs/` — reference documentation
 
 ```
 docs/
 ├── HYBRID_ROUTING_DESIGN.md      # THE design doc (strategies + agents + methodology + schema)
 └── release-notes/
     ├── v1.4.0.md                 # 708-row gemma4 canonical
-    └── v1.4.1.md                 # 936 new rows (qwen3-coder + qwen3.6) — 1,644 row leaderboard
+    ├── v1.4.1.md                 # 1,644 row leaderboard (qwen3-coder + qwen3.6 added)
+    ├── v1.4.2.md / v1.4.3.md / v1.4.4.md   # cleanup releases
+    └── v1.5.0.md                 # D6 hard-task stress test (60 new rows)
 ```
 
 The docs surface is intentionally minimal. Long-form design discussion
@@ -310,7 +312,7 @@ notes.
             ├── agents/mini_swe.py
             └── agents/cline.py
         → scorers/functional_python.py OR scorers/swebench.py
-        → core/results.append_row()         # one JSON line to <out>/raw.jsonl
+        → core/results.append_row()         # one JSON line to <out>/<strategy>/seed-<seed>/raw.jsonl
 ```
 
 Rows are flushed after each `(task, agent)` completes, so sweeps are
@@ -322,8 +324,8 @@ task_id, route, router_strategy)` to skip completed pairs on `--resume`.
 `always-cloud · always-local · rules · heuristic · llm-classifier ·
 embedding-knn · cascade · phase-aware`. Each is one function in
 `router/strategies.mjs`. Decisions are appended to
-`router/logs/decisions.jsonl` and correlated back to rows via
-`bench_run_id` in the model field.
+`router/logs/decisions.jsonl` (gitignored) and correlated back to rows
+via `bench_run_id` in the model field.
 
 ### Analysis pipeline
 
@@ -338,21 +340,27 @@ embedding-knn · cascade · phase-aware`. Each is one function in
 - **The router proxy is auto-spawned by `bench sweep`.** You don't need
   a separate router terminal. For debugging, run `(cd router &&
   ./start.sh)` and pass `--external-router` to `bench sweep`.
-- **`tests/test_*` marked `slow`** invoke the Docker harness (minutes
-  per test). Skip with `-m 'not slow'`.
+- **Tests are not split by speed.** All 120 fast tests run on every CI
+  build. SWE-bench Docker tests skip gracefully when Docker is
+  unavailable.
 - **Preserved runs are read-only.** `results/raw.jsonl` and the tracked
   `results/runs/{01..04, 07, 11}/` dirs never change bytes.
 - **Cost is derived, not stored.** Any `cost_usd_*` field in
   `raw.jsonl` is a bug. Cost is computed on read via `core/pricing.py`.
 - **Env keys**: `OPENAI_API_KEY` / `OPEN_AI_API_KEY` accepted (router
-  checks both). `ANTHROPIC_API_KEY` is unused in v1.4 (the LLM judge
+  checks both). `ANTHROPIC_API_KEY` is unused in v1.4+ (the LLM judge
   was removed).
 - **Task classes**: `puzzles`, `refactors`, `real-prs` — the same names
   flow end-to-end through `BenchmarkConfig.task_classes`, the
   `ResultRow.category` field, the `aggregate.json` / `bootstrap_cis.json`
-  cell keys (e.g. `puzzles::aider::heuristic`), and release-notes prose.
-  (The legacy single-letter codes `A`/`B`/`C`/`D` were retired in v1.4.3.)
-- **Agent names**: `aider`, `opencode`, `mini-swe-agent`, `cline`.
+  cell keys (e.g. `puzzles::aider::heuristic`,
+  `refactors::cline::cascade`), and release-notes prose.
+- **Refactor shapes**: D1 (feature), D2 (bug-fix, not in canonical), D3
+  (refactor), D4 (review), D5 (script), **D6 (v1.5 hard implementation
+  challenge)**. D1/D5/D6 are functionally scored; D3/D4 use the LLM
+  judge.
+- **Agent names**: `aider`, `opencode`, `mini-swe-agent`, `cline` —
+  used end-to-end (no legacy R-numbers).
 - **Local guards** (v1.4.1): every local call is capped at 4096
   `num_predict`, 180 s wall-clock, `repeat_penalty=1.1`. Override via
   `ROUTER_LOCAL_*` env vars.
@@ -363,16 +371,13 @@ embedding-knn · cascade · phase-aware`. Each is one function in
 
 1. [`README.md`](./README.md) — quickstart + headline findings
 2. [`docs/HYBRID_ROUTING_DESIGN.md`](./docs/HYBRID_ROUTING_DESIGN.md) — design doc
-3. [`docs/release-notes/v1.4.1.md`](./docs/release-notes/v1.4.1.md) — latest results
-4. [`CONTRIBUTING.md`](./CONTRIBUTING.md) — add a model / agent / strategy
-5. [`CHANGELOG.md`](./CHANGELOG.md) — v1.0 → v1.4.1 lineage
+3. [`docs/release-notes/v1.5.0.md`](./docs/release-notes/v1.5.0.md) — latest findings (D6 stress test)
+4. [`docs/release-notes/v1.4.1.md`](./docs/release-notes/v1.4.1.md) — canonical 3-model leaderboard
+5. [`CONTRIBUTING.md`](./CONTRIBUTING.md) — add a model / agent / strategy
+6. [`CHANGELOG.md`](./CHANGELOG.md) — v1.0 → v1.5 lineage
 
-## License + attribution
+## License
 
-- **Code** (`src/`, `router/`, `tests/`, `configs/`, `bench`,
-  `scripts/`): MIT — see [`LICENSE`](./LICENSE).
-- **Data + figures + docs prose** (`results/`, `docs/`, charts):
-  CC-BY-4.0 — see [`LICENSE-DATA`](./LICENSE-DATA) +
-  [`LICENSE.md`](./LICENSE.md).
-- **Third-party**: see [`NOTICE.md`](./NOTICE.md) and
-  `vendor/README.md`.
+Everything in this repo is **MIT-licensed** — see [`LICENSE`](./LICENSE).
+A citation in any derived work would be really appreciated; the BibTeX
+block lives in the README.

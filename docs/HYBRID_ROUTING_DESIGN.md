@@ -137,9 +137,9 @@ sweeps don't.
 
 | Class       | Source                            | Shape                                                  | Count in v1.4 |
 | ----------- | --------------------------------- | ------------------------------------------------------ | ------------- |
-| `puzzles`   | Exercism Python (Aider polyglot)  | Single-function, single-file tasks with hidden tests   | 5             |
-| `refactors` | Hand-written real-PR patterns     | Multi-file refactor / review / script tasks (D1+D5)    | 8             |
-| `real-prs`  | SWE-bench Verified subset         | Repo-level patches against Docker testbeds              | (v1.5 work)   |
+| `puzzles`   | Exercism Python (via Aider polyglot benchmark) | Single-function, single-file tasks with hidden tests   | 5             |
+| `refactors` | Hand-written real-PR patterns     | Multi-file refactor / review / script tasks (D1+D5 in v1.4 canonical; v1.5 adds 4 D6 hard implementation challenges) | 12 (8 + 4 D6) |
+| `real-prs`  | SWE-bench Verified subset         | Repo-level patches against Docker testbeds              | (v1.6+ work; adapter shipped) |
 
 Each task adapter lives in `src/hybrid_coding_eval/tasks/<class>/`. A task is
 a small dataclass: `id`, `fixture_path`, `prompt`, `run_cmd`. Scoring is per
@@ -244,7 +244,7 @@ matrix:
 ```bash
 ollama pull <new-model>
 ./bench setup                # idempotent; first run only
-./scripts/reproduce.sh \
+./bench sweep \
     --config configs/v1.4-canonical-gemma4.yaml \
     --set models.local=<new-model> \
     --set out_dir=results/runs/v1.4-<new-model> \
@@ -252,11 +252,11 @@ ollama pull <new-model>
     --seeds 42,7,13
 ```
 
-`scripts/reproduce.sh` checks prereqs (Docker, Ollama, Node, API keys),
-runs `./bench setup` if needed, then runs `./bench sweep`. Long-form
-lifecycle commands (`./bench start` / `pause` / `resume` / `stop` /
-`status`) are documented inline at `./bench --help` and exist so you can
-detach the sweep and reclaim the laptop.
+`./bench setup` checks prereqs (Docker, Ollama, Node, API keys) and
+builds the sandbox image / installs the agent CLIs. Long-form lifecycle
+commands (`./bench start` / `pause` / `resume` / `stop` / `status`) are
+documented inline at `./bench --help` and exist so you can detach the
+sweep and reclaim the laptop.
 
 Expected runtime on an M4 Max 64 GB: 10–15 hours, ≈ $30–50 cloud spend at
 gpt-5.5 list price. The router auto-spawns from `models.local`; you don't
@@ -266,7 +266,7 @@ When the sweep completes:
 
 ```bash
 ./bench analyze results/runs/v1.4-<new-model>
-jq '.cells["D::cline::heuristic"].pass_rate' \
+jq '.cells["refactors::cline::heuristic"].pass_rate' \
    results/runs/v1.4-<new-model>/bootstrap_cis.json
 ```
 

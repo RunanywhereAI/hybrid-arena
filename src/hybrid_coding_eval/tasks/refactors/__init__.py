@@ -1,4 +1,4 @@
-"""Category D: real-developer tasks across 5 shapes (D1-D5)."""
+"""``refactors`` task class — real-developer Python refactor tasks (shapes D1–D6)."""
 
 from .adapter import Task, load_tasks, task_prompt
 

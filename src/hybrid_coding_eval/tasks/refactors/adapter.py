@@ -1,16 +1,18 @@
-"""Real-developer task adapter (Category D).
+"""``refactors`` task adapter — real-developer Python refactor tasks.
 
-Twenty tasks representing what a real developer hands their coding
-agent on a normal weekday. Tasks are partitioned across five *shapes*:
+Tasks representing what a real developer hands their coding agent on a
+normal weekday. Tasks are partitioned across six *shapes*:
 
 - **D1** — feature add (small new endpoint / handler / utility).
 - **D2** — bug fix (reproducer + patch).
 - **D3** — refactor / extract (move code; behaviour preserved).
 - **D4** — PR review (given a diff, produce a critique).
 - **D5** — script / one-shot (data-munging / CLI glue).
+- **D6** — hard implementation challenge (v1.5; calibrated to stress 30B local models).
 
-D1, D2, D5 are scored functionally (pytest / jest against a fixture).
-D3 and D4 are scored by an LLM-judge against a 5-dimension rubric.
+D1, D5, D6 are scored functionally (pytest against a fixture overlay).
+D3 and D4 are scored by an LLM-judge against a 5-dimension rubric. D2
+is retained for reference but not in the canonical sweep.
 
 The adapter is deliberately dumb: read ``tasks.jsonl``, parse each line
 into a :class:`Task`, return the list. Prompt assembly (inlining

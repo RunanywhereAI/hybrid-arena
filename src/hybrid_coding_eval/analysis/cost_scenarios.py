@@ -6,7 +6,8 @@ gpt-5-mini?"* long after the fact — by re-running the pricing formula
 against the stored token counts.
 
 A *scenario* is a human-readable name (e.g. ``openai-gpt5.5``) that
-:mod:`lib.results` maps to a pricing-table key. This module adds two
+:mod:`hybrid_coding_eval.core.results` maps to a pricing-table key.
+This module adds two
 small utilities on top of that:
 
   * :func:`compute_row_cost` — single-row cost under one scenario.
@@ -35,7 +36,7 @@ __all__ = [
 
 
 # Scenarios surfaced by the report. Kept small on purpose — the full
-# registry lives in ``lib.results.PRICING_SCENARIOS``. These five span
+# registry lives in ``core.results.PRICING_SCENARIOS``. These five span
 # "current default cloud route" → "cheap cloud" → "alternative frontier"
 # and are what the decision matrix / Pareto charts iterate over.
 PRICING_SCENARIOS: list[str] = [
@@ -59,7 +60,7 @@ def _scenario_to_model_id(scenario: str) -> str:
 def compute_row_cost(row: ResultRow, scenario: str) -> float:
     """USD for one row under ``scenario``.
 
-    Rules (identical to :func:`lib.results._row_cost_usd` but re-stated
+    Rules (identical to :func:`core.results._row_cost_usd` but re-stated
     here so this module is self-contained):
 
       * ``local_*`` tokens are priced at ``__local__`` (always $0).

@@ -22,15 +22,17 @@ SOFTWARE.
 
 ---
 
-This license applies to the harness code under `src/`, `router/`,
-`tests/`, `configs/`, `scripts/`, and the top-level `bench` dispatcher.
-It does NOT apply to:
+This MIT license applies to **all** content in this repository — the
+harness code (`src/`, `router/`, `tests/`, `configs/`, the `bench`
+dispatcher), the result datasets (`results/`), the charts and docs
+prose (`docs/`).
 
-- Upstream benchmark datasets referenced or pinned by adapters under
-  `src/hybrid_coding_eval/tasks/` (Aider Polyglot / Exercism Python is
-  MIT, SWE-bench Verified is CC-BY-4.0, etc.). Each retains its upstream
-  license — see `NOTICE.md`.
-- Vendored third-party code under `vendor/` — see `NOTICE.md` and
-  `vendor/README.md`.
-- Results datasets, per-run metrics, charts, and docs prose — licensed
-  under CC-BY-4.0; see `LICENSE-DATA`.
+Upstream benchmark datasets referenced by adapters under
+`src/hybrid_coding_eval/tasks/` retain their original upstream licenses
+(Aider Polyglot / Exercism Python is MIT, SWE-bench Verified is
+CC-BY-4.0). Vendored third-party code under `vendor/` retains the
+license shipped with it — see `vendor/README.md`.
+
+If you use this benchmark or its data in your own work, a citation
+would be really appreciated. The BibTeX block lives at the bottom of
+`README.md`.

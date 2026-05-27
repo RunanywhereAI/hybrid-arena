@@ -64,9 +64,9 @@ def test_default_swebench_yaml_resolves() -> None:
     package layout changed — the runner would fail on the first
     ``-c <default>`` flag of every invocation.
     """
-    from hybrid_coding_eval.agents import mini_swe as r6_mini_swe_agent
+    from hybrid_coding_eval.agents import mini_swe as mini_swe_runner
 
-    p = r6_mini_swe_agent._default_swebench_yaml()
+    p = mini_swe_runner._default_swebench_yaml()
     assert p.exists(), f"package swebench.yaml not found at {p}"
     assert p.name == "swebench.yaml"
 
@@ -82,9 +82,9 @@ def test_strategy_yaml_is_well_formed() -> None:
     """
     import yaml
 
-    from hybrid_coding_eval.agents import mini_swe as r6_mini_swe_agent
+    from hybrid_coding_eval.agents import mini_swe as mini_swe_runner
 
-    txt = r6_mini_swe_agent._strategy_yaml(
+    txt = mini_swe_runner._strategy_yaml(
         api_base="http://127.0.0.1:8787/v1",
         strategy="heuristic",
         bench_run_id="abc123def456",
@@ -102,17 +102,17 @@ def test_extract_diff_from_trajectory_empty_when_missing(tmp_path: Path) -> None
     """The trajectory parser returns "" when the trajectory file is
     absent (the agent never produced one — e.g., it crashed before
     writing any output)."""
-    from hybrid_coding_eval.agents import mini_swe as r6_mini_swe_agent
+    from hybrid_coding_eval.agents import mini_swe as mini_swe_runner
 
     missing = tmp_path / "nope.json"
-    assert r6_mini_swe_agent._extract_diff_from_trajectory(missing) == ""
+    assert mini_swe_runner._extract_diff_from_trajectory(missing) == ""
 
 
 def test_extract_diff_from_trajectory_v2_submission(tmp_path: Path) -> None:
     """Trajectory parser reads ``info.submission`` (mini-swe-agent v2 schema)."""
     import json
 
-    from hybrid_coding_eval.agents import mini_swe as r6_mini_swe_agent
+    from hybrid_coding_eval.agents import mini_swe as mini_swe_runner
 
     traj = tmp_path / "trajectory.json"
     traj.write_text(
@@ -124,7 +124,7 @@ def test_extract_diff_from_trajectory_v2_submission(tmp_path: Path) -> None:
         ),
         encoding="utf-8",
     )
-    out = r6_mini_swe_agent._extract_diff_from_trajectory(traj)
+    out = mini_swe_runner._extract_diff_from_trajectory(traj)
     assert out.startswith("diff --git a/foo b/foo")
 
 

@@ -4,6 +4,59 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+## [1.5.1] — 2026-05-27
+
+**Open-source polish release** — addresses every audit finding from the
+pre-publish review (security, licensing, UX, hygiene). No code-behaviour
+changes; safe to take.
+
+### Removed
+
+- `NOTICE.md`, `LICENSE-DATA`, `LICENSE.md` — consolidated to a single
+  MIT `LICENSE` that covers code, data, and docs.
+- `scripts/reproduce.sh` — `./bench setup` already does prereq checks
+  and the smoke sweep is a one-liner (`./bench sweep --config
+  configs/v1.4-smoke.yaml`).
+- `logs/v3.3/` — historical sweep logs moved to maintainer-private
+  storage. `logs/` is now gitignored.
+- `pytest` runtime dependency promoted to `[dev]` only (was shipped in
+  both before).
+- `pytest -m slow` filter removed from CI and docs — no test is
+  currently marked `slow`, so the filter was a no-op.
+
+### Changed
+
+- **`README.md` rewritten end-to-end** — six-cell headline table, real
+  quickstart with accurate prereq + timing estimates, "picking a config
+  for real work" section distilled from the v1.5 leaderboard, full
+  `bench` CLI table, MIT-only license + citation block.
+- **`AGENTS.md` refreshed for v1.5.0** — D6 task shape documented,
+  v1.5 configs added to the tree, latest-results pointer updated,
+  conventions section reflects single-letter codes are retired.
+- **`CODE_OF_CONDUCT.md` simplified** to a short, direct version.
+- **`src/hybrid_coding_eval/__init__.py`** — `__version__` is now
+  `"1.5.0"` (was stuck at `"0.1.0"`).
+- **Source-tree docstrings + READMEs** — `lib.*` stale references
+  rewritten to `core.*` / `hybrid_coding_eval.*`; "Category D/B/X"
+  rewritten to `refactors` / `real-prs` / `puzzles` end-to-end.
+- **Tracked `raw.jsonl` datasets** — sanitized **263 home-directory
+  path leaks** to repo-relative form. JSON integrity preserved
+  (`json.loads()` re-validated on every row).
+
+### Fixed
+
+- `.github/ISSUE_TEMPLATE/new_model.md` — broken
+  `configs/variants/_template.yaml` reference replaced with a real
+  command.
+- `docs/HYBRID_ROUTING_DESIGN.md` — `jq` cell-key examples updated
+  from legacy `D::cline::heuristic` form to current
+  `refactors::cline::heuristic`. D6 row added to the task-class table.
+- `docs/release-notes/v1.4.0.md` and `v1.4.1.md` — same cell-key fix
+  in the reproduction snippets.
+- Test aliases `r10_cline` and `r6_mini_swe_agent` renamed to
+  `cline_runner` / `mini_swe_runner` to remove the last legacy
+  R-numbers from the testsuite.
+
 ## [1.5.0] — 2026-05-27
 
 **Hard-task stress test release.** Adds a new D6 task shape with 4

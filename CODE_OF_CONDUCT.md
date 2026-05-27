@@ -1,26 +1,28 @@
 # Code of Conduct
 
-This project adopts the **[Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/)** as its code of conduct. By participating in this project — through issues, pull requests, discussions, or any other channel — you agree to abide by its terms.
+This is a small open-source research project. Be kind, be patient, and stay focused on the work.
 
-The full text is available at the link above and is reproduced as `CODE_OF_CONDUCT_FULL.md` if a local copy is required for your jurisdiction or organization.
+## The short version
+
+- **Be respectful.** Disagree on ideas, not on people.
+- **Assume good faith.** Maintainers and contributors are volunteers.
+- **No harassment, personal attacks, or discriminatory language.** None.
+- **Keep it on-topic.** Issues and PRs are for the benchmark, not unrelated debates.
+- **If something feels off, flag it.** Email the maintainer (see below).
 
 ## Scope
 
-The code of conduct applies in all project spaces — the GitHub repository, issue tracker, pull-request reviews, discussions, any project chat or email list, and when an individual represents the project in public.
+Applies in this GitHub repository — issues, PRs, discussions, commit messages — and anywhere a contributor represents the project publicly.
 
 ## Reporting
 
-To report a concern that affects you or someone else in the community, email the maintainer privately:
+If you experience or witness behavior that violates the spirit above, email the maintainer privately:
 
 - **Maintainer:** Sanchit Monga
 - **Email:** conduct@runanywhere.ai
 
-Public GitHub issues are not the right channel for conduct complaints — please use the email above so the reporter's privacy is preserved. Reports will be reviewed and investigated promptly and fairly. The maintainer is obligated to respect the privacy and safety of the reporter.
+Don't file public issues for conduct complaints — privacy matters.
 
 ## Enforcement
 
-The maintainer is responsible for clarifying and enforcing the standards described in the Contributor Covenant 2.1 document, and will take action they deem appropriate and fair in response to behavior they deem inappropriate, threatening, offensive, or harmful. Possible responses are described in the Covenant's "Enforcement Guidelines" section (link above).
-
----
-
-*Attribution: This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org), version 2.1, available at <https://www.contributor-covenant.org/version/2/1/code_of_conduct.html>. Translations are available at <https://www.contributor-covenant.org/translations>.*
+The maintainer may, at their discretion, warn, temporarily block, or permanently ban anyone whose behavior is incompatible with the spirit above. Decisions are final.
