@@ -8,8 +8,6 @@ Subcommands:
 - ``bench show-config configs/foo.yaml`` → prints merged config JSON.
 - ``bench env-detect [--out PATH]`` → writes an env-manifest.json.
 - ``bench analyze RESULTS_DIR`` → aggregate → ARQGC → charts.
-- ``bench rescore RESULTS_DIR`` → post-sweep SWE-bench rescore.
-- ``bench rejudge RESULTS_DIR`` → post-sweep Opus re-judge.
 - ``bench schema [--out configs/schema.json]`` → dump JSON Schema.
 - ``bench setup`` → one-shot install (aider + opencode + cline + …).
 
@@ -197,19 +195,7 @@ def _cmd_env_detect(args: argparse.Namespace) -> int:
     return int(env_main(argv) or 0)
 
 
-# ---------- subcommand: rescore / rejudge / analyze -----------------------
-
-
-def _cmd_rescore(args: argparse.Namespace) -> int:
-    from hybrid_coding_eval.cli.rescore import cli_main
-
-    return int(cli_main([str(args.results_dir)]) or 0)
-
-
-def _cmd_rejudge(args: argparse.Namespace) -> int:
-    from hybrid_coding_eval.cli.rejudge import cli_main
-
-    return int(cli_main([str(args.results_dir)]) or 0)
+# ---------- subcommand: analyze -------------------------------------------
 
 
 def _cmd_analyze(args: argparse.Namespace) -> int:
@@ -287,7 +273,6 @@ def _cmd_schema(args: argparse.Namespace) -> int:
 
 # ---------- setup ----------------------------------------------------------
 
-_MINIONS_GIT_URL = "https://github.com/HazyResearch/minions.git"
 # Opencode (R8) fork install — env-overridable so iteration can pin a
 # specific SHA without code edits. See docs/AGENTIC_ROUTES.md.
 import os as _os
@@ -298,41 +283,6 @@ _OPENCODE_GIT_URL = _os.environ.get(
 )
 _OPENCODE_GIT_REF = _os.environ.get("OPENCODE_GIT_REF", "feat/hybrid-routing-plugin")
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent  # repo root
-
-
-def _ensure_minions(verbose: bool = True) -> bool:
-    """Clone vendor/minions/ if missing. Returns True on success.
-
-    Idempotent: returns True immediately if already present (detected via
-    ``.git`` or the upstream's ``app.py`` sentinel — handles both git
-    clones and manual extractions). Used by both ``bench setup`` and
-    ``bench run`` (auto-clone on first R4/R5 route).
-    """
-    target = _REPO_ROOT / "vendor" / "minions"
-    if (target / ".git").exists() or (target / "app.py").exists():
-        if verbose:
-            print(f"  ✓ vendor/minions/ present at {target}")
-        return True
-    if verbose:
-        print(f"  Cloning Stanford Minions (~9 MB) into {target}…")
-    target.parent.mkdir(parents=True, exist_ok=True)
-    import subprocess
-    try:
-        subprocess.run(
-            ["git", "clone", "--depth", "1", _MINIONS_GIT_URL, str(target)],
-            check=True,
-            capture_output=not verbose,
-        )
-        if verbose:
-            print("  ✓ vendor/minions/ ready")
-        return True
-    except (FileNotFoundError, subprocess.CalledProcessError) as exc:
-        print(f"  ✗ git clone failed: {exc}", file=sys.stderr)
-        print(
-            f"    Manually clone: cd vendor && git clone {_MINIONS_GIT_URL}",
-            file=sys.stderr,
-        )
-        return False
 
 
 def _ensure_opencode(verbose: bool = True) -> bool:
@@ -520,7 +470,7 @@ def _ensure_cline_config(verbose: bool = True) -> bool:
 
 
 def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
-    """One-shot setup: clone minions, build Docker image, pull aux models, sanity-check env.
+    """One-shot setup: build Docker image, pull aux models, install agents, sanity-check env.
 
     Idempotent — safe to re-run.
     """
@@ -530,13 +480,8 @@ def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
     print("=== bench setup — preparing the benchmark harness ===\n")
     failures = []
 
-    # 1. (deleted in v1.4 cleanup — Stanford Minions no longer used)
-    print("[1/7] Stanford Minions (R4 + R5 routes)")
-    if not _ensure_minions(verbose=True):
-        failures.append("minions clone failed")
-
-    # 2. Docker image for functional scoring sandbox
-    print("\n[2/7] Functional-scoring Docker image (hybrid-eval-python:latest)")
+    # 1. Docker image for functional scoring sandbox
+    print("[1/6] Functional-scoring Docker image (hybrid-eval-python:latest)")
     if not shutil.which("docker"):
         print("  ⚠ docker not on PATH — skipping image build")
         print("    Install Docker Desktop: https://www.docker.com/products/docker-desktop/")
@@ -561,8 +506,8 @@ def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
                 print(f"  ⚠ docker build failed: {exc}")
                 failures.append("Docker image build failed")
 
-    # 3. Auxiliary Ollama models (router strategies)
-    print("\n[3/7] Auxiliary local models (router classifier + embedding)")
+    # 2. Auxiliary Ollama models (router strategies)
+    print("\n[2/6] Auxiliary local models (router classifier + embedding)")
     if not shutil.which("ollama"):
         print("  ⚠ ollama not on PATH — skipping model pulls")
         print("    Install Ollama: https://ollama.com/download")
@@ -585,10 +530,10 @@ def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
             except (FileNotFoundError, subprocess.CalledProcessError) as exc:
                 print(f"  ⚠ pull failed for {tag}: {exc}")
 
-    # 4. Aider (R7 route — the v1.2 canonical agent for hybrid eval).
+    # 3. Aider (R7 route — the v1.2+ canonical agent for hybrid eval).
     # Installed into the repo's venv so subprocess can find it via the
     # R7 runner's .venv/bin/aider fallback. Independent of system PATH.
-    print("\n[4/7] Aider (R7 route — primary agent for v1.2 hybrid sweeps)")
+    print("\n[3/6] Aider (R7 route)")
     aider_bin = _REPO_ROOT / ".venv" / "bin" / "aider"
     if aider_bin.exists():
         print(f"  ✓ aider already installed at {aider_bin}")
@@ -610,7 +555,7 @@ def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
     # SWE-bench Verified apples-to-apples reference). Installed into the
     # repo's venv so the R6 runner's ``.venv/bin/mini-extra`` fallback
     # picks it up without needing the system PATH to include venv/bin.
-    print("\n[4b/7] mini-swe-agent (R6 route — bash-only ReAct, SWE-bench reference)")
+    print("\n[3b/6] mini-swe-agent (R6 route — bash-only ReAct, SWE-bench reference)")
     mini_extra_bin = _REPO_ROOT / ".venv" / "bin" / "mini-extra"
     if mini_extra_bin.exists():
         print(f"  ✓ mini-swe-agent already installed at {mini_extra_bin}")
@@ -631,13 +576,12 @@ def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
                 print(f"  ⚠ mini-swe-agent install failed: {exc}")
                 failures.append("mini-swe-agent install failed")
 
-    # 5. Opencode fork (R8 route — EXPERIMENTAL in v1.2).
-    # Skipped by default in v1.2. Set BENCH_SETUP_OPENCODE=1 to enable.
-    # R8 stays in-tree (results at v1.1.x tags) but isn't the v1.2
-    # canonical because qwen3-coder:30b + opencode's free-form tool-use
-    # pattern doesn't produce useful work — see CHANGELOG v1.1.3 + v1.2.
+    # 4. Opencode fork (R8 route — gemma4-only in v1.4; opt-in via env).
+    # v1.4.0 resurrected opencode + gemma4 + heuristic + refactors at 71%
+    # (vs v1.1.x's 0/15), but the resurrection is gemma4-specific —
+    # qwen3-coder/qwen3.6 stay at 21–33% (see release-notes/v1.4.1.md).
     if _os.environ.get("BENCH_SETUP_OPENCODE", "0") in ("1", "true", "yes"):
-        print("\n[5/7] Opencode (R8 route — EXPERIMENTAL; enabled via BENCH_SETUP_OPENCODE=1)")
+        print("\n[4/6] Opencode (R8 route — gemma4-only; enabled via BENCH_SETUP_OPENCODE=1)")
         if not shutil.which("opencode"):
             print("  ⚠ opencode CLI not on PATH — R8 route won't work")
             print("    Install via Homebrew: brew install opencode")
@@ -648,23 +592,22 @@ def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
         if not _ensure_opencode_config(verbose=True):
             failures.append("opencode.json config setup failed")
     else:
-        print("\n[5/7] Opencode (R8 route) — SKIPPED (EXPERIMENTAL in v1.2)")
-        print("  R8 is in the tree but qwen3-coder:30b + opencode's free-form tool-use")
-        print("  protocol doesn't produce useful work in hybrid setups (see CHANGELOG).")
-        print("  v1.1.x tags have the diagnostic data. To enable anyway:")
+        print("\n[4/6] Opencode (R8 route) — SKIPPED (opt-in for gemma4 sweeps)")
+        print("  Resurrected on gemma4 in v1.4.0 (71% heuristic refactors); does not")
+        print("  transfer to qwen models. To enable for a gemma4 sweep:")
         print("    BENCH_SETUP_OPENCODE=1 ./bench setup")
 
-    # 6. Cline agent (R10 route — LiteLLM-compatible CLI, v1.4 canonical sweep).
+    # 5. Cline agent (R10 route — LiteLLM-compatible CLI, v1.4 canonical sweep).
     # The npm package is installed globally so `cline` ends up on PATH; the
     # providers.json points it at our router proxy on :8787.
-    print("\n[6/7] cline agent (LiteLLM-compatible CLI)")
+    print("\n[5/6] cline agent (LiteLLM-compatible CLI)")
     if not _ensure_cline_install(verbose=True):
         failures.append("cline install failed")
     if not _ensure_cline_config(verbose=True):
         failures.append("cline providers.json setup failed")
 
-    # 7. Environment sanity (.env file, Python version)
-    print("\n[7/7] Environment sanity")
+    # 6. Environment sanity (.env file, Python version)
+    print("\n[6/6] Environment sanity")
     env_path = _REPO_ROOT / ".env"
     env_example = _REPO_ROOT / ".env.example"
     if env_path.exists():
@@ -689,10 +632,10 @@ def _cmd_setup(args: argparse.Namespace) -> int:  # noqa: ARG001
     else:
         print("  ✓ All checks passed.")
         print("\nNext:")
-    print("  1. Ensure .env has OPEN_AI_API_KEY (and ANTHROPIC_API_KEY for judge)")
-    print("  2. Pull a local model: `ollama pull devstral:24b` (or another from configs/variants/)")
-    print("  3. Start the router proxy: `(cd router && ./start.sh) &`")
-    print("  4. Run a smoke test: `./bench run --config configs/variants/_template.yaml --smoke`")
+    print("  1. Ensure .env has OPEN_AI_API_KEY (and ANTHROPIC_API_KEY for claude-code)")
+    print("  2. Pull a local model: `ollama pull gemma4:31b` (or qwen3-coder:30b / qwen3.6:35b)")
+    print("  3. Run the v1.4 smoke sweep: `./bench sweep --config configs/v1.4-smoke.yaml`")
+    print("     (the router proxy is auto-spawned from `models.local`)")
     return 1 if failures else 0
 
 
@@ -1498,14 +1441,6 @@ def main(argv: list[str] | None = None) -> int:
     p_env.add_argument("--out", type=Path, default=None)
     p_env.set_defaults(func=_cmd_env_detect)
 
-    p_rescore = sub.add_parser("rescore", help="Post-sweep SWE-bench rescore.")
-    p_rescore.add_argument("results_dir", type=Path)
-    p_rescore.set_defaults(func=_cmd_rescore)
-
-    p_rejudge = sub.add_parser("rejudge", help="Post-sweep Opus re-judge.")
-    p_rejudge.add_argument("results_dir", type=Path)
-    p_rejudge.set_defaults(func=_cmd_rejudge)
-
     p_analyze = sub.add_parser("analyze", help="Aggregate + ARQGC + charts.")
     p_analyze.add_argument("results_dir", type=Path)
     p_analyze.set_defaults(func=_cmd_analyze)
@@ -1544,7 +1479,7 @@ def main(argv: list[str] | None = None) -> int:
 
     p_setup = sub.add_parser(
         "setup",
-        help="One-shot setup: clone vendor/minions, build Docker image, pull auxiliary models.",
+        help="One-shot setup: build Docker image, pull aux models, install aider/cline/mini-swe-agent.",
     )
     p_setup.set_defaults(func=_cmd_setup)
 

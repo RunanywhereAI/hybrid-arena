@@ -3,11 +3,11 @@
 > *A benchmark + harness that answers, with reproducible numbers, the question:*
 > ***For my coding task and my hardware — should I run it local, hybrid, or cloud?***
 
-[![License: MIT](https://img.shields.io/badge/Code-MIT-blue.svg)](./LICENSE) [![Data: CC BY 4.0](https://img.shields.io/badge/Data-CC--BY--4.0-lightgrey.svg)](./LICENSE-DATA) [![Version](https://img.shields.io/badge/version-1.4.0-success.svg)](./CHANGELOG.md) [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/) [![CI](https://github.com/RunanywhereAI/hybrid-coding-eval/actions/workflows/ci.yml/badge.svg)](https://github.com/RunanywhereAI/hybrid-coding-eval/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/Code-MIT-blue.svg)](./LICENSE) [![Data: CC BY 4.0](https://img.shields.io/badge/Data-CC--BY--4.0-lightgrey.svg)](./LICENSE-DATA) [![Version](https://img.shields.io/badge/version-1.4.1-success.svg)](./CHANGELOG.md) [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/) [![CI](https://github.com/RunanywhereAI/hybrid-coding-eval/actions/workflows/ci.yml/badge.svg)](https://github.com/RunanywhereAI/hybrid-coding-eval/actions/workflows/ci.yml)
 
-**Status (v1.4.0):** Cleanup + production-pipeline release. Drops legacy R1/R2/R3/R4/R5 non-agentic routes; canonical routes are now the five agents: **R6 mini-swe-agent · R7 aider · R8 opencode · R9 claude-code · R10 cline**. `bench sweep` auto-spawns the router proxy from `models.local`, so the reproducer is now four copy-paste commands. 18 tasks (X Exercism Python + D real-developer refactors) × 8 routing strategies × 3 local models — see `configs/v1.4-canonical.yaml`.
+**Status (v1.4.1):** 3-model agentic leaderboard. The agent-only surface (five agents: **R6 mini-swe-agent · R7 aider · R8 opencode · R9 claude-code · R10 cline**) is the sole sweep target. `bench sweep` auto-spawns the router proxy from `models.local`, so the reproducer is four copy-paste commands. v1.4 combined dataset: **1,644 rows** across 3 local models × 3–5 agents × 4–8 strategies × 13 tasks × 3 seeds — see `configs/v1.4-canonical-{gemma4,qwen3-coder,qwen3.6}.yaml` and `docs/release-notes/v1.4.1.md`.
 
-**Headline preview** (v1.3.0 carry-over on real-dev D-tasks, to be refreshed by the v1.4 sweep): **gemma4:31b + heuristic = 96% pass-rate [88, 100]** vs always-cloud 100% [100, 100] at 79% cloud_fraction (≈21% token-spend reduction). First hybrid configuration in this benchmark to clear the "equivalent quality at lower cost" bar with statistical significance. v1.4 numbers land with the sweep in `docs/release-notes/v1.4.0.md`.
+**Headline (v1.4.1):** **cline + qwen3.6:35b + cascade + refactors = 24/24 = 100% [100, 100]** at ~5–10% cloud-fraction — the cleanest cell in the benchmark. The v1.4.0 marquee (**aider + gemma4:31b + heuristic + refactors = 96% [88, 100]** at 48% cloud-fraction) replicates exactly under refreshed code. **cline + (gemma4 OR qwen3.6) + always-local + puzzles = 15/15 = 100%** — 30B local-only nails Exercism Python.
 
 ## Quickstart (~30 minutes)
 
@@ -145,7 +145,7 @@ Step-by-step instructions in [`docs/REPRODUCING.md`](./docs/REPRODUCING.md), inc
   title        = {hybrid-coding-eval: reproducible cost/latency/quality benchmark for local vs cloud vs hybrid LLM routing on coding tasks},
   year         = {2026},
   howpublished = {\url{https://github.com/RunanywhereAI/hybrid-coding-eval}},
-  note         = {Version 1.4.0}
+  note         = {Version 1.4.1}
 }
 ```
 
