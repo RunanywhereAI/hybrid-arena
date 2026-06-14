@@ -36,3 +36,31 @@ jobs:
 
       - name: Run tests
         run: pytest tests/ -q
+
+  router:
+    name: router (Node)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Router unit tests (strategies, no proxy/Ollama required)
+        run: npm test
+        working-directory: router
+
+  docker-scoring-image:
+    name: docker scoring image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the functional-scoring sandbox image
+        run: |
+          docker build \
+            -f src/hybrid_coding_eval/scorers/Dockerfile.functional_python \
+            -t hybrid-eval-python:ci \
+            .

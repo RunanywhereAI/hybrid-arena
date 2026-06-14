@@ -324,12 +324,14 @@ Third-party tools driven by this harness:
 
 ## Read next
 
-1. [`docs/HYBRID_ROUTING_DESIGN.md`](./docs/HYBRID_ROUTING_DESIGN.md) — the single canonical design doc (strategies, agents, schema, methodology).
-2. [`docs/release-notes/v1.5.0.md`](./docs/release-notes/v1.5.0.md) — most recent findings (D6 hard-task stress test).
-3. [`docs/release-notes/v1.4.1.md`](./docs/release-notes/v1.4.1.md) — the canonical 3-model leaderboard.
-4. [`AGENTS.md`](./AGENTS.md) — folder-by-folder map for AI coding agents reading the codebase.
-5. [`CONTRIBUTING.md`](./CONTRIBUTING.md) — add a model, agent, strategy, or task class.
-6. [`SECURITY.md`](./SECURITY.md) — vulnerability-disclosure channel.
+1. [`docs/ARTICLE.md`](./docs/ARTICLE.md) — the narrative overview: the question, the strategies in plain terms, what was benchmarked (incl. honest SWE-bench status), and the findings.
+2. [`docs/REPRODUCING.md`](./docs/REPRODUCING.md) — clean-clone → green-charts → compare-against-canonical, step by step.
+3. [`docs/HYBRID_ROUTING_DESIGN.md`](./docs/HYBRID_ROUTING_DESIGN.md) — the single canonical design doc (strategies, agents, schema, methodology).
+4. [`docs/release-notes/v1.5.0.md`](./docs/release-notes/v1.5.0.md) — most recent findings (D6 hard-task stress test).
+5. [`docs/release-notes/v1.4.1.md`](./docs/release-notes/v1.4.1.md) — the canonical 3-model leaderboard.
+6. [`AGENTS.md`](./AGENTS.md) — folder-by-folder map for AI coding agents reading the codebase.
+7. [`CONTRIBUTING.md`](./CONTRIBUTING.md) — add a model, agent, strategy, or task class.
+8. [`SECURITY.md`](./SECURITY.md) — vulnerability-disclosure channel.
 
 Questions, reproduction issues, or new-model requests? File an issue:
 <https://github.com/RunanywhereAI/hybrid-coding-eval/issues>
