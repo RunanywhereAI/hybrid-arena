@@ -58,9 +58,9 @@ def despine(ax, keep=("left","bottom")):
 # 1 - Headline bar: bar height = pass-rate; cloud share is a SEPARATE,
 #     clearly-labeled line beneath each x-axis label (never inside the bar).
 # ===========================================================================
-labels = ["cline + qwen3.6\ncascade\nrefactors",
+labels = ["cline + qwen3.6\ncascade\nD1/D5 tasks",
           "cline + qwen3.6\nlocal-only\npuzzles",
-          "aider + gemma4\nheuristic\nrefactors",
+          "aider + gemma4\nheuristic\nD1/D5 tasks",
           "cline + qwen3.6\nlocal-only\nHARD (D6)",
           "aider + gemma4\nheuristic\nHARD (D6)",
           "any agent\nalways-cloud\nHARD (D6)"]
@@ -107,7 +107,7 @@ fig.savefig(f"{OUT}/headline-results.png", dpi=DPI); plt.close(fig)
 print("headline-results.png")
 
 # ===========================================================================
-# 2 - Cost/quality Pareto (cline + qwen3.6, real-developer refactors).
+# 2 - Cost/quality Pareto (cline + qwen3.6, real-developer tasks).
 # ===========================================================================
 pts = [("always-local",  0.0,  90.9, LOCAL),
        ("cascade",       8.1, 100.0, HYBRID),
@@ -133,7 +133,7 @@ ax.set_ylabel("Tasks passed  (%)", fontsize=12.5)
 ax.set_xlim(-6,116); ax.set_ylim(84,103); ax.set_yticks([85,90,95,100])
 ax.grid(color=GRID, zorder=0); ax.set_axisbelow(True); despine(ax)
 titled(fig, "Hybrid routing sits on the cost/quality frontier",
-       "cline + qwen3.6:35B  ·  real-developer refactors (D1/D5)  ·  ~100× price gap between the two backends")
+       "cline + qwen3.6:35B  ·  real-developer tasks (D1/D5)  ·  ~100× price gap between the two backends")
 footer(fig)
 fig.savefig(f"{OUT}/pareto-cost-quality.png", dpi=DPI); plt.close(fig)
 print("pareto-cost-quality.png")
@@ -230,7 +230,7 @@ def card(x, w, title, sub, color, y=1.5, h=3.1):
             fontsize=9.6, zorder=4, linespacing=1.45)
 
 card(0.45, 1.7, "Puzzles", "Exercism Python\n5 tasks\nsingle function\n~30 to 100 LOC\n\njunior", LOCAL, h=3.1)
-card(2.35, 1.7, "Refactors\nD1 / D5", "feature-adds +\nscripts\n8 tasks\nsingle file,\ntiny fixture repo\n\nmid-level", HYBRID, h=3.1)
+card(2.35, 1.7, "Everyday tasks\nD1 / D5", "feature-adds +\nscripts\n8 tasks\nsingle file,\ntiny fixture repo\n\nmid-level", HYBRID, h=3.1)
 card(4.25, 3.35, "Hard builds, D6   ◀ ceiling here", "LRU+TTL cache · token bucket · toposort · template engine\n4 tasks · 55 to 273 LOC each · 80 pytest tests · corner-case heavy\n\nsenior · single file", "#5B2BC4", h=3.1)
 card(8.15, 1.55, "Real PRs", "SWE-bench\nVerified\nreal merged PRs\nrepo-scale\n\nMVP-era /\nv1.6 roadmap", "#C97A2B", h=3.1)
 card(9.95, 1.65, "Long-horizon", "SWE-bench Pro /\nSWE-Marathon\nmulti-hour,\nfull repos\nfrontier <26%\n(Opus 4.8)", "#B23A48", h=3.1)

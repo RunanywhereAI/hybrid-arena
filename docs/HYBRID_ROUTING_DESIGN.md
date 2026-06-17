@@ -138,7 +138,7 @@ sweeps don't.
 | Class       | Source                            | Shape                                                  | Count in v1.4 |
 | ----------- | --------------------------------- | ------------------------------------------------------ | ------------- |
 | `puzzles`   | Exercism Python (via Aider polyglot benchmark) | Single-function, single-file tasks with hidden tests   | 5             |
-| `refactors` | Hand-written real-PR patterns     | Multi-file refactor / review / script tasks (D1+D5 in v1.4 canonical; v1.5 adds 4 D6 hard implementation challenges) | 12 (8 + 4 D6) |
+| `refactors` | Hand-written, real-PR-shaped tasks in single-file fixture repos | Historical class name. The functional canonical cell is feature-adds (D1) + one-shot scripts (D5); v1.5 adds 4 D6 hard single-file builds. True refactor (D3) and code-review (D4) shapes exist in the source but were LLM-judged and are not in the functional cell. | 12 (8 D1/D5 + 4 D6) |
 | `real-prs`  | SWE-bench Verified subset         | Repo-level patches against Docker testbeds              | (v1.6+ work; adapter shipped) |
 
 Each task adapter lives in `src/hybrid_arena/tasks/<class>/`. A task is

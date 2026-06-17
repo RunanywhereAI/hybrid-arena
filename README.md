@@ -33,7 +33,7 @@ in `results/runs/<sweep>/raw.jsonl`, priced by a versioned pricing table.
 ¹ Conservative reading: 3 of the 4 misses are `cline` session-management bugs (the model never wrote code), not quality failures. The analyzer, which excludes error rows, scores this cell **8/9 = 89%**. We quote the stricter 67% in the headline.
 
 Full numbers, confidence intervals, per-task breakdowns, and the
-real-world walkthrough of every refactor we measured live in
+real-world walkthrough of every task we measured live in
 [`docs/release-notes/v1.5.0.md`](./docs/release-notes/v1.5.0.md) and
 [`docs/release-notes/v1.4.1.md`](./docs/release-notes/v1.4.1.md).
 
@@ -154,7 +154,7 @@ n=24 reading that counts cline-session errors as failures).
 | --- | --- |
 | **4 coding agents** | `aider` · `opencode` · `mini-swe-agent` · `cline` |
 | **8 routing strategies** | `always-cloud` · `always-local` · `rules` · `heuristic` · `llm-classifier` · `embedding-knn` · `cascade` · `phase-aware` |
-| **3 task classes** | `puzzles` (Exercism Python, 5 tasks) · `refactors` (8 D1/D5 real-PR patterns + 4 D6 hard implementation challenges) · `real-prs` (SWE-bench Verified, adapter shipped, sweep is v1.6+ work) |
+| **3 task classes** | `puzzles` (Exercism Python, 5 tasks) · `refactors` (historical class name; the canonical cell is feature-adds (D1) + one-shot scripts (D5), 8 tasks, plus 4 D6 hard single-file builds. True refactor/review shapes (D3/D4) exist but were LLM-judged and sit outside the functional cell) · `real-prs` (SWE-bench Verified, adapter shipped, sweep is v1.6+ work) |
 | **6 pricing scenarios** | `gpt-5.5` · `gpt-5` · `gpt-5-mini` · `claude-opus-4-7` · `claude-sonnet-4-6` · `claude-haiku-4-5` |
 | **Functional scoring** | Sandboxed Python via Docker (`--network none`, memory caps, 60s timeout) |
 | **Statistics** | Per-cell bootstrap 95% CIs on pass-rate, cost, cloud-fraction, wall-ms |
@@ -217,7 +217,7 @@ Distilled from the v1.5 leaderboard:
 
 | You want… | Use this config | Why |
 | --- | --- | --- |
-| **Best refactor quality + lowest cost** | `cline + qwen3.6 + cascade` | 100% on D1/D5 refactors at 8% cloud, $0.022/task |
+| **Best everyday-task quality + lowest cost** | `cline + qwen3.6 + cascade` | 100% on the D1/D5 tasks at 8% cloud, $0.022/task |
 | **Zero cloud spend, still serious quality** | `cline + qwen3.6 + always-local` | 100% on puzzles, 67% on D6 hard tasks, $0 cloud |
 | **Maximum quality, cost is no object** | Any agent + `always-cloud` (gpt-5.5) | 100% across every cell we measured |
 | **You know the task is hard** | Force `!cloud` on the model field | Cascade's router cannot always tell hard from easy |
